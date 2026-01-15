@@ -4,9 +4,8 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   Palette, Monitor, Volume2, Wifi, Bell, User, Lock, Info, 
-  Sun, Moon, ChevronRight, Check, Shield, Code, Users, Activity,
-  Cpu, HardDrive, Clock, RefreshCw, ArrowLeft, Key,
-  Mail, UserPlus
+  Sun, Moon, ChevronRight, Check, Shield, Code, Activity, Users,
+  Cpu, HardDrive, Clock, RefreshCw, ArrowLeft, Key, Mail
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -103,7 +102,7 @@ interface AuthUser {
   createdAt: string;
 }
 
-type AccountSubSection = "main" | "profile" | "signin" | "family";
+type AccountSubSection = "main" | "profile" | "signin";
 
 export function SettingsApp() {
   const { settings, updateSettings, security, updateSecurity } = useOS();
@@ -678,69 +677,6 @@ export function SettingsApp() {
           );
         }
 
-        // Family & Other Users sub-section
-        if (accountSubSection === "family") {
-          return (
-            <div className="space-y-6">
-              <button
-                onClick={() => setAccountSubSection("main")}
-                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
-                data-testid="btn-back-accounts"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back to Accounts</span>
-              </button>
-
-              <h3 className="text-lg font-semibold">Family & Other Users</h3>
-
-              <div className="space-y-4">
-                <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                  <h4 className="font-medium text-blue-400 mb-2">Your Family</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Add family members to share apps, games, and more. Family members get their own sign-in and desktop.
-                  </p>
-                </div>
-
-                <button 
-                  className="w-full flex items-center gap-3 p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-dashed border-white/20"
-                  data-testid="btn-add-family"
-                >
-                  <UserPlus className="w-5 h-5 text-muted-foreground" />
-                  <span>Add a family member</span>
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <h4 className="font-medium text-muted-foreground text-sm uppercase tracking-wider">Other Users</h4>
-                
-                <p className="text-sm text-muted-foreground">
-                  Allow other people to sign in to this device. Each person will have their own files and settings.
-                </p>
-
-                <button 
-                  className="w-full flex items-center gap-3 p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-dashed border-white/20"
-                  data-testid="btn-add-user"
-                >
-                  <UserPlus className="w-5 h-5 text-muted-foreground" />
-                  <span>Add someone else to this device</span>
-                </button>
-
-                <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-white/5 border border-white/10">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gray-500 flex items-center justify-center">
-                      <User className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <h5 className="font-medium">Guest</h5>
-                      <p className="text-sm text-muted-foreground">For temporary access</p>
-                    </div>
-                  </div>
-                  <Switch checked={true} data-testid="switch-guest-account" />
-                </div>
-              </div>
-            </div>
-          );
-        }
         
         // Main accounts view
         return (
@@ -797,21 +733,6 @@ export function SettingsApp() {
                   <div className="text-left">
                     <h4 className="font-medium">Sign-in Options</h4>
                     <p className="text-sm text-muted-foreground">Password, PIN, and security keys</p>
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground" />
-              </button>
-
-              <button
-                onClick={() => setAccountSubSection("family")}
-                className="w-full flex items-center justify-between py-3 border-b border-white/10 hover:bg-white/5 transition-colors rounded-lg px-2 -mx-2"
-                data-testid="btn-family"
-              >
-                <div className="flex items-center gap-3">
-                  <Users className="w-5 h-5 text-muted-foreground" />
-                  <div className="text-left">
-                    <h4 className="font-medium">Family & Other Users</h4>
-                    <p className="text-sm text-muted-foreground">Add or manage other accounts</p>
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-muted-foreground" />
