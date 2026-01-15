@@ -5,8 +5,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   Palette, Monitor, Volume2, Wifi, Bell, User, Lock, Info, 
   Sun, Moon, ChevronRight, Check, Shield, Code, Users, Activity,
-  Cpu, HardDrive, Clock, RefreshCw, ArrowLeft, Key, Fingerprint,
-  Smartphone, Mail, UserPlus, Trash2
+  Cpu, HardDrive, Clock, RefreshCw, ArrowLeft, Key,
+  Mail, UserPlus
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -106,10 +106,17 @@ interface AuthUser {
 type AccountSubSection = "main" | "profile" | "signin" | "family";
 
 export function SettingsApp() {
-  const { settings, updateSettings } = useOS();
+  const { settings, updateSettings, security, updateSecurity } = useOS();
   const [activeSection, setActiveSection] = useState<SettingsSection>("appearance");
   const [accountSubSection, setAccountSubSection] = useState<AccountSubSection>("main");
   const [syncEnabled, setSyncEnabled] = useState(false);
+  const [showPasswordSetup, setShowPasswordSetup] = useState(false);
+  const [showPinSetup, setShowPinSetup] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [setupError, setSetupError] = useState("");
 
   const { data: currentUser } = useQuery<AuthUser | null>({
     queryKey: ["/api/auth/user"],
@@ -445,6 +452,46 @@ export function SettingsApp() {
 
         // Sign-in Options sub-section
         if (accountSubSection === "signin") {
+          const handlePasswordSetup = () => {
+            setSetupError("");
+            if (newPassword.length < 4) {
+              setSetupError("Password must be at least 4 characters");
+              return;
+            }
+            if (newPassword !== confirmPassword) {
+              setSetupError("Passwords do not match");
+              return;
+            }
+            updateSecurity({ password: newPassword });
+            setNewPassword("");
+            setConfirmPassword("");
+            setShowPasswordSetup(false);
+          };
+
+          const handlePinSetup = () => {
+            setSetupError("");
+            if (newPin.length < 4) {
+              setSetupError("PIN must be at least 4 digits");
+              return;
+            }
+            if (newPin !== confirmPin) {
+              setSetupError("PINs do not match");
+              return;
+            }
+            updateSecurity({ pin: newPin });
+            setNewPin("");
+            setConfirmPin("");
+            setShowPinSetup(false);
+          };
+
+          const handleRemovePassword = () => {
+            updateSecurity({ password: null });
+          };
+
+          const handleRemovePin = () => {
+            updateSecurity({ pin: null });
+          };
+
           return (
             <div className="space-y-6">
               <button
@@ -459,55 +506,153 @@ export function SettingsApp() {
               <h3 className="text-lg font-semibold">Sign-in Options</h3>
 
               <div className="space-y-3">
-                <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-white/5 border border-white/10">
-                  <div className="flex items-center gap-3">
-                    <Key className="w-5 h-5 text-blue-400" />
-                    <div>
-                      <h4 className="font-medium">Password</h4>
-                      <p className="text-sm text-muted-foreground">Use a password to sign in</p>
+                {/* Password Setup */}
+                {showPasswordSetup ? (
+                  <div className="p-4 rounded-lg bg-white/5 border border-white/10 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Key className="w-5 h-5 text-blue-400" />
+                      <h4 className="font-medium">Set up Password</h4>
+                    </div>
+                    <input
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password"
+                      className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-foreground placeholder-muted-foreground focus:outline-none focus:border-blue-500"
+                      data-testid="input-new-password"
+                    />
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm password"
+                      className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-foreground placeholder-muted-foreground focus:outline-none focus:border-blue-500"
+                      data-testid="input-confirm-password"
+                    />
+                    {setupError && <p className="text-red-400 text-sm">{setupError}</p>}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handlePasswordSetup}
+                        className="px-4 py-2 rounded-lg bg-blue-500 text-white text-sm hover:bg-blue-600 transition-colors"
+                        data-testid="btn-save-password"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => { setShowPasswordSetup(false); setNewPassword(""); setConfirmPassword(""); setSetupError(""); }}
+                        className="px-4 py-2 rounded-lg bg-white/10 text-sm hover:bg-white/20 transition-colors"
+                        data-testid="btn-cancel-password"
+                      >
+                        Cancel
+                      </button>
                     </div>
                   </div>
-                  <button className="px-3 py-1.5 rounded-lg bg-white/10 text-sm hover:bg-white/20 transition-colors" data-testid="btn-change-password">
-                    Change
-                  </button>
-                </div>
+                ) : (
+                  <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-white/5 border border-white/10">
+                    <div className="flex items-center gap-3">
+                      <Key className="w-5 h-5 text-blue-400" />
+                      <div>
+                        <h4 className="font-medium">Password</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {security.password ? "Password is set" : "Use a password to sign in"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => setShowPasswordSetup(true)}
+                        className="px-3 py-1.5 rounded-lg bg-white/10 text-sm hover:bg-white/20 transition-colors" 
+                        data-testid="btn-setup-password"
+                      >
+                        {security.password ? "Change" : "Set up"}
+                      </button>
+                      {security.password && (
+                        <button 
+                          onClick={handleRemovePassword}
+                          className="px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30 transition-colors" 
+                          data-testid="btn-remove-password"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
 
-                <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-white/5 border border-white/10">
-                  <div className="flex items-center gap-3">
-                    <Fingerprint className="w-5 h-5 text-green-400" />
-                    <div>
-                      <h4 className="font-medium">Fingerprint</h4>
-                      <p className="text-sm text-muted-foreground">Use biometric authentication</p>
+                {/* PIN Setup */}
+                {showPinSetup ? (
+                  <div className="p-4 rounded-lg bg-white/5 border border-white/10 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <Lock className="w-5 h-5 text-yellow-400" />
+                      <h4 className="font-medium">Set up PIN</h4>
+                    </div>
+                    <input
+                      type="text"
+                      value={newPin}
+                      onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Enter new PIN (numbers only)"
+                      className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-foreground placeholder-muted-foreground focus:outline-none focus:border-blue-500"
+                      data-testid="input-new-pin"
+                      maxLength={8}
+                    />
+                    <input
+                      type="text"
+                      value={confirmPin}
+                      onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
+                      placeholder="Confirm PIN"
+                      className="w-full px-3 py-2 rounded-lg bg-white/10 border border-white/20 text-foreground placeholder-muted-foreground focus:outline-none focus:border-blue-500"
+                      data-testid="input-confirm-pin"
+                      maxLength={8}
+                    />
+                    {setupError && <p className="text-red-400 text-sm">{setupError}</p>}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handlePinSetup}
+                        className="px-4 py-2 rounded-lg bg-blue-500 text-white text-sm hover:bg-blue-600 transition-colors"
+                        data-testid="btn-save-pin"
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={() => { setShowPinSetup(false); setNewPin(""); setConfirmPin(""); setSetupError(""); }}
+                        className="px-4 py-2 rounded-lg bg-white/10 text-sm hover:bg-white/20 transition-colors"
+                        data-testid="btn-cancel-pin"
+                      >
+                        Cancel
+                      </button>
                     </div>
                   </div>
-                  <Badge variant="secondary">Not Available</Badge>
-                </div>
-
-                <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-white/5 border border-white/10">
-                  <div className="flex items-center gap-3">
-                    <Lock className="w-5 h-5 text-yellow-400" />
-                    <div>
-                      <h4 className="font-medium">PIN</h4>
-                      <p className="text-sm text-muted-foreground">Use a numeric PIN to sign in</p>
+                ) : (
+                  <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-white/5 border border-white/10">
+                    <div className="flex items-center gap-3">
+                      <Lock className="w-5 h-5 text-yellow-400" />
+                      <div>
+                        <h4 className="font-medium">PIN</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {security.pin ? "PIN is set" : "Use a numeric PIN to sign in"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => setShowPinSetup(true)}
+                        className="px-3 py-1.5 rounded-lg bg-white/10 text-sm hover:bg-white/20 transition-colors" 
+                        data-testid="btn-setup-pin"
+                      >
+                        {security.pin ? "Change" : "Set up"}
+                      </button>
+                      {security.pin && (
+                        <button 
+                          onClick={handleRemovePin}
+                          className="px-3 py-1.5 rounded-lg bg-red-500/20 text-red-400 text-sm hover:bg-red-500/30 transition-colors" 
+                          data-testid="btn-remove-pin"
+                        >
+                          Remove
+                        </button>
+                      )}
                     </div>
                   </div>
-                  <button className="px-3 py-1.5 rounded-lg bg-white/10 text-sm hover:bg-white/20 transition-colors" data-testid="btn-setup-pin">
-                    Set up
-                  </button>
-                </div>
-
-                <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-white/5 border border-white/10">
-                  <div className="flex items-center gap-3">
-                    <Smartphone className="w-5 h-5 text-purple-400" />
-                    <div>
-                      <h4 className="font-medium">Security Key</h4>
-                      <p className="text-sm text-muted-foreground">Use a physical security key</p>
-                    </div>
-                  </div>
-                  <button className="px-3 py-1.5 rounded-lg bg-white/10 text-sm hover:bg-white/20 transition-colors" data-testid="btn-add-key">
-                    Add
-                  </button>
-                </div>
+                )}
               </div>
 
               <div className="pt-4 border-t border-white/10">
@@ -515,9 +660,18 @@ export function SettingsApp() {
                 <div className="flex items-center justify-between py-3">
                   <div>
                     <h5 className="font-medium">Require sign-in on wake</h5>
-                    <p className="text-sm text-muted-foreground">When should NexusOS require you to sign in again?</p>
+                    <p className="text-sm text-muted-foreground">
+                      {security.password || security.pin 
+                        ? "Require sign-in after startup" 
+                        : "Set up a password or PIN first"}
+                    </p>
                   </div>
-                  <Switch checked={true} data-testid="switch-signin-wake" />
+                  <Switch 
+                    checked={security.requireSignInOnWake} 
+                    onCheckedChange={(checked) => updateSecurity({ requireSignInOnWake: checked })}
+                    disabled={!security.password && !security.pin}
+                    data-testid="switch-signin-wake" 
+                  />
                 </div>
               </div>
             </div>

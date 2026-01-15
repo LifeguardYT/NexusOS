@@ -15,7 +15,8 @@ import { UpdatesApp } from "@/components/apps/UpdatesApp";
 import { SnakeGame } from "@/components/apps/SnakeGame";
 import { MinesweeperGame } from "@/components/apps/MinesweeperGame";
 import { TerminalApp } from "@/components/apps/TerminalApp";
-import { Power } from "lucide-react";
+import { Power, Lock } from "lucide-react";
+import { useState } from "react";
 
 const wallpapers: Record<string, string> = {
   "gradient-1": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
@@ -41,7 +42,9 @@ const appComponents: Record<string, React.ComponentType> = {
 };
 
 export function Desktop() {
-  const { settings, windows, showContextMenu, hideContextMenu, setStartMenuOpen, isPoweredOn, isShuttingDown, isStartingUp, startup } = useOS();
+  const { settings, windows, showContextMenu, hideContextMenu, setStartMenuOpen, isPoweredOn, isShuttingDown, isStartingUp, isLocked, startup, unlock, security } = useOS();
+  const [lockInput, setLockInput] = useState("");
+  const [lockError, setLockError] = useState(false);
 
   const handleDesktopClick = () => {
     hideContextMenu();
@@ -56,6 +59,71 @@ export function Desktop() {
       { label: "Personalize", action: () => {} },
     ]);
   };
+
+  const handleUnlock = () => {
+    if (unlock(lockInput)) {
+      setLockInput("");
+      setLockError(false);
+    } else {
+      setLockError(true);
+      setLockInput("");
+    }
+  };
+
+  // Lock screen
+  if (isLocked && isPoweredOn && !isStartingUp) {
+    const isPinMode = security.pin && !security.password;
+    return (
+      <div 
+        className="fixed inset-0 flex flex-col items-center justify-center select-none"
+        style={{ 
+          background: wallpapers[settings.wallpaper] || wallpapers["gradient-1"],
+        }}
+        data-testid="lock-screen"
+      >
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-md" />
+        <div className="relative z-10 flex flex-col items-center gap-6 p-8">
+          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-2xl">
+            <Lock className="w-12 h-12 text-white" />
+          </div>
+          <h2 className="text-2xl font-semibold text-white">NexusOS</h2>
+          <p className="text-white/70">Enter your {isPinMode ? "PIN" : "password"} to unlock</p>
+          
+          <div className="flex flex-col items-center gap-3">
+            <input
+              type={isPinMode ? "text" : "password"}
+              value={lockInput}
+              onChange={(e) => {
+                if (isPinMode) {
+                  // Only allow numbers for PIN
+                  const val = e.target.value.replace(/\D/g, '');
+                  setLockInput(val);
+                } else {
+                  setLockInput(e.target.value);
+                }
+                setLockError(false);
+              }}
+              onKeyDown={(e) => e.key === "Enter" && handleUnlock()}
+              placeholder={isPinMode ? "Enter PIN" : "Enter password"}
+              className={`w-64 px-4 py-3 rounded-lg bg-white/10 border ${lockError ? 'border-red-500' : 'border-white/20'} text-white placeholder-white/50 text-center focus:outline-none focus:border-blue-500`}
+              data-testid="input-lock"
+              autoFocus
+            />
+            {lockError && (
+              <p className="text-red-400 text-sm">Incorrect {isPinMode ? "PIN" : "password"}</p>
+            )}
+            <button
+              onClick={handleUnlock}
+              className="px-6 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+              data-testid="btn-unlock"
+            >
+              Unlock
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Shutdown screen
   if (!isPoweredOn) {

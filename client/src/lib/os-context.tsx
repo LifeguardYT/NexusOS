@@ -42,6 +42,12 @@ const defaultNotes: Note[] = [
   { id: "1", title: "Welcome", content: "Welcome to Notes! Start writing...", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
 ];
 
+interface SecuritySettings {
+  password: string | null;
+  pin: string | null;
+  requireSignInOnWake: boolean;
+}
+
 interface OSContextType {
   settings: Settings;
   updateSettings: (updates: Partial<Settings>) => void;
@@ -68,8 +74,12 @@ interface OSContextType {
   isPoweredOn: boolean;
   isShuttingDown: boolean;
   isStartingUp: boolean;
+  isLocked: boolean;
   shutdown: () => void;
   startup: () => void;
+  unlock: (credential: string) => boolean;
+  security: SecuritySettings;
+  updateSecurity: (updates: Partial<SecuritySettings>) => void;
 }
 
 const OSContext = createContext<OSContextType | null>(null);
@@ -92,11 +102,44 @@ export function OSProvider({ children }: { children: ReactNode }) {
   const [isPoweredOn, setIsPoweredOn] = useState(true);
   const [isShuttingDown, setIsShuttingDown] = useState(false);
   const [isStartingUp, setIsStartingUp] = useState(false);
+  const [isLocked, setIsLocked] = useState(false);
+  
+  const [security, setSecurity] = useState<SecuritySettings>(() => {
+    const saved = localStorage.getItem("os-security");
+    return saved ? JSON.parse(saved) : { password: null, pin: null, requireSignInOnWake: false };
+  });
+
+  useEffect(() => {
+    localStorage.setItem("os-security", JSON.stringify(security));
+  }, [security]);
+
+  // Check if we need to show lock screen on initial load
+  useEffect(() => {
+    if (security.password || security.pin) {
+      setIsLocked(true);
+    }
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const updateSecurity = useCallback((updates: Partial<SecuritySettings>) => {
+    setSecurity(prev => ({ ...prev, ...updates }));
+  }, []);
+
+  const unlock = useCallback((credential: string) => {
+    if (security.password && credential === security.password) {
+      setIsLocked(false);
+      return true;
+    }
+    if (security.pin && credential === security.pin) {
+      setIsLocked(false);
+      return true;
+    }
+    return false;
+  }, [security]);
 
   const shutdown = useCallback(() => {
     setStartMenuOpen(false);
@@ -115,8 +158,12 @@ export function OSProvider({ children }: { children: ReactNode }) {
     // Wait for animation to complete
     setTimeout(() => {
       setIsStartingUp(false);
+      // Lock if require sign-in on wake is enabled
+      if (security.requireSignInOnWake && (security.password || security.pin)) {
+        setIsLocked(true);
+      }
     }, 1500);
-  }, []);
+  }, [security]);
 
   useEffect(() => {
     localStorage.setItem("os-settings", JSON.stringify(settings));
@@ -258,8 +305,12 @@ export function OSProvider({ children }: { children: ReactNode }) {
       isPoweredOn,
       isShuttingDown,
       isStartingUp,
+      isLocked,
       shutdown,
       startup,
+      unlock,
+      security,
+      updateSecurity,
     }}>
       {children}
     </OSContext.Provider>
