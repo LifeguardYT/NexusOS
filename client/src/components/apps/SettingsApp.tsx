@@ -11,7 +11,7 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 
-type SettingsSection = "appearance" | "display" | "sound" | "network" | "notifications" | "accounts" | "privacy" | "about" | "admin" | "developer";
+type SettingsSection = "appearance" | "display" | "sound" | "network" | "notifications" | "accounts" | "about" | "admin" | "developer";
 
 interface SectionItem {
   id: SettingsSection;
@@ -27,7 +27,6 @@ const sections: SectionItem[] = [
   { id: "network", name: "Network", icon: Wifi },
   { id: "notifications", name: "Notifications", icon: Bell },
   { id: "accounts", name: "Accounts", icon: User },
-  { id: "privacy", name: "Privacy", icon: Lock },
   { id: "about", name: "About", icon: Info },
   { id: "admin", name: "Admin", icon: Shield, adminOnly: true },
   { id: "developer", name: "Developer", icon: Code, adminOnly: true },
@@ -451,101 +450,6 @@ export function SettingsApp() {
                   disabled
                   data-testid="switch-sync"
                 />
-              </div>
-            </div>
-          </div>
-        );
-
-      case "privacy":
-        return (
-          <div className="space-y-6">
-            <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
-              <div className="flex items-center gap-3 mb-2">
-                <Shield className="w-6 h-6 text-blue-400" />
-                <h3 className="font-semibold text-blue-400">Privacy Dashboard</h3>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Your privacy is important. NexusOS keeps your data safe and secure.
-              </p>
-            </div>
-
-            <div className="space-y-3">
-              <h4 className="font-medium text-muted-foreground text-sm uppercase tracking-wider">Privacy Settings</h4>
-              
-              <div className="flex items-center justify-between py-3 border-b border-white/10">
-                <div className="flex items-center gap-3">
-                  <Activity className="w-5 h-5 text-muted-foreground" />
-                  <div>
-                    <h4 className="font-medium">Activity History</h4>
-                    <p className="text-sm text-muted-foreground">Store activity history on this device</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={true}
-                  disabled
-                  data-testid="switch-activity-history"
-                />
-              </div>
-
-              <div className="flex items-center justify-between py-3 border-b border-white/10">
-                <div className="flex items-center gap-3">
-                  <Monitor className="w-5 h-5 text-muted-foreground" />
-                  <div>
-                    <h4 className="font-medium">Diagnostics & Feedback</h4>
-                    <p className="text-sm text-muted-foreground">Help improve NexusOS</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={false}
-                  disabled
-                  data-testid="switch-diagnostics"
-                />
-              </div>
-
-              <div className="flex items-center justify-between py-3 border-b border-white/10">
-                <div className="flex items-center gap-3">
-                  <Lock className="w-5 h-5 text-muted-foreground" />
-                  <div>
-                    <h4 className="font-medium">Location Services</h4>
-                    <p className="text-sm text-muted-foreground">Allow apps to access your location</p>
-                  </div>
-                </div>
-                <Switch
-                  checked={true}
-                  disabled
-                  data-testid="switch-location"
-                />
-              </div>
-
-              <div className="flex items-center justify-between py-3">
-                <div className="flex items-center gap-3">
-                  <Bell className="w-5 h-5 text-muted-foreground" />
-                  <div>
-                    <h4 className="font-medium">App Permissions</h4>
-                    <p className="text-sm text-muted-foreground">Manage app access to system features</p>
-                  </div>
-                </div>
-                <ChevronRight className="w-5 h-5 text-muted-foreground" />
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-white/10">
-              <h4 className="font-medium mb-3">Data Management</h4>
-              <div className="space-y-2">
-                <button 
-                  className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-                  data-testid="btn-clear-history"
-                >
-                  <h5 className="font-medium">Clear Activity History</h5>
-                  <p className="text-sm text-muted-foreground">Remove all stored activity data</p>
-                </button>
-                <button 
-                  className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
-                  data-testid="btn-export-data"
-                >
-                  <h5 className="font-medium">Export Your Data</h5>
-                  <p className="text-sm text-muted-foreground">Download a copy of your data</p>
-                </button>
               </div>
             </div>
           </div>
