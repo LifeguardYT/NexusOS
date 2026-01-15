@@ -88,3 +88,18 @@ export const updates = pgTable("updates", {
 export const insertUpdateSchema = createInsertSchema(updates).omit({ id: true, createdAt: true });
 export type InsertUpdate = z.infer<typeof insertUpdateSchema>;
 export type Update = typeof updates.$inferSelect;
+
+// Chat Messages table
+export const messages = pgTable("messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  senderId: text("sender_id").notNull(),
+  senderName: text("sender_name").notNull(),
+  recipientId: text("recipient_id"), // null for global chat
+  content: text("content").notNull(),
+  isGlobal: boolean("is_global").notNull().default(false),
+  createdAt: text("created_at").notNull().default(sql`now()`),
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type Message = typeof messages.$inferSelect;
