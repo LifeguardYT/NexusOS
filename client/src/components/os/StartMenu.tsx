@@ -20,7 +20,7 @@ const iconMap: Record<string, React.ComponentType<any>> = {
 };
 
 export function StartMenu() {
-  const { apps, openWindow, startMenuOpen, setStartMenuOpen } = useOS();
+  const { apps, openWindow, startMenuOpen, setStartMenuOpen, shutdown } = useOS();
   const [searchQuery, setSearchQuery] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -106,7 +106,12 @@ export function StartMenu() {
           </div>
           <span className="text-sm text-white/80">User</span>
         </button>
-        <button className="p-2 rounded-lg hover:bg-white/10 transition-colors text-white/60 hover:text-white">
+        <button 
+          onClick={shutdown}
+          className="p-2 rounded-lg hover:bg-red-500/20 transition-colors text-white/60 hover:text-red-400"
+          data-testid="btn-power"
+          title="Shutdown"
+        >
           <Power className="w-5 h-5" />
         </button>
       </div>

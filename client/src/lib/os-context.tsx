@@ -65,6 +65,9 @@ interface OSContextType {
   showContextMenu: (x: number, y: number, items: { label: string; action: () => void }[]) => void;
   hideContextMenu: () => void;
   currentTime: Date;
+  isPoweredOn: boolean;
+  shutdown: () => void;
+  startup: () => void;
 }
 
 const OSContext = createContext<OSContextType | null>(null);
@@ -84,10 +87,21 @@ export function OSProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem("os-notes");
     return saved ? JSON.parse(saved) : defaultNotes;
   });
+  const [isPoweredOn, setIsPoweredOn] = useState(true);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  const shutdown = useCallback(() => {
+    setStartMenuOpen(false);
+    setWindows([]);
+    setIsPoweredOn(false);
+  }, []);
+
+  const startup = useCallback(() => {
+    setIsPoweredOn(true);
   }, []);
 
   useEffect(() => {
@@ -227,6 +241,9 @@ export function OSProvider({ children }: { children: ReactNode }) {
       showContextMenu,
       hideContextMenu,
       currentTime,
+      isPoweredOn,
+      shutdown,
+      startup,
     }}>
       {children}
     </OSContext.Provider>

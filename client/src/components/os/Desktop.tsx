@@ -15,6 +15,7 @@ import { UpdatesApp } from "@/components/apps/UpdatesApp";
 import { SnakeGame } from "@/components/apps/SnakeGame";
 import { MinesweeperGame } from "@/components/apps/MinesweeperGame";
 import { TerminalApp } from "@/components/apps/TerminalApp";
+import { Power } from "lucide-react";
 
 const wallpapers: Record<string, string> = {
   "gradient-1": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
@@ -40,7 +41,7 @@ const appComponents: Record<string, React.ComponentType> = {
 };
 
 export function Desktop() {
-  const { settings, windows, showContextMenu, hideContextMenu, setStartMenuOpen } = useOS();
+  const { settings, windows, showContextMenu, hideContextMenu, setStartMenuOpen, isPoweredOn, startup } = useOS();
 
   const handleDesktopClick = () => {
     hideContextMenu();
@@ -55,6 +56,32 @@ export function Desktop() {
       { label: "Personalize", action: () => {} },
     ]);
   };
+
+  // Shutdown screen
+  if (!isPoweredOn) {
+    return (
+      <div 
+        className="fixed inset-0 bg-black flex flex-col items-center justify-center select-none"
+        data-testid="shutdown-screen"
+      >
+        <button
+          onClick={startup}
+          className="group flex flex-col items-center gap-6 p-8 rounded-2xl transition-all hover:bg-white/5"
+          data-testid="btn-startup"
+        >
+          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-2xl group-hover:scale-105 transition-transform">
+            <Power className="w-12 h-12 text-white" />
+          </div>
+          <span className="text-xl font-semibold text-white/90 group-hover:text-white transition-colors">
+            Startup NexusOS
+          </span>
+        </button>
+        <p className="absolute bottom-8 text-sm text-white/30">
+          Press the button to start
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div 
