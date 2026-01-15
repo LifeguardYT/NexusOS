@@ -8,6 +8,62 @@ interface Tab {
   title: string;
 }
 
+// Convert YouTube URLs to embeddable format
+function getEmbeddableUrl(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    
+    // YouTube video URLs
+    if (urlObj.hostname.includes("youtube.com")) {
+      // Handle youtube.com/watch?v=VIDEO_ID
+      const videoId = urlObj.searchParams.get("v");
+      if (videoId) {
+        return `https://www.youtube.com/embed/${videoId}?autoplay=0`;
+      }
+      // Handle youtube.com/shorts/VIDEO_ID
+      const shortsMatch = urlObj.pathname.match(/\/shorts\/([a-zA-Z0-9_-]+)/);
+      if (shortsMatch) {
+        return `https://www.youtube.com/embed/${shortsMatch[1]}?autoplay=0`;
+      }
+      // YouTube homepage - use embedded search/browse
+      if (urlObj.pathname === "/" || urlObj.pathname === "") {
+        return "https://www.youtube.com/embed?listType=search&list=";
+      }
+    }
+    
+    // Handle youtu.be short links
+    if (urlObj.hostname === "youtu.be") {
+      const videoId = urlObj.pathname.slice(1);
+      if (videoId) {
+        return `https://www.youtube.com/embed/${videoId}?autoplay=0`;
+      }
+    }
+    
+    // Return original URL for non-YouTube sites
+    return url;
+  } catch {
+    return url;
+  }
+}
+
+// Check if URL needs the external link warning
+function needsExternalWarning(url: string): boolean {
+  try {
+    const urlObj = new URL(url);
+    const hostname = urlObj.hostname.toLowerCase();
+    
+    // Sites known to block iframes (excluding YouTube which we handle specially)
+    const blockedSites = [
+      "twitter.com", "x.com", "facebook.com", "instagram.com", 
+      "linkedin.com", "reddit.com", "tiktok.com", "twitch.tv"
+    ];
+    
+    return blockedSites.some(site => hostname.includes(site));
+  } catch {
+    return false;
+  }
+}
+
 export function BrowserApp() {
   const [tabs, setTabs] = useState<Tab[]>([
     { id: "1", url: "https://www.youtube.com", title: "YouTube" }
@@ -213,7 +269,7 @@ export function BrowserApp() {
       <div className="flex-1 bg-gray-900 relative">
         <iframe
           id="browser-frame"
-          src={activeTab?.url}
+          src={activeTab?.url ? getEmbeddableUrl(activeTab.url) : undefined}
           className="w-full h-full border-0"
           sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -221,26 +277,28 @@ export function BrowserApp() {
           data-testid="browser-iframe"
         />
         
-        {/* Iframe blocked notice overlay */}
-        <div className="absolute bottom-4 left-4 right-4 bg-gray-800/95 backdrop-blur-sm border border-gray-700 rounded-lg p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5 text-yellow-500 shrink-0" />
-            <div className="text-sm">
-              <p className="text-white font-medium">Some sites may not load in the iframe</p>
-              <p className="text-gray-400 text-xs">Sites like YouTube block embedded viewing. Click to open in a new tab.</p>
+        {/* Iframe blocked notice overlay - only show for known blocked sites */}
+        {activeTab?.url && needsExternalWarning(activeTab.url) && (
+          <div className="absolute bottom-4 left-4 right-4 bg-gray-800/95 backdrop-blur-sm border border-gray-700 rounded-lg p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-yellow-500 shrink-0" />
+              <div className="text-sm">
+                <p className="text-white font-medium">This site cannot be embedded</p>
+                <p className="text-gray-400 text-xs">This site blocks iframe viewing. Click to open in a new tab.</p>
+              </div>
             </div>
+            <Button
+              onClick={() => window.open(activeTab.url, '_blank')}
+              variant="outline"
+              size="sm"
+              className="shrink-0 gap-2"
+              data-testid="btn-open-external"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Open
+            </Button>
           </div>
-          <Button
-            onClick={() => window.open(activeTab?.url, '_blank')}
-            variant="outline"
-            size="sm"
-            className="shrink-0 gap-2"
-            data-testid="btn-open-external"
-          >
-            <ExternalLink className="w-4 h-4" />
-            Open
-          </Button>
-        </div>
+        )}
       </div>
     </div>
   );
