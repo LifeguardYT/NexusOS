@@ -20,6 +20,7 @@ export const settingsSchema = z.object({
   wifi: z.boolean().default(true),
   bluetooth: z.boolean().default(false),
   developerMode: z.boolean().default(false),
+  syncEnabled: z.boolean().default(false),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;

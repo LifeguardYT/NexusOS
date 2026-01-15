@@ -108,7 +108,6 @@ export function SettingsApp() {
   const { settings, updateSettings, security, updateSecurity } = useOS();
   const [activeSection, setActiveSection] = useState<SettingsSection>("appearance");
   const [accountSubSection, setAccountSubSection] = useState<AccountSubSection>("main");
-  const [syncEnabled, setSyncEnabled] = useState(false);
   const [showPasswordSetup, setShowPasswordSetup] = useState(false);
   const [showPinSetup, setShowPinSetup] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -747,8 +746,8 @@ export function SettingsApp() {
                   </div>
                 </div>
                 <Switch
-                  checked={syncEnabled}
-                  onCheckedChange={setSyncEnabled}
+                  checked={settings.syncEnabled}
+                  onCheckedChange={(checked) => updateSettings({ syncEnabled: checked })}
                   data-testid="switch-sync"
                 />
               </div>

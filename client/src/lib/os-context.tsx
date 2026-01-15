@@ -13,6 +13,8 @@ const defaultSettings: Settings = {
   notifications: true,
   wifi: true,
   bluetooth: false,
+  developerMode: false,
+  syncEnabled: false,
 };
 
 const defaultApps: App[] = [
