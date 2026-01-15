@@ -5,7 +5,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   Palette, Monitor, Volume2, Wifi, Bell, User, Lock, Info, 
   Sun, Moon, ChevronRight, Check, Shield, Code, Users, Activity,
-  Cpu, HardDrive, Clock, RefreshCw
+  Cpu, HardDrive, Clock, RefreshCw, ArrowLeft, Key, Fingerprint,
+  Smartphone, Mail, UserPlus, Trash2
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -102,9 +103,13 @@ interface AuthUser {
   createdAt: string;
 }
 
+type AccountSubSection = "main" | "profile" | "signin" | "family";
+
 export function SettingsApp() {
   const { settings, updateSettings } = useOS();
   const [activeSection, setActiveSection] = useState<SettingsSection>("appearance");
+  const [accountSubSection, setAccountSubSection] = useState<AccountSubSection>("main");
+  const [syncEnabled, setSyncEnabled] = useState(false);
 
   const { data: currentUser } = useQuery<AuthUser | null>({
     queryKey: ["/api/auth/user"],
@@ -375,6 +380,215 @@ export function SettingsApp() {
           ? (currentUser.firstName?.[0] || currentUser.email[0]).toUpperCase()
           : "G";
         
+        // Profile sub-section
+        if (accountSubSection === "profile") {
+          return (
+            <div className="space-y-6">
+              <button
+                onClick={() => setAccountSubSection("main")}
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="btn-back-accounts"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Accounts</span>
+              </button>
+
+              <h3 className="text-lg font-semibold">Profile</h3>
+
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-white/5">
+                {currentUser?.profileImageUrl ? (
+                  <img 
+                    src={currentUser.profileImageUrl} 
+                    alt="Profile" 
+                    className="w-20 h-20 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                    <span className="text-3xl font-bold text-white">{userInitial}</span>
+                  </div>
+                )}
+                <div>
+                  <button className="px-4 py-2 rounded-lg bg-blue-500 text-white text-sm hover:bg-blue-600 transition-colors" data-testid="btn-change-photo">
+                    Change Photo
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">Display Name</label>
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-white/5 border border-white/10">
+                    <User className="w-4 h-4 text-muted-foreground" />
+                    <span>{displayName}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">Email Address</label>
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-white/5 border border-white/10">
+                    <Mail className="w-4 h-4 text-muted-foreground" />
+                    <span>{currentUser?.email || "Not set"}</span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm text-muted-foreground">Account Created</label>
+                  <div className="flex items-center gap-2 p-3 rounded-lg bg-white/5 border border-white/10">
+                    <Clock className="w-4 h-4 text-muted-foreground" />
+                    <span>{currentUser?.createdAt ? new Date(currentUser.createdAt).toLocaleDateString() : "Unknown"}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // Sign-in Options sub-section
+        if (accountSubSection === "signin") {
+          return (
+            <div className="space-y-6">
+              <button
+                onClick={() => setAccountSubSection("main")}
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="btn-back-accounts"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Accounts</span>
+              </button>
+
+              <h3 className="text-lg font-semibold">Sign-in Options</h3>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-white/5 border border-white/10">
+                  <div className="flex items-center gap-3">
+                    <Key className="w-5 h-5 text-blue-400" />
+                    <div>
+                      <h4 className="font-medium">Password</h4>
+                      <p className="text-sm text-muted-foreground">Use a password to sign in</p>
+                    </div>
+                  </div>
+                  <button className="px-3 py-1.5 rounded-lg bg-white/10 text-sm hover:bg-white/20 transition-colors" data-testid="btn-change-password">
+                    Change
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-white/5 border border-white/10">
+                  <div className="flex items-center gap-3">
+                    <Fingerprint className="w-5 h-5 text-green-400" />
+                    <div>
+                      <h4 className="font-medium">Fingerprint</h4>
+                      <p className="text-sm text-muted-foreground">Use biometric authentication</p>
+                    </div>
+                  </div>
+                  <Badge variant="secondary">Not Available</Badge>
+                </div>
+
+                <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-white/5 border border-white/10">
+                  <div className="flex items-center gap-3">
+                    <Lock className="w-5 h-5 text-yellow-400" />
+                    <div>
+                      <h4 className="font-medium">PIN</h4>
+                      <p className="text-sm text-muted-foreground">Use a numeric PIN to sign in</p>
+                    </div>
+                  </div>
+                  <button className="px-3 py-1.5 rounded-lg bg-white/10 text-sm hover:bg-white/20 transition-colors" data-testid="btn-setup-pin">
+                    Set up
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-white/5 border border-white/10">
+                  <div className="flex items-center gap-3">
+                    <Smartphone className="w-5 h-5 text-purple-400" />
+                    <div>
+                      <h4 className="font-medium">Security Key</h4>
+                      <p className="text-sm text-muted-foreground">Use a physical security key</p>
+                    </div>
+                  </div>
+                  <button className="px-3 py-1.5 rounded-lg bg-white/10 text-sm hover:bg-white/20 transition-colors" data-testid="btn-add-key">
+                    Add
+                  </button>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-white/10">
+                <h4 className="font-medium mb-3">Additional Settings</h4>
+                <div className="flex items-center justify-between py-3">
+                  <div>
+                    <h5 className="font-medium">Require sign-in on wake</h5>
+                    <p className="text-sm text-muted-foreground">When should NexusOS require you to sign in again?</p>
+                  </div>
+                  <Switch checked={true} data-testid="switch-signin-wake" />
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        // Family & Other Users sub-section
+        if (accountSubSection === "family") {
+          return (
+            <div className="space-y-6">
+              <button
+                onClick={() => setAccountSubSection("main")}
+                className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                data-testid="btn-back-accounts"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Accounts</span>
+              </button>
+
+              <h3 className="text-lg font-semibold">Family & Other Users</h3>
+
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                  <h4 className="font-medium text-blue-400 mb-2">Your Family</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Add family members to share apps, games, and more. Family members get their own sign-in and desktop.
+                  </p>
+                </div>
+
+                <button 
+                  className="w-full flex items-center gap-3 p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-dashed border-white/20"
+                  data-testid="btn-add-family"
+                >
+                  <UserPlus className="w-5 h-5 text-muted-foreground" />
+                  <span>Add a family member</span>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="font-medium text-muted-foreground text-sm uppercase tracking-wider">Other Users</h4>
+                
+                <p className="text-sm text-muted-foreground">
+                  Allow other people to sign in to this device. Each person will have their own files and settings.
+                </p>
+
+                <button 
+                  className="w-full flex items-center gap-3 p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors border border-dashed border-white/20"
+                  data-testid="btn-add-user"
+                >
+                  <UserPlus className="w-5 h-5 text-muted-foreground" />
+                  <span>Add someone else to this device</span>
+                </button>
+
+                <div className="flex items-center justify-between py-3 px-4 rounded-lg bg-white/5 border border-white/10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gray-500 flex items-center justify-center">
+                      <User className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h5 className="font-medium">Guest</h5>
+                      <p className="text-sm text-muted-foreground">For temporary access</p>
+                    </div>
+                  </div>
+                  <Switch checked={true} data-testid="switch-guest-account" />
+                </div>
+              </div>
+            </div>
+          );
+        }
+        
+        // Main accounts view
         return (
           <div className="space-y-6">
             <div className="flex items-center gap-4 p-4 rounded-xl bg-white/5">
@@ -404,38 +618,50 @@ export function SettingsApp() {
             <div className="space-y-3">
               <h4 className="font-medium text-muted-foreground text-sm uppercase tracking-wider">Account Settings</h4>
               
-              <div className="flex items-center justify-between py-3 border-b border-white/10">
+              <button
+                onClick={() => setAccountSubSection("profile")}
+                className="w-full flex items-center justify-between py-3 border-b border-white/10 hover:bg-white/5 transition-colors rounded-lg px-2 -mx-2"
+                data-testid="btn-profile"
+              >
                 <div className="flex items-center gap-3">
                   <User className="w-5 h-5 text-muted-foreground" />
-                  <div>
+                  <div className="text-left">
                     <h4 className="font-medium">Profile</h4>
                     <p className="text-sm text-muted-foreground">Manage your profile information</p>
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-muted-foreground" />
-              </div>
+              </button>
 
-              <div className="flex items-center justify-between py-3 border-b border-white/10">
+              <button
+                onClick={() => setAccountSubSection("signin")}
+                className="w-full flex items-center justify-between py-3 border-b border-white/10 hover:bg-white/5 transition-colors rounded-lg px-2 -mx-2"
+                data-testid="btn-signin-options"
+              >
                 <div className="flex items-center gap-3">
                   <Lock className="w-5 h-5 text-muted-foreground" />
-                  <div>
+                  <div className="text-left">
                     <h4 className="font-medium">Sign-in Options</h4>
                     <p className="text-sm text-muted-foreground">Password, PIN, and security keys</p>
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-muted-foreground" />
-              </div>
+              </button>
 
-              <div className="flex items-center justify-between py-3 border-b border-white/10">
+              <button
+                onClick={() => setAccountSubSection("family")}
+                className="w-full flex items-center justify-between py-3 border-b border-white/10 hover:bg-white/5 transition-colors rounded-lg px-2 -mx-2"
+                data-testid="btn-family"
+              >
                 <div className="flex items-center gap-3">
                   <Users className="w-5 h-5 text-muted-foreground" />
-                  <div>
+                  <div className="text-left">
                     <h4 className="font-medium">Family & Other Users</h4>
                     <p className="text-sm text-muted-foreground">Add or manage other accounts</p>
                   </div>
                 </div>
                 <ChevronRight className="w-5 h-5 text-muted-foreground" />
-              </div>
+              </button>
 
               <div className="flex items-center justify-between py-3">
                 <div className="flex items-center gap-3">
@@ -446,8 +672,8 @@ export function SettingsApp() {
                   </div>
                 </div>
                 <Switch
-                  checked={false}
-                  disabled
+                  checked={syncEnabled}
+                  onCheckedChange={setSyncEnabled}
                   data-testid="switch-sync"
                 />
               </div>
