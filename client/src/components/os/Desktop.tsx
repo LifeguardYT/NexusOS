@@ -41,7 +41,7 @@ const appComponents: Record<string, React.ComponentType> = {
 };
 
 export function Desktop() {
-  const { settings, windows, showContextMenu, hideContextMenu, setStartMenuOpen, isPoweredOn, startup } = useOS();
+  const { settings, windows, showContextMenu, hideContextMenu, setStartMenuOpen, isPoweredOn, isShuttingDown, isStartingUp, startup } = useOS();
 
   const handleDesktopClick = () => {
     hideContextMenu();
@@ -61,7 +61,7 @@ export function Desktop() {
   if (!isPoweredOn) {
     return (
       <div 
-        className="fixed inset-0 bg-black flex flex-col items-center justify-center select-none"
+        className="fixed inset-0 bg-black flex flex-col items-center justify-center select-none animate-fade-in"
         data-testid="shutdown-screen"
       >
         <button
@@ -69,7 +69,7 @@ export function Desktop() {
           className="group flex flex-col items-center gap-6 p-8 rounded-2xl transition-all hover:bg-white/5"
           data-testid="btn-startup"
         >
-          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-2xl group-hover:scale-105 transition-transform">
+          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-2xl group-hover:scale-105 transition-transform animate-pulse-slow">
             <Power className="w-12 h-12 text-white" />
           </div>
           <span className="text-xl font-semibold text-white/90 group-hover:text-white transition-colors">
@@ -84,6 +84,34 @@ export function Desktop() {
   }
 
   return (
+    <>
+      {/* Shutdown animation overlay */}
+      {isShuttingDown && (
+        <div 
+          className="fixed inset-0 bg-black z-[9999] pointer-events-none animate-shutdown"
+          data-testid="shutdown-animation"
+        />
+      )}
+      
+      {/* Startup animation overlay */}
+      {isStartingUp && (
+        <div 
+          className="fixed inset-0 bg-black z-[9999] pointer-events-none flex items-center justify-center animate-startup"
+          data-testid="startup-animation"
+        >
+          <div className="flex flex-col items-center gap-4 animate-boot-logo">
+            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-2xl">
+              <span className="text-3xl font-bold text-white">N</span>
+            </div>
+            <span className="text-lg font-medium text-white">NexusOS</span>
+            <div className="flex gap-1 mt-2">
+              <div className="w-2 h-2 rounded-full bg-white animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-2 h-2 rounded-full bg-white animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-2 h-2 rounded-full bg-white animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+          </div>
+        </div>
+      )}
     <div 
       className="fixed inset-0 overflow-hidden select-none"
       style={{ 
@@ -118,5 +146,6 @@ export function Desktop() {
       {/* Context Menu */}
       <ContextMenu />
     </div>
+    </>
   );
 }

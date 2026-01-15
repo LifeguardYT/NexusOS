@@ -66,6 +66,8 @@ interface OSContextType {
   hideContextMenu: () => void;
   currentTime: Date;
   isPoweredOn: boolean;
+  isShuttingDown: boolean;
+  isStartingUp: boolean;
   shutdown: () => void;
   startup: () => void;
 }
@@ -88,6 +90,8 @@ export function OSProvider({ children }: { children: ReactNode }) {
     return saved ? JSON.parse(saved) : defaultNotes;
   });
   const [isPoweredOn, setIsPoweredOn] = useState(true);
+  const [isShuttingDown, setIsShuttingDown] = useState(false);
+  const [isStartingUp, setIsStartingUp] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -96,12 +100,22 @@ export function OSProvider({ children }: { children: ReactNode }) {
 
   const shutdown = useCallback(() => {
     setStartMenuOpen(false);
-    setWindows([]);
-    setIsPoweredOn(false);
+    setIsShuttingDown(true);
+    // Wait for animation to complete
+    setTimeout(() => {
+      setWindows([]);
+      setIsPoweredOn(false);
+      setIsShuttingDown(false);
+    }, 1500);
   }, []);
 
   const startup = useCallback(() => {
+    setIsStartingUp(true);
     setIsPoweredOn(true);
+    // Wait for animation to complete
+    setTimeout(() => {
+      setIsStartingUp(false);
+    }, 1500);
   }, []);
 
   useEffect(() => {
@@ -242,6 +256,8 @@ export function OSProvider({ children }: { children: ReactNode }) {
       hideContextMenu,
       currentTime,
       isPoweredOn,
+      isShuttingDown,
+      isStartingUp,
       shutdown,
       startup,
     }}>
