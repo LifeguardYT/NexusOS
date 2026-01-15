@@ -1,14 +1,24 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Bell, Plus, Trash2, Send, Loader2 } from "lucide-react";
+import { Bell, Trash2, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Update } from "@shared/schema";
 
+interface AdminStatus {
+  isAdmin: boolean;
+  userId: string | null;
+}
+
 export function UpdatesApp() {
-  const [isAdmin, setIsAdmin] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newContent, setNewContent] = useState("");
+
+  const { data: adminStatus } = useQuery<AdminStatus>({
+    queryKey: ["/api/admin/status"],
+  });
+
+  const isAdmin = adminStatus?.isAdmin ?? false;
 
   const { data: updates = [], isLoading } = useQuery<Update[]>({
     queryKey: ["/api/updates"],
@@ -56,29 +66,18 @@ export function UpdatesApp() {
     <div className="h-full flex flex-col bg-gradient-to-b from-indigo-900 to-purple-900">
       {/* Header */}
       <div className="p-4 border-b border-white/10">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center">
-              <Bell className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold text-white">System Updates</h1>
-              <p className="text-xs text-white/60">Latest news and announcements</p>
-            </div>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center">
+            <Bell className="w-5 h-5 text-white" />
           </div>
-          <Button
-            variant={isAdmin ? "default" : "outline"}
-            size="sm"
-            onClick={() => setIsAdmin(!isAdmin)}
-            className="text-xs"
-            data-testid="btn-toggle-admin"
-          >
-            {isAdmin ? "Exit Admin" : "Admin Mode"}
-          </Button>
+          <div>
+            <h1 className="text-lg font-semibold text-white">System Updates</h1>
+            <p className="text-xs text-white/60">Latest news and announcements</p>
+          </div>
         </div>
       </div>
 
-      {/* Admin Form */}
+      {/* Admin Form - only visible to admin */}
       {isAdmin && (
         <form onSubmit={handleSubmit} className="p-4 border-b border-white/10 bg-white/5">
           <div className="space-y-3">

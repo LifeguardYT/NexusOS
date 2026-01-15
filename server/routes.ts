@@ -6,12 +6,27 @@ import { z } from "zod";
 import { db } from "./db";
 import { updates } from "@shared/schema";
 import { desc, eq } from "drizzle-orm";
+import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+
+// Admin user ID - set this to your Replit user ID
+const ADMIN_USER_ID = process.env.ADMIN_USER_ID || "";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
   const DEFAULT_USER_ID = "default-user";
+
+  // Setup authentication
+  await setupAuth(app);
+  registerAuthRoutes(app);
+
+  // Get admin status for current user
+  app.get("/api/admin/status", (req: any, res) => {
+    const userId = req.user?.claims?.sub;
+    const isAdmin = userId && userId === ADMIN_USER_ID;
+    res.json({ isAdmin, userId });
+  });
 
   // Get settings
   app.get("/api/settings", async (req, res) => {
@@ -49,9 +64,13 @@ export async function registerRoutes(
     }
   });
 
-  // Create a new update
-  app.post("/api/updates", async (req, res) => {
+  // Create a new update (admin only)
+  app.post("/api/updates", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?.claims?.sub;
+      if (userId !== ADMIN_USER_ID) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
       const data = insertUpdateSchema.parse(req.body);
       const [newUpdate] = await db.insert(updates).values(data).returning();
       res.json(newUpdate);
@@ -65,9 +84,13 @@ export async function registerRoutes(
     }
   });
 
-  // Delete an update
-  app.delete("/api/updates/:id", async (req, res) => {
+  // Delete an update (admin only)
+  app.delete("/api/updates/:id", isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?.claims?.sub;
+      if (userId !== ADMIN_USER_ID) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
       const { id } = req.params;
       await db.delete(updates).where(eq(updates.id, id));
       res.json({ success: true });
