@@ -1,12 +1,21 @@
 import { useState, useRef, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 interface TerminalLine {
   type: "input" | "output" | "error";
   content: string;
 }
 
-const COMMANDS: Record<string, (args: string[]) => string> = {
-  help: () => `Available commands:
+interface AdminStatus {
+  isAdmin: boolean;
+  userId?: string;
+}
+
+const ADMIN_COMMANDS = ["users", "sysadmin", "logs", "shutdown"];
+
+const COMMANDS: Record<string, (args: string[], isAdmin?: boolean) => string | Promise<string>> = {
+  help: (args, isAdmin) => {
+    let output = `Available commands:
   help     - Show this help message
   echo     - Print a message
   date     - Show current date and time
@@ -17,7 +26,19 @@ const COMMANDS: Record<string, (args: string[]) => string> = {
   clear    - Clear the terminal
   uname    - Print system information
   history  - Show command history
-  neofetch - Show system info (simplified)`,
+  neofetch - Show system info (simplified)`;
+    
+    if (isAdmin) {
+      output += `
+
+\x1b[33mAdmin Commands:\x1b[0m
+  users    - List all registered users
+  sysadmin - Show system administration info
+  logs     - View recent system logs
+  shutdown - Simulate system shutdown`;
+    }
+    return output;
+  },
   echo: (args) => args.join(" "),
   date: () => new Date().toString(),
   whoami: () => "user",
@@ -53,6 +74,74 @@ readme.txt  notes.txt  .bashrc  .profile`,
                   CPU: Virtual @ Web GHz
                   Memory: Unlimited
 `,
+  users: async (args, isAdmin) => {
+    if (!isAdmin) return "Permission denied: Admin access required";
+    try {
+      const res = await fetch("/api/admin/users");
+      if (!res.ok) return "Failed to fetch users";
+      const users = await res.json();
+      if (users.length === 0) return "No registered users";
+      let output = "USER ID          | EMAIL                    | NAME\n";
+      output += "-".repeat(60) + "\n";
+      users.forEach((u: any) => {
+        const id = u.id.substring(0, 14).padEnd(16);
+        const email = (u.email || "N/A").substring(0, 24).padEnd(26);
+        const name = `${u.firstName || ""} ${u.lastName || ""}`.trim() || "N/A";
+        output += `${id}| ${email}| ${name}\n`;
+      });
+      return output;
+    } catch (e) {
+      return "Error fetching users";
+    }
+  },
+  sysadmin: async (args, isAdmin) => {
+    if (!isAdmin) return "Permission denied: Admin access required";
+    try {
+      const res = await fetch("/api/admin/diagnostics");
+      if (!res.ok) return "Failed to fetch diagnostics";
+      const d = await res.json();
+      return `System Administration Panel
+==============================
+Platform:     ${d.system.platform}
+Architecture: ${d.system.arch}
+Node Version: ${d.system.nodeVersion}
+System Uptime: ${Math.floor(d.system.uptime / 3600)}h ${Math.floor((d.system.uptime % 3600) / 60)}m
+
+Memory:
+  Total: ${(d.memory.total / 1024 / 1024 / 1024).toFixed(2)} GB
+  Used:  ${(d.memory.used / 1024 / 1024 / 1024).toFixed(2)} GB
+  Free:  ${(d.memory.free / 1024 / 1024 / 1024).toFixed(2)} GB
+
+Process:
+  PID: ${d.process.pid}
+  CPU Cores: ${d.cpu.cores}
+  Heap Used: ${(d.process.memoryUsage.heapUsed / 1024 / 1024).toFixed(1)} MB`;
+    } catch (e) {
+      return "Error fetching system info";
+    }
+  },
+  logs: (args, isAdmin) => {
+    if (!isAdmin) return "Permission denied: Admin access required";
+    const now = new Date();
+    const logs = [
+      `[${new Date(now.getTime() - 300000).toISOString()}] INFO  System startup complete`,
+      `[${new Date(now.getTime() - 240000).toISOString()}] INFO  Database connection established`,
+      `[${new Date(now.getTime() - 180000).toISOString()}] INFO  Authentication service ready`,
+      `[${new Date(now.getTime() - 120000).toISOString()}] DEBUG Session middleware initialized`,
+      `[${new Date(now.getTime() - 60000).toISOString()}] INFO  All services operational`,
+      `[${now.toISOString()}] INFO  Admin accessed system logs`,
+    ];
+    return logs.join("\n");
+  },
+  shutdown: (args, isAdmin) => {
+    if (!isAdmin) return "Permission denied: Admin access required";
+    return `Shutdown initiated...
+Broadcasting message to all terminals...
+System going down for maintenance in 60 seconds!
+
+[SIMULATED] - This is a simulated shutdown.
+In a real system, this would gracefully stop all services.`;
+  },
 };
 
 export function TerminalApp() {
@@ -63,8 +152,15 @@ export function TerminalApp() {
   const [input, setInput] = useState("");
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [isProcessing, setIsProcessing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
+
+  const { data: adminStatus } = useQuery<AdminStatus>({
+    queryKey: ["/api/admin/status"],
+  });
+
+  const isAdmin = adminStatus?.isAdmin === true;
 
   useEffect(() => {
     if (terminalRef.current) {
@@ -72,9 +168,9 @@ export function TerminalApp() {
     }
   }, [lines]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || isProcessing) return;
 
     const trimmedInput = input.trim();
     const [cmd, ...args] = trimmedInput.split(" ");
@@ -82,20 +178,38 @@ export function TerminalApp() {
     setLines(prev => [...prev, { type: "input", content: `$ ${trimmedInput}` }]);
     setHistory(prev => [...prev, trimmedInput]);
     setHistoryIndex(-1);
+    setInput("");
 
     if (cmd === "clear") {
       setLines([]);
-    } else if (cmd === "history") {
+      return;
+    }
+    
+    if (cmd === "history") {
       const historyOutput = history.map((h, i) => `  ${i + 1}  ${h}`).join("\n");
       setLines(prev => [...prev, { type: "output", content: historyOutput || "No history" }]);
-    } else if (cmd in COMMANDS) {
-      const output = COMMANDS[cmd](args);
-      setLines(prev => [...prev, { type: "output", content: output }]);
+      return;
+    }
+    
+    if (cmd in COMMANDS) {
+      // Check if it's an admin command and user is not admin
+      if (ADMIN_COMMANDS.includes(cmd) && !isAdmin) {
+        setLines(prev => [...prev, { type: "error", content: `${cmd}: Permission denied - Admin access required` }]);
+        return;
+      }
+      
+      setIsProcessing(true);
+      try {
+        const result = COMMANDS[cmd](args, isAdmin);
+        const output = result instanceof Promise ? await result : result;
+        setLines(prev => [...prev, { type: "output", content: output }]);
+      } catch (e) {
+        setLines(prev => [...prev, { type: "error", content: `Error executing ${cmd}` }]);
+      }
+      setIsProcessing(false);
     } else if (cmd) {
       setLines(prev => [...prev, { type: "error", content: `${cmd}: command not found` }]);
     }
-
-    setInput("");
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {

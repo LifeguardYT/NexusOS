@@ -21,6 +21,7 @@ const defaultSettings: Settings = {
   notifications: true,
   wifi: true,
   bluetooth: false,
+  developerMode: false,
 };
 
 export class MemStorage implements IStorage {

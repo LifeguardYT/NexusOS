@@ -1,15 +1,26 @@
 import { useState } from "react";
 import { useOS } from "@/lib/os-context";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   Palette, Monitor, Volume2, Wifi, Bell, User, Lock, Info, 
-  Sun, Moon, ChevronRight, Check
+  Sun, Moon, ChevronRight, Check, Shield, Code, Users, Activity,
+  Cpu, HardDrive, Clock, RefreshCw
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 
-type SettingsSection = "appearance" | "display" | "sound" | "network" | "notifications" | "accounts" | "privacy" | "about";
+type SettingsSection = "appearance" | "display" | "sound" | "network" | "notifications" | "accounts" | "privacy" | "about" | "admin" | "developer";
 
-const sections: { id: SettingsSection; name: string; icon: React.ComponentType<any> }[] = [
+interface SectionItem {
+  id: SettingsSection;
+  name: string;
+  icon: React.ComponentType<any>;
+  adminOnly?: boolean;
+}
+
+const sections: SectionItem[] = [
   { id: "appearance", name: "Appearance", icon: Palette },
   { id: "display", name: "Display", icon: Monitor },
   { id: "sound", name: "Sound", icon: Volume2 },
@@ -18,6 +29,8 @@ const sections: { id: SettingsSection; name: string; icon: React.ComponentType<a
   { id: "accounts", name: "Accounts", icon: User },
   { id: "privacy", name: "Privacy", icon: Lock },
   { id: "about", name: "About", icon: Info },
+  { id: "admin", name: "Admin", icon: Shield, adminOnly: true },
+  { id: "developer", name: "Developer", icon: Code, adminOnly: true },
 ];
 
 const wallpapers = [
@@ -39,9 +52,101 @@ const accentColors = [
   { id: "teal", name: "Teal", color: "#14b8a6" },
 ];
 
+interface AdminStatus {
+  isAdmin: boolean;
+  userId?: string;
+}
+
+interface SystemDiagnostics {
+  system: {
+    platform: string;
+    arch: string;
+    hostname: string;
+    uptime: number;
+    nodeVersion: string;
+  };
+  memory: {
+    total: number;
+    free: number;
+    used: number;
+  };
+  cpu: {
+    cores: number;
+    model: string;
+  };
+  process: {
+    pid: number;
+    memoryUsage: {
+      heapUsed: number;
+      heapTotal: number;
+      rss: number;
+    };
+    uptime: number;
+  };
+}
+
+interface UserData {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  createdAt: string;
+}
+
 export function SettingsApp() {
   const { settings, updateSettings } = useOS();
   const [activeSection, setActiveSection] = useState<SettingsSection>("appearance");
+
+  const { data: adminStatus } = useQuery<AdminStatus>({
+    queryKey: ["/api/admin/status"],
+  });
+
+  const { data: users, refetch: refetchUsers } = useQuery<UserData[]>({
+    queryKey: ["/api/admin/users"],
+    enabled: adminStatus?.isAdmin === true,
+  });
+
+  const { data: diagnostics, refetch: refetchDiagnostics } = useQuery<SystemDiagnostics>({
+    queryKey: ["/api/admin/diagnostics"],
+    enabled: adminStatus?.isAdmin === true,
+  });
+
+  const isAdmin = adminStatus?.isAdmin === true;
+
+  const devModeMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      const res = await apiRequest("POST", "/api/admin/dev-mode", { enabled });
+      if (!res.ok) {
+        throw new Error("Failed to update developer mode");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+    },
+    onError: () => {
+      // Revert on error - refetch settings to get correct state
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+    },
+  });
+
+  const handleDevModeToggle = (checked: boolean) => {
+    devModeMutation.mutate(checked);
+  };
+
+  const formatBytes = (bytes: number) => {
+    const gb = bytes / (1024 * 1024 * 1024);
+    return `${gb.toFixed(2)} GB`;
+  };
+
+  const formatUptime = (seconds: number) => {
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    if (days > 0) return `${days}d ${hours}h ${mins}m`;
+    if (hours > 0) return `${hours}h ${mins}m`;
+    return `${mins}m`;
+  };
 
   const renderContent = () => {
     switch (activeSection) {
@@ -278,6 +383,199 @@ export function SettingsApp() {
           </div>
         );
 
+      case "admin":
+        if (!isAdmin) {
+          return (
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              <p>Admin access required</p>
+            </div>
+          );
+        }
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Users className="w-6 h-6 text-blue-400" />
+                <h3 className="text-lg font-semibold">User Management</h3>
+              </div>
+              <button
+                onClick={() => refetchUsers()}
+                className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                data-testid="btn-refresh-users"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="space-y-2">
+              {users?.map((user) => (
+                <div 
+                  key={user.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-white/5"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                      <span className="text-white font-medium">
+                        {user.firstName?.[0] || user.email[0].toUpperCase()}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="font-medium">
+                        {user.firstName} {user.lastName}
+                        {user.id === adminStatus?.userId && (
+                          <Badge variant="secondary" className="ml-2 text-xs">You</Badge>
+                        )}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{user.email}</p>
+                    </div>
+                  </div>
+                  <div className="text-right text-sm text-muted-foreground">
+                    <p>ID: {user.id}</p>
+                    <p>Joined: {new Date(user.createdAt).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              ))}
+              {(!users || users.length === 0) && (
+                <p className="text-muted-foreground text-center py-4">No users found</p>
+              )}
+            </div>
+
+            <div className="pt-4 border-t border-white/10">
+              <h4 className="font-medium mb-3">Admin Stats</h4>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                  <p className="text-2xl font-bold text-blue-400">{users?.length || 0}</p>
+                  <p className="text-sm text-muted-foreground">Total Users</p>
+                </div>
+                <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <p className="text-2xl font-bold text-green-400">Active</p>
+                  <p className="text-sm text-muted-foreground">System Status</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case "developer":
+        if (!isAdmin) {
+          return (
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              <p>Admin access required</p>
+            </div>
+          );
+        }
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between py-3 border-b border-white/10">
+              <div>
+                <h4 className="font-medium">Developer Mode</h4>
+                <p className="text-sm text-muted-foreground">Enable advanced debugging features</p>
+              </div>
+              <Switch
+                checked={settings.developerMode}
+                onCheckedChange={handleDevModeToggle}
+                disabled={devModeMutation.isPending}
+                data-testid="switch-developer-mode"
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Activity className="w-6 h-6 text-green-400" />
+                <h3 className="text-lg font-semibold">System Diagnostics</h3>
+              </div>
+              <button
+                onClick={() => refetchDiagnostics()}
+                className="p-2 rounded-lg hover:bg-white/10 transition-colors"
+                data-testid="btn-refresh-diagnostics"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
+
+            {diagnostics && (
+              <div className="space-y-4">
+                <div className="p-4 rounded-lg bg-white/5 space-y-3">
+                  <div className="flex items-center gap-2 text-blue-400">
+                    <Cpu className="w-5 h-5" />
+                    <h4 className="font-medium">System Info</h4>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Platform</span>
+                      <span>{diagnostics.system.platform}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Architecture</span>
+                      <span>{diagnostics.system.arch}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Node Version</span>
+                      <span>{diagnostics.system.nodeVersion}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">System Uptime</span>
+                      <span>{formatUptime(diagnostics.system.uptime)}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-lg bg-white/5 space-y-3">
+                  <div className="flex items-center gap-2 text-purple-400">
+                    <HardDrive className="w-5 h-5" />
+                    <h4 className="font-medium">Memory</h4>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Total</span>
+                      <span>{formatBytes(diagnostics.memory.total)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Used</span>
+                      <span>{formatBytes(diagnostics.memory.used)}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Free</span>
+                      <span>{formatBytes(diagnostics.memory.free)}</span>
+                    </div>
+                    <div className="h-2 bg-white/10 rounded-full overflow-hidden mt-2">
+                      <div 
+                        className="h-full bg-purple-500 rounded-full"
+                        style={{ width: `${(diagnostics.memory.used / diagnostics.memory.total) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-lg bg-white/5 space-y-3">
+                  <div className="flex items-center gap-2 text-orange-400">
+                    <Clock className="w-5 h-5" />
+                    <h4 className="font-medium">Process Info</h4>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">PID</span>
+                      <span>{diagnostics.process.pid}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">CPU Cores</span>
+                      <span>{diagnostics.cpu.cores}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Process Uptime</span>
+                      <span>{formatUptime(diagnostics.process.uptime)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Heap Used</span>
+                      <span>{(diagnostics.process.memoryUsage.heapUsed / 1024 / 1024).toFixed(1)} MB</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
       default:
         return (
           <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -287,12 +585,14 @@ export function SettingsApp() {
     }
   };
 
+  const visibleSections = sections.filter(s => !s.adminOnly || isAdmin);
+
   return (
     <div className="h-full flex">
       {/* Sidebar */}
       <div className="w-60 border-r border-border bg-muted/30 p-2">
         <div className="space-y-1">
-          {sections.map(section => {
+          {visibleSections.map(section => {
             const Icon = section.icon;
             return (
               <button
@@ -307,7 +607,10 @@ export function SettingsApp() {
               >
                 <Icon className="w-5 h-5" />
                 <span className="text-sm font-medium">{section.name}</span>
-                <ChevronRight className={`w-4 h-4 ml-auto transition-opacity ${
+                {section.adminOnly && (
+                  <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0">Admin</Badge>
+                )}
+                <ChevronRight className={`w-4 h-4 ${section.adminOnly ? "" : "ml-auto"} transition-opacity ${
                   activeSection === section.id ? "opacity-100" : "opacity-0"
                 }`} />
               </button>

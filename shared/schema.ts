@@ -19,6 +19,7 @@ export const settingsSchema = z.object({
   notifications: z.boolean().default(true),
   wifi: z.boolean().default(true),
   bluetooth: z.boolean().default(false),
+  developerMode: z.boolean().default(false),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
