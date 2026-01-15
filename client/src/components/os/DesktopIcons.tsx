@@ -39,7 +39,7 @@ export function DesktopIcons() {
   };
 
   return (
-    <div className="absolute top-4 left-4 grid grid-cols-1 gap-2 z-0">
+    <div className="absolute top-4 left-4 grid grid-cols-2 gap-2 z-0" style={{ maxHeight: 'calc(100vh - 100px)' }}>
       {desktopApps.map(app => {
         const Icon = app.icon === "trash" ? Trash2 : iconMap[app.icon] || Folder;
         return (
