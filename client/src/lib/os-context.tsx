@@ -23,6 +23,7 @@ const defaultApps: App[] = [
   { id: "notes", name: "Notes", icon: "file-text", color: "bg-amber-400", defaultWidth: 600, defaultHeight: 500 },
   { id: "weather", name: "Weather", icon: "cloud-sun", color: "bg-sky-400", defaultWidth: 400, defaultHeight: 500 },
   { id: "music", name: "Music", icon: "music", color: "bg-pink-500", defaultWidth: 400, defaultHeight: 550 },
+  { id: "updates", name: "Updates", icon: "bell", color: "bg-indigo-500", defaultWidth: 450, defaultHeight: 550 },
   { id: "snake", name: "Snake", icon: "gamepad-2", color: "bg-green-500", defaultWidth: 500, defaultHeight: 550 },
   { id: "minesweeper", name: "Minesweeper", icon: "bomb", color: "bg-slate-600", defaultWidth: 400, defaultHeight: 500 },
   { id: "terminal", name: "Terminal", icon: "terminal", color: "bg-black", defaultWidth: 700, defaultHeight: 500 },

@@ -84,3 +84,15 @@ export const noteSchema = z.object({
 });
 
 export type Note = z.infer<typeof noteSchema>;
+
+// System Updates table
+export const updates = pgTable("updates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  createdAt: text("created_at").notNull().default(sql`now()`),
+});
+
+export const insertUpdateSchema = createInsertSchema(updates).omit({ id: true, createdAt: true });
+export type InsertUpdate = z.infer<typeof insertUpdateSchema>;
+export type Update = typeof updates.$inferSelect;
