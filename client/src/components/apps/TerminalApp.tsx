@@ -27,7 +27,7 @@ readme.txt  notes.txt  .bashrc  .profile`,
   cat: (args) => {
     if (args.length === 0) return "cat: missing file operand";
     const files: Record<string, string> = {
-      "readme.txt": "Welcome to WebOS Terminal!\nType 'help' for available commands.",
+      "readme.txt": "Welcome to NexusOS Terminal!\nType 'help' for available commands.",
       "notes.txt": "My notes go here...",
       ".bashrc": "# ~/.bashrc: executed by bash for interactive shells",
       ".profile": "# ~/.profile: executed by login shells",
@@ -37,19 +37,19 @@ readme.txt  notes.txt  .bashrc  .profile`,
   },
   uname: (args) => {
     if (args.includes("-a")) {
-      return "WebOS 1.0.0 x86_64 GNU/Linux";
+      return "NexusOS 1.0.0 x86_64 GNU/Linux";
     }
-    return "WebOS";
+    return "NexusOS";
   },
   neofetch: () => `
-       .--.        user@webos
-      |o_o |       ---------
-      |:_/ |       OS: WebOS 1.0.0
+       .--.        user@nexusos
+      |o_o |       -----------
+      |:_/ |       OS: NexusOS 1.0.0
      //   \\ \\      Host: Web Browser
     (|     | )     Kernel: JavaScript
    /'\\_   _/'\`\\    Uptime: ${Math.floor(Math.random() * 24)} hours
-   \\___)=(___/    Shell: wsh 1.0
-                  Terminal: WebOS Terminal
+   \\___)=(___/    Shell: nsh 1.0
+                  Terminal: NexusOS Terminal
                   CPU: Virtual @ Web GHz
                   Memory: Unlimited
 `,
@@ -57,7 +57,7 @@ readme.txt  notes.txt  .bashrc  .profile`,
 
 export function TerminalApp() {
   const [lines, setLines] = useState<TerminalLine[]>([
-    { type: "output", content: "WebOS Terminal v1.0.0" },
+    { type: "output", content: "NexusOS Terminal v1.0.0" },
     { type: "output", content: "Type 'help' for available commands.\n" },
   ]);
   const [input, setInput] = useState("");

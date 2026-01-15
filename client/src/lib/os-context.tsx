@@ -33,7 +33,7 @@ const defaultFiles: FileItem[] = [
   { id: "2", name: "Pictures", type: "folder", parentId: null },
   { id: "3", name: "Music", type: "folder", parentId: null },
   { id: "4", name: "Downloads", type: "folder", parentId: null },
-  { id: "5", name: "readme.txt", type: "file", content: "Welcome to WebOS!", parentId: null },
+  { id: "5", name: "readme.txt", type: "file", content: "Welcome to NexusOS!", parentId: null },
   { id: "6", name: "notes.txt", type: "file", content: "My notes go here...", parentId: "1" },
 ];
 

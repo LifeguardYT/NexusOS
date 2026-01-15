@@ -1,4 +1,4 @@
-# WebOS - Web-Based Operating System
+# NexusOS - Web-Based Operating System
 
 ## Overview
 A fully functional web-based operating system simulation built with React and TypeScript. Features a complete desktop environment with window management, taskbar, start menu, and multiple applications.
@@ -69,7 +69,7 @@ server/
 - Window positions and sizes are managed in memory during session
 
 ## Recent Changes
-- Initial implementation of WebOS with all core features
+- Initial implementation of NexusOS with all core features
 - 10 applications including browser, settings, games, and utilities
 - Full window management system
 - Responsive taskbar and start menu

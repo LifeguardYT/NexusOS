@@ -254,10 +254,10 @@ export function SettingsApp() {
           <div className="space-y-6">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                <span className="text-2xl font-bold text-white">W</span>
+                <span className="text-2xl font-bold text-white">N</span>
               </div>
               <div>
-                <h2 className="text-xl font-bold">WebOS</h2>
+                <h2 className="text-xl font-bold">NexusOS</h2>
                 <p className="text-sm text-muted-foreground">Version 1.0.0</p>
               </div>
             </div>
