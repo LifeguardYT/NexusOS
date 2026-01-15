@@ -122,6 +122,13 @@ export function Desktop() {
       onContextMenu={handleContextMenu}
       data-testid="desktop"
     >
+      {/* NexusOS Watermark */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
+        <span className="text-[12rem] font-bold text-white/10 tracking-wider">
+          NexusOS
+        </span>
+      </div>
+
       {/* Desktop Icons */}
       <DesktopIcons />
 
