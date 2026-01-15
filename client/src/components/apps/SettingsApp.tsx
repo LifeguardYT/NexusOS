@@ -91,11 +91,25 @@ interface UserData {
   firstName: string | null;
   lastName: string | null;
   createdAt: string;
+  profileImageUrl?: string | null;
+}
+
+interface AuthUser {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  profileImageUrl: string | null;
+  createdAt: string;
 }
 
 export function SettingsApp() {
   const { settings, updateSettings } = useOS();
   const [activeSection, setActiveSection] = useState<SettingsSection>("appearance");
+
+  const { data: currentUser } = useQuery<AuthUser | null>({
+    queryKey: ["/api/auth/user"],
+  });
 
   const { data: adminStatus } = useQuery<AdminStatus>({
     queryKey: ["/api/admin/status"],
@@ -355,15 +369,36 @@ export function SettingsApp() {
         );
 
       case "accounts":
+        const displayName = currentUser 
+          ? `${currentUser.firstName || ''}${currentUser.lastName ? ' ' + currentUser.lastName : ''}`.trim() || currentUser.email
+          : "Guest User";
+        const userInitial = currentUser 
+          ? (currentUser.firstName?.[0] || currentUser.email[0]).toUpperCase()
+          : "G";
+        
         return (
           <div className="space-y-6">
             <div className="flex items-center gap-4 p-4 rounded-xl bg-white/5">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
-                <User className="w-8 h-8 text-white" />
-              </div>
+              {currentUser?.profileImageUrl ? (
+                <img 
+                  src={currentUser.profileImageUrl} 
+                  alt="Profile" 
+                  className="w-16 h-16 rounded-full object-cover"
+                  data-testid="img-profile"
+                />
+              ) : (
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                  <span className="text-2xl font-bold text-white">{userInitial}</span>
+                </div>
+              )}
               <div>
-                <h3 className="text-lg font-semibold">Guest User</h3>
-                <p className="text-sm text-muted-foreground">Not signed in</p>
+                <h3 className="text-lg font-semibold" data-testid="text-username">{displayName}</h3>
+                <p className="text-sm text-muted-foreground" data-testid="text-signin-status">
+                  {currentUser ? "Signed in" : "Not signed in"}
+                </p>
+                {currentUser && (
+                  <p className="text-xs text-muted-foreground">{currentUser.email}</p>
+                )}
               </div>
             </div>
 
