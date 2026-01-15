@@ -1,7 +1,6 @@
 import { useState, useCallback } from "react";
-import { ArrowLeft, ArrowRight, RotateCw, Home, Star, Plus, X, Search, Lock, ExternalLink, AlertTriangle, Shield, ShieldOff } from "lucide-react";
+import { ArrowLeft, ArrowRight, RotateCw, Home, Star, Plus, X, Search, Lock, ExternalLink, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 
 interface Tab {
   id: string;
@@ -9,30 +8,24 @@ interface Tab {
   title: string;
 }
 
-// Convert YouTube URLs to embeddable format
 function getEmbeddableUrl(url: string): string {
   try {
     const urlObj = new URL(url);
     
-    // YouTube video URLs
     if (urlObj.hostname.includes("youtube.com")) {
-      // Handle youtube.com/watch?v=VIDEO_ID
       const videoId = urlObj.searchParams.get("v");
       if (videoId) {
         return `https://www.youtube.com/embed/${videoId}?autoplay=0`;
       }
-      // Handle youtube.com/shorts/VIDEO_ID
       const shortsMatch = urlObj.pathname.match(/\/shorts\/([a-zA-Z0-9_-]+)/);
       if (shortsMatch) {
         return `https://www.youtube.com/embed/${shortsMatch[1]}?autoplay=0`;
       }
-      // YouTube homepage - use embedded search/browse
       if (urlObj.pathname === "/" || urlObj.pathname === "") {
         return "https://www.youtube.com/embed?listType=search&list=";
       }
     }
     
-    // Handle youtu.be short links
     if (urlObj.hostname === "youtu.be") {
       const videoId = urlObj.pathname.slice(1);
       if (videoId) {
@@ -40,20 +33,17 @@ function getEmbeddableUrl(url: string): string {
       }
     }
     
-    // Return original URL for non-YouTube sites
     return url;
   } catch {
     return url;
   }
 }
 
-// Check if URL needs the external link warning
 function needsExternalWarning(url: string): boolean {
   try {
     const urlObj = new URL(url);
     const hostname = urlObj.hostname.toLowerCase();
     
-    // Sites known to block iframes (excluding YouTube which we handle specially)
     const blockedSites = [
       "twitter.com", "x.com", "facebook.com", "instagram.com", 
       "linkedin.com", "reddit.com", "tiktok.com", "twitch.tv"
@@ -73,19 +63,8 @@ export function BrowserApp() {
   const [inputUrl, setInputUrl] = useState("https://www.google.com");
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  const [proxyMode, setProxyMode] = useState(false);
 
   const activeTab = tabs.find(t => t.id === activeTabId);
-  
-  // Get the URL to load in iframe (with proxy if enabled)
-  const getIframeSrc = useCallback((url: string): string => {
-    if (proxyMode) {
-      // Use proxy for all URLs in proxy mode
-      return `/api/proxy?url=${encodeURIComponent(url)}`;
-    }
-    // Otherwise use the embeddable URL conversion for YouTube
-    return getEmbeddableUrl(url);
-  }, [proxyMode]);
 
   const navigateTo = useCallback((url: string) => {
     if (!url.startsWith("http://") && !url.startsWith("https://")) {
@@ -263,8 +242,8 @@ export function BrowserApp() {
         </button>
       </div>
 
-      {/* Quick Links & Proxy Toggle */}
-      <div className="flex items-center justify-between px-3 py-1.5 bg-gray-800/30 border-b border-gray-700/50">
+      {/* Quick Links */}
+      <div className="flex items-center px-3 py-1.5 bg-gray-800/30 border-b border-gray-700/50">
         <div className="flex items-center gap-2">
           {quickLinks.map(link => (
             <button
@@ -277,29 +256,13 @@ export function BrowserApp() {
             </button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5">
-            {proxyMode ? (
-              <Shield className="w-3.5 h-3.5 text-green-400" />
-            ) : (
-              <ShieldOff className="w-3.5 h-3.5 text-white/40" />
-            )}
-            <span className="text-xs text-white/60">Proxy</span>
-          </div>
-          <Switch
-            checked={proxyMode}
-            onCheckedChange={setProxyMode}
-            className="scale-75"
-            data-testid="switch-proxy-mode"
-          />
-        </div>
       </div>
 
       {/* Browser Content */}
       <div className="flex-1 bg-gray-900 relative">
         <iframe
           id="browser-frame"
-          src={activeTab?.url ? getIframeSrc(activeTab.url) : undefined}
+          src={activeTab?.url ? getEmbeddableUrl(activeTab.url) : undefined}
           className="w-full h-full border-0"
           sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -307,38 +270,26 @@ export function BrowserApp() {
           data-testid="browser-iframe"
         />
         
-        {/* Iframe blocked notice overlay - only show for known blocked sites when proxy is off */}
-        {activeTab?.url && !proxyMode && needsExternalWarning(activeTab.url) && (
+        {/* Iframe blocked notice overlay */}
+        {activeTab?.url && needsExternalWarning(activeTab.url) && (
           <div className="absolute bottom-4 left-4 right-4 bg-gray-800/95 backdrop-blur-sm border border-gray-700 rounded-lg p-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <AlertTriangle className="w-5 h-5 text-yellow-500 shrink-0" />
               <div className="text-sm">
-                <p className="text-white font-medium">This site cannot be embedded directly</p>
-                <p className="text-gray-400 text-xs">Enable Proxy mode to view this site, or open in a new tab.</p>
+                <p className="text-white font-medium">This site cannot be embedded</p>
+                <p className="text-gray-400 text-xs">This website blocks embedding. Click to open in a new tab.</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={() => setProxyMode(true)}
-                variant="default"
-                size="sm"
-                className="shrink-0 gap-2"
-                data-testid="btn-enable-proxy"
-              >
-                <Shield className="w-4 h-4" />
-                Enable Proxy
-              </Button>
-              <Button
-                onClick={() => window.open(activeTab.url, '_blank')}
-                variant="outline"
-                size="sm"
-                className="shrink-0 gap-2"
-                data-testid="btn-open-external"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Open
-              </Button>
-            </div>
+            <Button
+              onClick={() => window.open(activeTab.url, '_blank')}
+              variant="outline"
+              size="sm"
+              className="shrink-0 gap-2"
+              data-testid="btn-open-external"
+            >
+              <ExternalLink className="w-4 h-4" />
+              Open
+            </Button>
           </div>
         )}
       </div>
