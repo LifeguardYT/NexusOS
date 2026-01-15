@@ -15,6 +15,7 @@ const defaultSettings: Settings = {
   bluetooth: false,
   developerMode: false,
   syncEnabled: false,
+  displayName: "",
 };
 
 const defaultApps: App[] = [

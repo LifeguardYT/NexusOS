@@ -21,6 +21,7 @@ export const settingsSchema = z.object({
   bluetooth: z.boolean().default(false),
   developerMode: z.boolean().default(false),
   syncEnabled: z.boolean().default(false),
+  displayName: z.string().default(""),
 });
 
 export type Settings = z.infer<typeof settingsSchema>;

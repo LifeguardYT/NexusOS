@@ -378,12 +378,15 @@ export function SettingsApp() {
         );
 
       case "accounts":
-        const displayName = currentUser 
+        const defaultDisplayName = currentUser 
           ? `${currentUser.firstName || ''}${currentUser.lastName ? ' ' + currentUser.lastName : ''}`.trim() || currentUser.email
           : "Guest User";
-        const userInitial = currentUser 
-          ? (currentUser.firstName?.[0] || currentUser.email[0]).toUpperCase()
-          : "G";
+        const displayName = settings.displayName || defaultDisplayName;
+        const userInitial = settings.displayName 
+          ? settings.displayName[0].toUpperCase()
+          : currentUser 
+            ? (currentUser.firstName?.[0] || currentUser.email[0]).toUpperCase()
+            : "G";
         
         // Profile sub-section
         if (accountSubSection === "profile") {
@@ -422,10 +425,29 @@ export function SettingsApp() {
               <div className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm text-muted-foreground">Display Name</label>
-                  <div className="flex items-center gap-2 p-3 rounded-lg bg-white/5 border border-white/10">
-                    <User className="w-4 h-4 text-muted-foreground" />
-                    <span>{displayName}</span>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 flex items-center gap-2 p-3 rounded-lg bg-white/5 border border-white/10">
+                      <User className="w-4 h-4 text-muted-foreground" />
+                      <input
+                        type="text"
+                        value={settings.displayName}
+                        onChange={(e) => updateSettings({ displayName: e.target.value })}
+                        placeholder={defaultDisplayName}
+                        className="flex-1 bg-transparent border-none outline-none text-foreground placeholder-muted-foreground"
+                        data-testid="input-display-name"
+                      />
+                    </div>
+                    {settings.displayName && (
+                      <button
+                        onClick={() => updateSettings({ displayName: "" })}
+                        className="px-3 py-2 rounded-lg bg-white/10 text-sm hover:bg-white/20 transition-colors"
+                        data-testid="btn-reset-name"
+                      >
+                        Reset
+                      </button>
+                    )}
                   </div>
+                  <p className="text-xs text-muted-foreground">Leave empty to use your account name</p>
                 </div>
 
                 <div className="space-y-2">
