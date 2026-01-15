@@ -8,34 +8,35 @@ interface Tab {
   title: string;
 }
 
-function getEmbeddableUrl(url: string): string {
+function getEmbeddableUrl(url: string): { embedUrl: string; isEmbeddable: boolean } {
   try {
     const urlObj = new URL(url);
     
+    // YouTube video URLs - convert to embed
     if (urlObj.hostname.includes("youtube.com")) {
       const videoId = urlObj.searchParams.get("v");
       if (videoId) {
-        return `https://www.youtube.com/embed/${videoId}?autoplay=0`;
+        return { embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=0`, isEmbeddable: true };
       }
       const shortsMatch = urlObj.pathname.match(/\/shorts\/([a-zA-Z0-9_-]+)/);
       if (shortsMatch) {
-        return `https://www.youtube.com/embed/${shortsMatch[1]}?autoplay=0`;
+        return { embedUrl: `https://www.youtube.com/embed/${shortsMatch[1]}?autoplay=0`, isEmbeddable: true };
       }
-      if (urlObj.pathname === "/" || urlObj.pathname === "") {
-        return "https://www.youtube.com/embed?listType=search&list=";
-      }
+      // YouTube homepage or other pages - not embeddable
+      return { embedUrl: url, isEmbeddable: false };
     }
     
+    // youtu.be short links
     if (urlObj.hostname === "youtu.be") {
       const videoId = urlObj.pathname.slice(1);
       if (videoId) {
-        return `https://www.youtube.com/embed/${videoId}?autoplay=0`;
+        return { embedUrl: `https://www.youtube.com/embed/${videoId}?autoplay=0`, isEmbeddable: true };
       }
     }
     
-    return url;
+    return { embedUrl: url, isEmbeddable: true };
   } catch {
-    return url;
+    return { embedUrl: url, isEmbeddable: true };
   }
 }
 
@@ -260,38 +261,52 @@ export function BrowserApp() {
 
       {/* Browser Content */}
       <div className="flex-1 bg-gray-900 relative">
-        <iframe
-          id="browser-frame"
-          src={activeTab?.url ? getEmbeddableUrl(activeTab.url) : undefined}
-          className="w-full h-full border-0"
-          sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-          title="Browser"
-          data-testid="browser-iframe"
-        />
-        
-        {/* Iframe blocked notice overlay */}
-        {activeTab?.url && needsExternalWarning(activeTab.url) && (
-          <div className="absolute bottom-4 left-4 right-4 bg-gray-800/95 backdrop-blur-sm border border-gray-700 rounded-lg p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5 text-yellow-500 shrink-0" />
-              <div className="text-sm">
-                <p className="text-white font-medium">This site cannot be embedded</p>
-                <p className="text-gray-400 text-xs">This website blocks embedding. Click to open in a new tab.</p>
-              </div>
-            </div>
-            <Button
-              onClick={() => window.open(activeTab.url, '_blank')}
-              variant="outline"
-              size="sm"
-              className="shrink-0 gap-2"
-              data-testid="btn-open-external"
-            >
-              <ExternalLink className="w-4 h-4" />
-              Open
-            </Button>
-          </div>
-        )}
+        {(() => {
+          const urlResult = activeTab?.url ? getEmbeddableUrl(activeTab.url) : null;
+          const showWarning = (urlResult && !urlResult.isEmbeddable) || (activeTab?.url && needsExternalWarning(activeTab.url));
+          
+          return (
+            <>
+              {urlResult?.isEmbeddable && (
+                <iframe
+                  id="browser-frame"
+                  src={urlResult.embedUrl}
+                  className="w-full h-full border-0"
+                  sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  title="Browser"
+                  data-testid="browser-iframe"
+                />
+              )}
+              
+              {showWarning && (
+                <div className={`${urlResult?.isEmbeddable ? 'absolute bottom-4 left-4 right-4' : 'absolute inset-0 flex items-center justify-center'}`}>
+                  <div className={`bg-gray-800/95 backdrop-blur-sm border border-gray-700 rounded-lg p-6 ${urlResult?.isEmbeddable ? '' : 'max-w-md text-center'}`}>
+                    <div className={`flex ${urlResult?.isEmbeddable ? 'items-center justify-between' : 'flex-col items-center gap-4'}`}>
+                      <div className={`flex ${urlResult?.isEmbeddable ? 'items-center gap-3' : 'flex-col items-center gap-3'}`}>
+                        <AlertTriangle className="w-8 h-8 text-yellow-500 shrink-0" />
+                        <div className="text-sm">
+                          <p className="text-white font-medium">This site cannot be embedded</p>
+                          <p className="text-gray-400 text-xs mt-1">This website blocks embedding. Click to open in a new tab.</p>
+                        </div>
+                      </div>
+                      <Button
+                        onClick={() => window.open(activeTab?.url, '_blank')}
+                        variant="outline"
+                        size="sm"
+                        className="shrink-0 gap-2 mt-4"
+                        data-testid="btn-open-external"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                        Open in New Tab
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          );
+        })()}
       </div>
     </div>
   );
