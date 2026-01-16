@@ -125,23 +125,20 @@ export function StartMenu() {
     e.preventDefault();
     e.stopPropagation();
     
-    // Get the button element that was right-clicked
-    const target = e.currentTarget as HTMLElement;
-    const rect = target.getBoundingClientRect();
-    
-    // Position menu to the right of the app icon, or left if it would overflow
+    // Position menu at mouse cursor
     const menuWidth = 180;
-    let x = rect.right + 4;
-    let y = rect.top;
+    const menuHeight = 120;
+    let x = e.clientX;
+    let y = e.clientY;
     
     // Check if menu would overflow right side of viewport
-    if (x + menuWidth > window.innerWidth - 20) {
-      x = rect.left - menuWidth - 4;
+    if (x + menuWidth > window.innerWidth - 10) {
+      x = x - menuWidth;
     }
     
-    // Ensure menu doesn't go above the viewport
-    if (y < 20) {
-      y = 20;
+    // Check if menu would overflow bottom of viewport
+    if (y + menuHeight > window.innerHeight - 10) {
+      y = y - menuHeight;
     }
     
     setContextMenu({ x, y, appId: app.id, appName: app.name, isSystemApp: app.isSystemApp });
