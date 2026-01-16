@@ -39,7 +39,7 @@ const defaultFiles: FileItem[] = [
   { id: "2", name: "Pictures", type: "folder", parentId: null },
   { id: "3", name: "Music", type: "folder", parentId: null },
   { id: "4", name: "Downloads", type: "folder", parentId: null },
-  { id: "5", name: "readme.txt", type: "file", content: "Welcome to NexusOS!", parentId: null },
+  { id: "5", name: "readme.txt", type: "file", content: "Welcome to NexusOS! This is a project made by LifeguardYT as part of lgyt.dev. This is my best project, and I am very proud of it. This project will be getting updates and more! Thank you for using NexusOS, and have fun!\n\n-LifeguardYT\nJoin lgyt.dev! https://discord.gg/RaY3xeM6d4", parentId: null },
   { id: "6", name: "notes.txt", type: "file", content: "My notes go here...", parentId: "1" },
 ];
 
