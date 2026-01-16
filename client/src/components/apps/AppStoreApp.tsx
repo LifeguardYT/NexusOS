@@ -9,6 +9,7 @@ import {
   Cloud, Music, Gamepad2, Terminal, Settings, FolderOpen, MessageSquare,
   Package, TrendingUp, Sparkles, Clock, Blocks, Trash2
 } from "lucide-react";
+import geometryLessonsMonsterLogo from "@assets/download_(79)_1768587249858.png";
 
 interface AppInfo {
   id: string;
@@ -184,7 +185,7 @@ const allApps: AppInfo[] = [
     id: "geometry-lessons-monster",
     name: "Geometry Lessons Monster",
     description: "Learn geometry with interactive lessons and fun monster-themed challenges.",
-    icon: <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-teal-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">GL</div>,
+    icon: <img src={geometryLessonsMonsterLogo} alt="Geometry Lessons Monster" className="w-8 h-8 rounded-lg object-cover" />,
     category: "Games",
     rating: 4.5,
     downloads: "1M+",
