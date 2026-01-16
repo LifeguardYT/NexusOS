@@ -48,6 +48,14 @@ const externalApps: InstalledAppInfo[] = [
     externalUrl: "https://www.coolmathgames.com/",
     isSystemApp: false,
   },
+  {
+    id: "geometry-lessons-monster",
+    name: "Geometry Lessons Monster",
+    icon: <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-teal-600 rounded flex items-center justify-center text-white font-bold text-xs">GL</div>,
+    color: "bg-gradient-to-br from-green-500 to-teal-600",
+    externalUrl: "https://geometry-lessons.monster/",
+    isSystemApp: false,
+  },
 ];
 
 interface ContextMenuState {

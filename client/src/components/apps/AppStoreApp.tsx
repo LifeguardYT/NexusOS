@@ -181,6 +181,18 @@ const allApps: AppInfo[] = [
     externalUrl: "https://www.coolmathgames.com/",
   },
   {
+    id: "geometry-lessons-monster",
+    name: "Geometry Lessons Monster",
+    description: "Learn geometry with interactive lessons and fun monster-themed challenges.",
+    icon: <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-teal-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">GL</div>,
+    category: "Games",
+    rating: 4.5,
+    downloads: "1M+",
+    size: "Web App",
+    isSystemApp: false,
+    externalUrl: "https://geometry-lessons.monster/",
+  },
+  {
     id: "request-app",
     name: "Request App",
     description: "Request a new app to be added to the NexusOS App Store.",
