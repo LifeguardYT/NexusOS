@@ -5,20 +5,22 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   Palette, Monitor, Volume2, Wifi, Bell, User, Lock, Info, 
   Sun, Moon, ChevronRight, Check, Shield, Code, Activity, Users,
-  Cpu, HardDrive, Clock, RefreshCw, ArrowLeft, Key, Mail, Ban, UserCheck
+  Cpu, HardDrive, Clock, RefreshCw, ArrowLeft, Key, Mail, Ban, UserCheck, Crown, ShieldCheck, ShieldOff
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
-type SettingsSection = "appearance" | "display" | "sound" | "network" | "notifications" | "accounts" | "about" | "admin" | "developer";
+type SettingsSection = "appearance" | "display" | "sound" | "network" | "notifications" | "accounts" | "about" | "admin" | "developer" | "owner";
 
 interface SectionItem {
   id: SettingsSection;
   name: string;
   icon: React.ComponentType<any>;
   adminOnly?: boolean;
+  ownerOnly?: boolean;
 }
 
 const sections: SectionItem[] = [
@@ -31,6 +33,7 @@ const sections: SectionItem[] = [
   { id: "about", name: "About", icon: Info },
   { id: "admin", name: "Admin", icon: Shield, adminOnly: true },
   { id: "developer", name: "Developer", icon: Code, adminOnly: true },
+  { id: "owner", name: "Owner", icon: Crown, ownerOnly: true },
 ];
 
 const wallpapers = [
@@ -54,6 +57,7 @@ const accentColors = [
 
 interface AdminStatus {
   isAdmin: boolean;
+  isOwner: boolean;
   userId?: string;
 }
 
@@ -93,6 +97,7 @@ interface UserData {
   createdAt: string;
   profileImageUrl?: string | null;
   banned?: boolean | null;
+  isAdmin?: boolean | null;
 }
 
 interface AuthUser {
@@ -117,6 +122,9 @@ export function SettingsApp() {
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
   const [setupError, setSetupError] = useState("");
+  const [adminUsername, setAdminUsername] = useState("");
+  const [grantAdminError, setGrantAdminError] = useState("");
+  const [grantAdminSuccess, setGrantAdminSuccess] = useState("");
 
   const { data: currentUser } = useQuery<AuthUser | null>({
     queryKey: ["/api/auth/user"],
@@ -172,6 +180,42 @@ export function SettingsApp() {
   const handleBanUser = (userId: string, currentlyBanned: boolean) => {
     banUserMutation.mutate({ userId, banned: !currentlyBanned });
   };
+
+  const grantAdminMutation = useMutation({
+    mutationFn: async (username: string) => {
+      const res = await apiRequest("POST", "/api/owner/grant-admin", { username });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to grant admin");
+      }
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setGrantAdminSuccess(`Successfully granted admin to ${data.user?.firstName || data.user?.email}`);
+      setGrantAdminError("");
+      setAdminUsername("");
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setTimeout(() => setGrantAdminSuccess(""), 3000);
+    },
+    onError: (error: Error) => {
+      setGrantAdminError(error.message);
+      setGrantAdminSuccess("");
+    },
+  });
+
+  const revokeAdminMutation = useMutation({
+    mutationFn: async (userId: string) => {
+      const res = await apiRequest("POST", `/api/owner/users/${userId}/admin`, { isAdmin: false });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to revoke admin");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+  });
 
   const handleDevModeToggle = (checked: boolean) => {
     // Update local state immediately for responsive UI
@@ -1052,6 +1096,95 @@ export function SettingsApp() {
           </div>
         );
 
+      case "owner":
+        if (!adminStatus?.isOwner) {
+          return (
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              <p>Owner access required</p>
+            </div>
+          );
+        }
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <Crown className="w-6 h-6 text-yellow-400" />
+              <h3 className="text-lg font-semibold">Owner Controls</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              As the owner, you can grant or revoke admin privileges to other users.
+            </p>
+
+            <div className="p-4 rounded-lg bg-white/5 space-y-4">
+              <h4 className="font-medium">Grant Admin by Username</h4>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter username or email..."
+                  value={adminUsername}
+                  onChange={(e) => setAdminUsername(e.target.value)}
+                  className="flex-1"
+                  data-testid="input-admin-username"
+                />
+                <Button
+                  onClick={() => grantAdminMutation.mutate(adminUsername)}
+                  disabled={!adminUsername.trim() || grantAdminMutation.isPending}
+                  data-testid="btn-grant-admin"
+                >
+                  <ShieldCheck className="w-4 h-4 mr-2" />
+                  Grant Admin
+                </Button>
+              </div>
+              {grantAdminError && (
+                <p className="text-sm text-red-400">{grantAdminError}</p>
+              )}
+              {grantAdminSuccess && (
+                <p className="text-sm text-green-400">{grantAdminSuccess}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <h4 className="font-medium">Current Admins</h4>
+              {users?.filter(u => u.isAdmin || u.id === adminStatus?.userId).map((user) => (
+                <div 
+                  key={user.id}
+                  className="flex items-center justify-between p-3 rounded-lg bg-white/5"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
+                      <span className="text-white font-medium">
+                        {user.firstName?.[0] || user.email?.[0]?.toUpperCase() || '?'}
+                      </span>
+                    </div>
+                    <div>
+                      <p className="font-medium flex items-center gap-2 flex-wrap">
+                        {user.firstName} {user.lastName}
+                        {user.id === adminStatus?.userId && (
+                          <Badge className="text-xs bg-yellow-500/20 text-yellow-400 border-yellow-500/30">Owner</Badge>
+                        )}
+                        {user.isAdmin && user.id !== adminStatus?.userId && (
+                          <Badge variant="secondary" className="text-xs">Admin</Badge>
+                        )}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{user.email}</p>
+                    </div>
+                  </div>
+                  {user.id !== adminStatus?.userId && user.isAdmin && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => revokeAdminMutation.mutate(user.id)}
+                      disabled={revokeAdminMutation.isPending}
+                      data-testid={`btn-revoke-admin-${user.id}`}
+                    >
+                      <ShieldOff className="w-4 h-4 mr-1" />
+                      Revoke
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+
       default:
         return (
           <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -1061,7 +1194,12 @@ export function SettingsApp() {
     }
   };
 
-  const visibleSections = sections.filter(s => !s.adminOnly || isAdmin);
+  const isOwner = adminStatus?.isOwner === true;
+  const visibleSections = sections.filter(s => {
+    if (s.ownerOnly) return isOwner;
+    if (s.adminOnly) return isAdmin;
+    return true;
+  });
 
   return (
     <div className="h-full flex">
@@ -1083,10 +1221,13 @@ export function SettingsApp() {
               >
                 <Icon className="w-5 h-5" />
                 <span className="text-sm font-medium">{section.name}</span>
-                {section.adminOnly && (
+                {section.ownerOnly && (
+                  <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0 border-yellow-500/50 text-yellow-400">Owner</Badge>
+                )}
+                {section.adminOnly && !section.ownerOnly && (
                   <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0">Admin</Badge>
                 )}
-                <ChevronRight className={`w-4 h-4 ${section.adminOnly ? "" : "ml-auto"} transition-opacity ${
+                <ChevronRight className={`w-4 h-4 ${section.adminOnly || section.ownerOnly ? "" : "ml-auto"} transition-opacity ${
                   activeSection === section.id ? "opacity-100" : "opacity-0"
                 }`} />
               </button>

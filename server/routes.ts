@@ -9,8 +9,20 @@ import { desc, eq, or, and, ilike } from "drizzle-orm";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import os from "os";
 
-// Admin user ID - set this to your Replit user ID
-const ADMIN_USER_ID = process.env.ADMIN_USER_ID || "";
+// Owner user ID - the original owner who can grant admin to others
+const OWNER_USER_ID = process.env.ADMIN_USER_ID || "";
+
+// Helper function to check if user is admin (owner OR has isAdmin flag)
+async function isUserAdmin(userId: string): Promise<boolean> {
+  if (userId === OWNER_USER_ID) return true;
+  const [user] = await db.select().from(users).where(eq(users.id, userId));
+  return user?.isAdmin === true;
+}
+
+// Helper function to check if user is the owner
+function isOwner(userId: string): boolean {
+  return userId === OWNER_USER_ID;
+}
 
 export async function registerRoutes(
   httpServer: Server,
@@ -23,10 +35,19 @@ export async function registerRoutes(
   registerAuthRoutes(app);
 
   // Get admin status for current user
-  app.get("/api/admin/status", (req: any, res) => {
-    const userId = req.user?.claims?.sub;
-    const isAdmin = userId && userId === ADMIN_USER_ID;
-    res.json({ isAdmin, userId });
+  app.get("/api/admin/status", async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.json({ isAdmin: false, isOwner: false, userId: null });
+      }
+      const adminStatus = await isUserAdmin(userId);
+      const ownerStatus = isOwner(userId);
+      res.json({ isAdmin: adminStatus, isOwner: ownerStatus, userId });
+    } catch (error) {
+      console.error("Failed to check admin status:", error);
+      res.json({ isAdmin: false, isOwner: false, userId: null });
+    }
   });
 
   // Get settings
@@ -75,7 +96,7 @@ export async function registerRoutes(
   app.post("/api/updates", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
-      if (userId !== ADMIN_USER_ID) {
+      if (!userId || !(await isUserAdmin(userId))) {
         return res.status(403).json({ error: "Admin access required" });
       }
       const data = insertUpdateSchema.parse(req.body);
@@ -95,7 +116,7 @@ export async function registerRoutes(
   app.delete("/api/updates/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
-      if (userId !== ADMIN_USER_ID) {
+      if (!userId || !(await isUserAdmin(userId))) {
         return res.status(403).json({ error: "Admin access required" });
       }
       const { id } = req.params;
@@ -111,7 +132,7 @@ export async function registerRoutes(
   app.get("/api/admin/users", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
-      if (userId !== ADMIN_USER_ID) {
+      if (!userId || !(await isUserAdmin(userId))) {
         return res.status(403).json({ error: "Admin access required" });
       }
       const allUsers = await db.select().from(users).orderBy(desc(users.createdAt));
@@ -126,7 +147,7 @@ export async function registerRoutes(
   app.get("/api/admin/diagnostics", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
-      if (userId !== ADMIN_USER_ID) {
+      if (!userId || !(await isUserAdmin(userId))) {
         return res.status(403).json({ error: "Admin access required" });
       }
       
@@ -165,7 +186,7 @@ export async function registerRoutes(
   app.post("/api/admin/dev-mode", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
-      if (userId !== ADMIN_USER_ID) {
+      if (!userId || !(await isUserAdmin(userId))) {
         return res.status(403).json({ error: "Admin access required" });
       }
       const { enabled } = req.body;
@@ -182,15 +203,18 @@ export async function registerRoutes(
   app.post("/api/admin/users/:userId/ban", isAuthenticated, async (req: any, res) => {
     try {
       const adminId = req.user?.claims?.sub;
-      if (adminId !== ADMIN_USER_ID) {
+      if (!adminId || !(await isUserAdmin(adminId))) {
         return res.status(403).json({ error: "Admin access required" });
       }
       
       const { userId } = req.params;
       const { banned } = req.body;
       
-      // Prevent admin from banning themselves
-      if (userId === ADMIN_USER_ID) {
+      // Prevent banning the owner or yourself
+      if (userId === OWNER_USER_ID) {
+        return res.status(400).json({ error: "Cannot ban the owner" });
+      }
+      if (userId === adminId) {
         return res.status(400).json({ error: "Cannot ban yourself" });
       }
       
@@ -207,6 +231,85 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Failed to ban/unban user:", error);
       res.status(500).json({ error: "Failed to update user ban status" });
+    }
+  });
+
+  // ============= OWNER-ONLY ROUTES =============
+
+  // Grant/revoke admin privileges (owner only)
+  app.post("/api/owner/users/:userId/admin", isAuthenticated, async (req: any, res) => {
+    try {
+      const ownerId = req.user?.claims?.sub;
+      if (!isOwner(ownerId)) {
+        return res.status(403).json({ error: "Owner access required" });
+      }
+      
+      const { userId } = req.params;
+      const { isAdmin: grantAdmin } = req.body;
+      
+      // Cannot change owner's admin status
+      if (userId === OWNER_USER_ID) {
+        return res.status(400).json({ error: "Cannot modify owner privileges" });
+      }
+      
+      const [updatedUser] = await db.update(users)
+        .set({ isAdmin: grantAdmin === true, updatedAt: new Date() })
+        .where(eq(users.id, userId))
+        .returning();
+      
+      if (!updatedUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      res.json({ success: true, user: updatedUser });
+    } catch (error) {
+      console.error("Failed to update admin status:", error);
+      res.status(500).json({ error: "Failed to update admin status" });
+    }
+  });
+
+  // Grant admin by username/email (owner only)
+  app.post("/api/owner/grant-admin", isAuthenticated, async (req: any, res) => {
+    try {
+      const ownerId = req.user?.claims?.sub;
+      if (!isOwner(ownerId)) {
+        return res.status(403).json({ error: "Owner access required" });
+      }
+      
+      const { username } = req.body;
+      if (!username || typeof username !== 'string') {
+        return res.status(400).json({ error: "Username is required" });
+      }
+      
+      // Search by firstName or email (case insensitive)
+      const matchingUsers = await db.select().from(users).where(
+        or(
+          ilike(users.firstName, username),
+          ilike(users.email, username),
+          ilike(users.email, `${username}%`)
+        )
+      );
+      
+      if (matchingUsers.length === 0) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      const targetUser = matchingUsers[0];
+      
+      // Cannot change owner's admin status
+      if (targetUser.id === OWNER_USER_ID) {
+        return res.status(400).json({ error: "Cannot modify owner privileges" });
+      }
+      
+      const [updatedUser] = await db.update(users)
+        .set({ isAdmin: true, updatedAt: new Date() })
+        .where(eq(users.id, targetUser.id))
+        .returning();
+      
+      res.json({ success: true, user: updatedUser });
+    } catch (error) {
+      console.error("Failed to grant admin:", error);
+      res.status(500).json({ error: "Failed to grant admin privileges" });
     }
   });
 

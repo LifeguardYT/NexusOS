@@ -68,7 +68,31 @@ server/
 - Settings persist in localStorage
 - Window positions and sizes are managed in memory during session
 
+## Role-Based Access Control
+
+### Owner vs Admin
+- **Owner**: The user whose ID matches `OWNER_USER_ID` environment variable. Has all admin privileges plus ability to grant/revoke admin to other users.
+- **Admin**: Users with `isAdmin=true` in the database. Can access admin features but cannot manage other admins.
+
+### Settings Sections by Role
+- **Regular Users**: Appearance, Display, Sound, Network, Notifications, Accounts, About
+- **Admins**: All above + Admin (user management, ban/unban), Developer (dev mode, diagnostics)
+- **Owner**: All above + Owner (grant/revoke admin privileges by username or email)
+
+### API Endpoints
+- `GET /api/admin/status` - Returns `{ isAdmin, isOwner, userId }`
+- `POST /api/admin/users/:userId/ban` - Admin only: ban/unban users
+- `POST /api/owner/grant-admin` - Owner only: grant admin by username/email
+- `POST /api/owner/users/:userId/admin` - Owner only: grant/revoke admin by user ID
+
 ## Recent Changes
+- Added Owner-only tab in Settings with Crown icon for managing admin privileges
+- Implemented owner/admin role separation: owner (from env) vs admins (isAdmin=true in DB)
+- Added owner-only API endpoints for granting/revoking admin privileges
+- Refactored admin status checking to support both owner and isAdmin users
+- Added figlet command to Terminal for ASCII art generation
+- Added user ban system with admin controls in Settings
+- Made desktop right-click context menu functional
 - Initial implementation of NexusOS with all core features
 - 10 applications including browser, settings, games, and utilities
 - Full window management system
