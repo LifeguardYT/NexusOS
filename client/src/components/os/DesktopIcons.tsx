@@ -29,9 +29,7 @@ export function DesktopIcons() {
   const chatApp = apps.find(app => app.id === "chat");
   const appStoreApp = apps.find(app => app.id === "appstore");
   const desktopApps = [
-    apps[0], // Browser (row 1)
-    ...(appStoreApp ? [appStoreApp] : []), // App Store (row 2)
-    ...apps.slice(1, 6),
+    ...apps.slice(0, 6),
     ...(updatesApp ? [updatesApp] : []),
     { id: "trash", name: "Trash", icon: "trash", color: "bg-gray-500", defaultWidth: 600, defaultHeight: 400 },
     ...(chatApp ? [chatApp] : []),
@@ -78,6 +76,21 @@ export function DesktopIcons() {
           This PC
         </span>
       </button>
+      {appStoreApp && (
+        <button
+          onDoubleClick={() => openWindow("appstore")}
+          onContextMenu={(e) => handleContextMenu(e, "appstore")}
+          className="w-20 flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-white/10 transition-colors group"
+          data-testid="desktop-icon-appstore"
+        >
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-purple-500 shadow-lg group-hover:scale-105 transition-transform">
+            <Store className="w-6 h-6 text-white" />
+          </div>
+          <span className="text-[11px] text-white text-center leading-tight drop-shadow-lg">
+            App Store
+          </span>
+        </button>
+      )}
     </div>
   );
 }
