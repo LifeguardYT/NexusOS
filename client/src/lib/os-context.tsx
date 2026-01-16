@@ -31,6 +31,7 @@ const defaultApps: App[] = [
   { id: "snake", name: "Snake", icon: "gamepad-2", color: "bg-green-500", defaultWidth: 500, defaultHeight: 550 },
   { id: "minesweeper", name: "Minesweeper", icon: "bomb", color: "bg-slate-600", defaultWidth: 400, defaultHeight: 500 },
   { id: "terminal", name: "Terminal", icon: "terminal", color: "bg-black", defaultWidth: 700, defaultHeight: 500 },
+  { id: "appstore", name: "App Store", icon: "store", color: "bg-purple-500", defaultWidth: 700, defaultHeight: 550 },
 ];
 
 const defaultFiles: FileItem[] = [
@@ -84,6 +85,9 @@ interface OSContextType {
   unlock: (credential: string) => boolean;
   security: SecuritySettings;
   updateSecurity: (updates: Partial<SecuritySettings>) => void;
+  installedApps: string[];
+  installApp: (appId: string) => void;
+  uninstallApp: (appId: string) => void;
 }
 
 const OSContext = createContext<OSContextType | null>(null);
@@ -113,9 +117,18 @@ export function OSProvider({ children }: { children: ReactNode }) {
     return saved ? JSON.parse(saved) : { password: null, pin: null, requireSignInOnWake: false };
   });
 
+  const [installedApps, setInstalledApps] = useState<string[]>(() => {
+    const saved = localStorage.getItem("os-installed-apps");
+    return saved ? JSON.parse(saved) : [];
+  });
+
   useEffect(() => {
     localStorage.setItem("os-security", JSON.stringify(security));
   }, [security]);
+
+  useEffect(() => {
+    localStorage.setItem("os-installed-apps", JSON.stringify(installedApps));
+  }, [installedApps]);
 
   // Check if we need to show lock screen on initial load
   useEffect(() => {
@@ -282,6 +295,14 @@ export function OSProvider({ children }: { children: ReactNode }) {
     setNotes(prev => prev.filter(n => n.id !== id));
   }, []);
 
+  const installApp = useCallback((appId: string) => {
+    setInstalledApps(prev => prev.includes(appId) ? prev : [...prev, appId]);
+  }, []);
+
+  const uninstallApp = useCallback((appId: string) => {
+    setInstalledApps(prev => prev.filter(id => id !== appId));
+  }, []);
+
   return (
     <OSContext.Provider value={{
       settings,
@@ -315,6 +336,9 @@ export function OSProvider({ children }: { children: ReactNode }) {
       unlock,
       security,
       updateSecurity,
+      installedApps,
+      installApp,
+      uninstallApp,
     }}>
       {children}
     </OSContext.Provider>

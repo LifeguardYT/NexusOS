@@ -16,6 +16,7 @@ import { UpdatesApp } from "@/components/apps/UpdatesApp";
 import { SnakeGame } from "@/components/apps/SnakeGame";
 import { MinesweeperGame } from "@/components/apps/MinesweeperGame";
 import { TerminalApp } from "@/components/apps/TerminalApp";
+import AppStoreApp from "@/components/apps/AppStoreApp";
 import { Power, Lock } from "lucide-react";
 import { useState } from "react";
 
@@ -41,6 +42,7 @@ const appComponents: Record<string, React.ComponentType> = {
   snake: SnakeGame,
   minesweeper: MinesweeperGame,
   terminal: TerminalApp,
+  appstore: AppStoreApp,
 };
 
 export function Desktop() {
