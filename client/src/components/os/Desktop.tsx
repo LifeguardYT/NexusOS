@@ -11,6 +11,7 @@ import { NotesApp } from "@/components/apps/NotesApp";
 import { FilesApp } from "@/components/apps/FilesApp";
 import { WeatherApp } from "@/components/apps/WeatherApp";
 import { MusicApp } from "@/components/apps/MusicApp";
+import { ChatApp } from "@/components/apps/ChatApp";
 import { UpdatesApp } from "@/components/apps/UpdatesApp";
 import { SnakeGame } from "@/components/apps/SnakeGame";
 import { MinesweeperGame } from "@/components/apps/MinesweeperGame";
@@ -35,6 +36,7 @@ const appComponents: Record<string, React.ComponentType> = {
   files: FilesApp,
   weather: WeatherApp,
   music: MusicApp,
+  chat: ChatApp,
   updates: UpdatesApp,
   snake: SnakeGame,
   minesweeper: MinesweeperGame,

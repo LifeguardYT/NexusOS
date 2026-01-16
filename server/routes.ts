@@ -1,11 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { settingsSchema, insertUpdateSchema, users } from "@shared/schema";
+import { settingsSchema, insertUpdateSchema, insertMessageSchema, users, messages } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { updates } from "@shared/schema";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, or, and, ilike } from "drizzle-orm";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import os from "os";
 
@@ -175,6 +175,190 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Failed to toggle dev mode:", error);
       res.status(500).json({ error: "Failed to toggle developer mode" });
+    }
+  });
+
+  // ============= CHAT ROUTES =============
+
+  // Get global chat messages
+  app.get("/api/chat/global", async (req, res) => {
+    try {
+      const globalMessages = await db.select()
+        .from(messages)
+        .where(eq(messages.isGlobal, true))
+        .orderBy(desc(messages.createdAt))
+        .limit(100);
+      res.json(globalMessages.reverse());
+    } catch (error) {
+      console.error("Failed to fetch global messages:", error);
+      res.status(500).json({ error: "Failed to fetch messages" });
+    }
+  });
+
+  // Send a global chat message
+  app.post("/api/chat/global", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const userName = req.user?.claims?.first_name || req.user?.claims?.email || "Anonymous";
+      const { content } = req.body;
+      
+      if (!content || typeof content !== 'string' || content.trim().length === 0) {
+        return res.status(400).json({ error: "Message content is required" });
+      }
+
+      const messageData = insertMessageSchema.parse({
+        senderId: userId,
+        senderName: userName,
+        content: content.trim(),
+        isGlobal: true,
+        recipientId: null,
+      });
+
+      const [newMessage] = await db.insert(messages).values(messageData).returning();
+      
+      res.json(newMessage);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid message data", details: error.errors });
+      }
+      console.error("Failed to send global message:", error);
+      res.status(500).json({ error: "Failed to send message" });
+    }
+  });
+
+  // Get direct messages between current user and another user
+  app.get("/api/chat/direct/:userId", isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUserId = req.user?.claims?.sub;
+      const otherUserId = req.params.userId;
+      
+      const directMessages = await db.select()
+        .from(messages)
+        .where(
+          and(
+            eq(messages.isGlobal, false),
+            or(
+              and(eq(messages.senderId, currentUserId), eq(messages.recipientId, otherUserId)),
+              and(eq(messages.senderId, otherUserId), eq(messages.recipientId, currentUserId))
+            )
+          )
+        )
+        .orderBy(desc(messages.createdAt))
+        .limit(100);
+      
+      res.json(directMessages.reverse());
+    } catch (error) {
+      console.error("Failed to fetch direct messages:", error);
+      res.status(500).json({ error: "Failed to fetch messages" });
+    }
+  });
+
+  // Send a direct message
+  app.post("/api/chat/direct/:userId", isAuthenticated, async (req: any, res) => {
+    try {
+      const senderId = req.user?.claims?.sub;
+      const senderName = req.user?.claims?.first_name || req.user?.claims?.email || "Anonymous";
+      const recipientId = req.params.userId;
+      const { content } = req.body;
+      
+      if (!content || typeof content !== 'string' || content.trim().length === 0) {
+        return res.status(400).json({ error: "Message content is required" });
+      }
+
+      const messageData = insertMessageSchema.parse({
+        senderId,
+        senderName,
+        recipientId,
+        content: content.trim(),
+        isGlobal: false,
+      });
+
+      const [newMessage] = await db.insert(messages).values(messageData).returning();
+      
+      res.json(newMessage);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid message data", details: error.errors });
+      }
+      console.error("Failed to send direct message:", error);
+      res.status(500).json({ error: "Failed to send message" });
+    }
+  });
+
+  // Search users by username/email for starting a chat
+  app.get("/api/chat/users/search", isAuthenticated, async (req: any, res) => {
+    try {
+      const query = req.query.q as string;
+      const currentUserId = req.user?.claims?.sub;
+      
+      if (!query || query.length < 2) {
+        return res.json([]);
+      }
+
+      const foundUsers = await db.select()
+        .from(users)
+        .where(
+          or(
+            ilike(users.email, `%${query}%`),
+            ilike(users.firstName, `%${query}%`),
+            ilike(users.lastName, `%${query}%`)
+          )
+        )
+        .limit(10);
+      
+      // Filter out current user
+      const filteredUsers = foundUsers.filter(u => u.id !== currentUserId);
+      res.json(filteredUsers);
+    } catch (error) {
+      console.error("Failed to search users:", error);
+      res.status(500).json({ error: "Failed to search users" });
+    }
+  });
+
+  // Get list of users the current user has chatted with
+  app.get("/api/chat/conversations", isAuthenticated, async (req: any, res) => {
+    try {
+      const currentUserId = req.user?.claims?.sub;
+      
+      // Get all direct messages involving current user
+      const userMessages = await db.select()
+        .from(messages)
+        .where(
+          and(
+            eq(messages.isGlobal, false),
+            or(
+              eq(messages.senderId, currentUserId),
+              eq(messages.recipientId, currentUserId)
+            )
+          )
+        )
+        .orderBy(desc(messages.createdAt));
+      
+      // Extract unique user IDs
+      const userIds = new Set<string>();
+      const conversations: { id: string; name: string; lastMessage: string; lastMessageTime: string }[] = [];
+      
+      for (const msg of userMessages) {
+        const otherId = msg.senderId === currentUserId ? msg.recipientId : msg.senderId;
+        if (otherId && !userIds.has(otherId)) {
+          userIds.add(otherId);
+          // Find the user
+          const [user] = await db.select().from(users).where(eq(users.id, otherId));
+          if (user && user.id) {
+            conversations.push({
+              id: user.id,
+              name: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'Unknown',
+              lastMessage: msg.content.substring(0, 50),
+              lastMessageTime: msg.createdAt,
+            });
+          }
+        }
+      }
+      
+      res.json(conversations);
+    } catch (error) {
+      console.error("Failed to fetch conversations:", error);
+      res.status(500).json({ error: "Failed to fetch conversations" });
     }
   });
 
