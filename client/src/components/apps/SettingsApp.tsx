@@ -5,7 +5,8 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   Palette, Monitor, Volume2, Wifi, Bell, User, Lock, Info, 
   Sun, Moon, ChevronRight, Check, Shield, Code, Activity, Users,
-  Cpu, HardDrive, Clock, RefreshCw, ArrowLeft, Key, Mail, Ban, UserCheck, Crown, ShieldCheck, ShieldOff
+  Cpu, HardDrive, Clock, RefreshCw, ArrowLeft, Key, Mail, Ban, UserCheck, Crown, ShieldCheck, ShieldOff,
+  Download, Upload
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -236,6 +237,65 @@ export function SettingsApp() {
     if (days > 0) return `${days}d ${hours}h ${mins}m`;
     if (hours > 0) return `${hours}h ${mins}m`;
     return `${mins}m`;
+  };
+
+  const handleExportData = () => {
+    const exportData = {
+      version: "1.0.0",
+      exportedAt: new Date().toISOString(),
+      settings: settings,
+      security: {
+        requireSignInOnWake: security.requireSignInOnWake,
+        hasPassword: !!security.password,
+        hasPin: !!security.pin,
+      },
+      notes: localStorage.getItem("nexus-notes") || "[]",
+      files: localStorage.getItem("nexus-files") || "{}",
+    };
+
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `nexus-data-${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportData = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string);
+        
+        if (data.settings) {
+          updateSettings(data.settings);
+        }
+        
+        if (data.security) {
+          updateSecurity({ requireSignInOnWake: data.security.requireSignInOnWake });
+        }
+        
+        if (data.notes) {
+          localStorage.setItem("nexus-notes", typeof data.notes === "string" ? data.notes : JSON.stringify(data.notes));
+        }
+        
+        if (data.files) {
+          localStorage.setItem("nexus-files", typeof data.files === "string" ? data.files : JSON.stringify(data.files));
+        }
+
+        alert("Data imported successfully! Some changes may require a refresh to take effect.");
+      } catch (err) {
+        alert("Failed to import data. Please ensure the file is a valid NexusOS export.");
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = "";
   };
 
   const renderContent = () => {
@@ -839,6 +899,59 @@ export function SettingsApp() {
                   onCheckedChange={(checked) => updateSettings({ syncEnabled: checked })}
                   data-testid="switch-sync"
                 />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="font-medium text-muted-foreground text-sm uppercase tracking-wider">Data Management</h4>
+              
+              <div className="flex items-center justify-between py-3 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <Download className="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    <h4 className="font-medium">Export Data</h4>
+                    <p className="text-sm text-muted-foreground">Download all your settings and data</p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportData}
+                  data-testid="btn-export-data"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export
+                </Button>
+              </div>
+
+              <div className="flex items-center justify-between py-3">
+                <div className="flex items-center gap-3">
+                  <Upload className="w-5 h-5 text-muted-foreground" />
+                  <div>
+                    <h4 className="font-medium">Import Data</h4>
+                    <p className="text-sm text-muted-foreground">Restore from a backup file</p>
+                  </div>
+                </div>
+                <label>
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleImportData}
+                    className="hidden"
+                    data-testid="input-import-data"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild
+                    data-testid="btn-import-data"
+                  >
+                    <span>
+                      <Upload className="w-4 h-4 mr-2" />
+                      Import
+                    </span>
+                  </Button>
+                </label>
               </div>
             </div>
           </div>
