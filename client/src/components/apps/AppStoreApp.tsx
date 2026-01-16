@@ -177,7 +177,7 @@ const allApps: AppInfo[] = [
     rating: 5.0,
     downloads: "1K+",
     size: "Web App",
-    isSystemApp: false,
+    isSystemApp: true,
     externalUrl: "https://forms.gle/5FHCupNne952nvcBA",
   },
 ];
@@ -263,10 +263,20 @@ export default function AppStoreApp() {
             </div>
             <div>
               {selectedApp.isSystemApp ? (
-                <Badge variant="secondary" className="px-4 py-2">
-                  <Check className="w-4 h-4 mr-2" />
-                  System App
-                </Badge>
+                <div className="flex gap-2">
+                  {selectedApp.externalUrl && (
+                    <Button
+                      onClick={() => handleOpenExternalApp(selectedApp)}
+                      data-testid={`btn-open-${selectedApp.id}`}
+                    >
+                      Open
+                    </Button>
+                  )}
+                  <Badge variant="secondary" className="px-4 py-2">
+                    <Check className="w-4 h-4 mr-2" />
+                    System App
+                  </Badge>
+                </div>
               ) : isInstalled(selectedApp.id) ? (
                 <div className="flex gap-2">
                   {selectedApp.externalUrl && (
