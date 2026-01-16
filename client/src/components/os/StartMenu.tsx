@@ -40,6 +40,14 @@ const externalApps: InstalledAppInfo[] = [
     externalUrl: "https://www.youtube.com",
     isSystemApp: false,
   },
+  {
+    id: "coolmathgames",
+    name: "CoolMathGames",
+    icon: <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center text-white font-bold text-xs">CM</div>,
+    color: "bg-gradient-to-br from-blue-500 to-purple-600",
+    externalUrl: "https://www.coolmathgames.com/",
+    isSystemApp: false,
+  },
 ];
 
 interface ContextMenuState {

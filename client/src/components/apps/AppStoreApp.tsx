@@ -169,6 +169,18 @@ const allApps: AppInfo[] = [
     externalUrl: "https://www.youtube.com",
   },
   {
+    id: "coolmathgames",
+    name: "CoolMathGames",
+    description: "Play fun brain-training games, puzzles, and strategy games for free.",
+    icon: <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">CM</div>,
+    category: "Games",
+    rating: 4.6,
+    downloads: "5B+",
+    size: "Web App",
+    isSystemApp: false,
+    externalUrl: "https://www.coolmathgames.com/",
+  },
+  {
     id: "request-app",
     name: "Request App",
     description: "Request a new app to be added to the NexusOS App Store.",
