@@ -168,6 +168,18 @@ const allApps: AppInfo[] = [
     isSystemApp: false,
     externalUrl: "https://www.youtube.com",
   },
+  {
+    id: "request-app",
+    name: "Request App",
+    description: "Request a new app to be added to the NexusOS App Store.",
+    icon: <Package className="w-8 h-8 text-emerald-400" />,
+    category: "Utilities",
+    rating: 5.0,
+    downloads: "1K+",
+    size: "Web App",
+    isSystemApp: false,
+    externalUrl: "https://forms.gle/5FHCupNne952nvcBA",
+  },
 ];
 
 const categories = ["All", "Utilities", "Productivity", "Entertainment", "Games", "Social", "Developer Tools", "System"];
