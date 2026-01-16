@@ -184,7 +184,7 @@ const allApps: AppInfo[] = [
   {
     id: "geometry-lessons-monster",
     name: "Geometry Lessons Monster",
-    description: "Learn geometry with interactive lessons and fun monster-themed challenges.",
+    description: "Fun unblocked games that you can play in school.",
     icon: <img src={geometryLessonsMonsterLogo} alt="Geometry Lessons Monster" className="w-8 h-8 rounded-lg object-cover" />,
     category: "Games",
     rating: 4.5,
