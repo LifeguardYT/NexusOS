@@ -305,9 +305,7 @@ export default function AppStoreApp() {
             <div className="flex-1">
               <h1 className="text-2xl font-bold mb-1">{selectedApp.name}</h1>
               <p className="text-muted-foreground mb-2">{selectedApp.category}</p>
-              {renderStars(selectedApp.rating)}
               <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
-                <span>{selectedApp.downloads} downloads</span>
                 <span>{selectedApp.size}</span>
               </div>
             </div>
@@ -511,9 +509,6 @@ export default function AppStoreApp() {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium">{app.name}</h3>
                   <p className="text-sm text-muted-foreground truncate">{app.description}</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    {renderStars(app.rating)}
-                  </div>
                 </div>
                 <div className="shrink-0">
                   {app.isSystemApp || isInstalled(app.id) ? (
