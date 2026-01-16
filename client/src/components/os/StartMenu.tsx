@@ -5,6 +5,8 @@ import {
   Gamepad2, Bomb, Terminal, MessageSquare, Bell, Store
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 const iconMap: Record<string, React.ComponentType<any>> = {
   globe: Globe,
@@ -65,11 +67,32 @@ interface ContextMenuState {
   appName: string;
 }
 
+interface UserData {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+  profileImageUrl: string | null;
+}
+
 export function StartMenu() {
   const { apps, openWindow, startMenuOpen, setStartMenuOpen, shutdown, installedApps, uninstallApp } = useOS();
   const [searchQuery, setSearchQuery] = useState("");
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const { data: user } = useQuery<UserData>({
+    queryKey: ["/api/auth/user"],
+    retry: false,
+  });
+
+  const displayName = user?.firstName 
+    ? `${user.firstName}${user.lastName ? ` ${user.lastName}` : ''}`
+    : user?.email?.split('@')[0] || 'User';
+  
+  const initials = user?.firstName 
+    ? `${user.firstName[0]}${user.lastName?.[0] || ''}`.toUpperCase()
+    : user?.email?.[0]?.toUpperCase() || 'U';
 
   const allDisplayedApps = [
     ...apps.map(app => ({
@@ -224,11 +247,23 @@ export function StartMenu() {
 
       {/* Footer */}
       <div className="p-3 border-t border-white/10 flex items-center justify-between">
-        <button className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-            <User className="w-4 h-4 text-white" />
-          </div>
-          <span className="text-sm text-white/80">User</span>
+        <button 
+          className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/10 transition-colors"
+          onClick={() => {
+            openWindow("settings");
+            setStartMenuOpen(false);
+          }}
+          data-testid="btn-user-profile"
+        >
+          <Avatar className="w-8 h-8">
+            {user?.profileImageUrl ? (
+              <AvatarImage src={user.profileImageUrl} alt={displayName} />
+            ) : null}
+            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-600 text-white text-xs">
+              {initials}
+            </AvatarFallback>
+          </Avatar>
+          <span className="text-sm text-white/80">{displayName}</span>
         </button>
         <button 
           onClick={shutdown}
