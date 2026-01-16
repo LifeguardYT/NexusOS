@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Search, Download, Check, Star, Globe, FileText, Calculator, 
   Cloud, Music, Gamepad2, Terminal, Settings, FolderOpen, MessageSquare,
-  Package, TrendingUp, Sparkles, Clock, Blocks
+  Package, TrendingUp, Sparkles, Clock, Blocks, Trash2
 } from "lucide-react";
 
 interface AppInfo {
@@ -184,11 +184,37 @@ const allApps: AppInfo[] = [
 
 const categories = ["All", "Utilities", "Productivity", "Entertainment", "Games", "Social", "Developer Tools", "System"];
 
+interface ContextMenuState {
+  x: number;
+  y: number;
+  app: AppInfo;
+}
+
 export default function AppStoreApp() {
   const { installedApps, installApp, uninstallApp, openWindow } = useOS();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedApp, setSelectedApp] = useState<AppInfo | null>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+
+  const handleContextMenu = (e: React.MouseEvent, app: AppInfo) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!app.isSystemApp && isInstalled(app.id)) {
+      setContextMenu({ x: e.clientX, y: e.clientY, app });
+    }
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  const handleUninstallFromContext = () => {
+    if (contextMenu) {
+      uninstallApp(contextMenu.app.id);
+      closeContextMenu();
+    }
+  };
 
   const filteredApps = allApps.filter(app => {
     const matchesSearch = app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -348,7 +374,24 @@ export default function AppStoreApp() {
   }
 
   return (
-    <div className="h-full bg-background flex flex-col">
+    <div className="h-full bg-background flex flex-col" onClick={closeContextMenu}>
+      {contextMenu && (
+        <div 
+          className="fixed bg-card border border-border rounded-lg shadow-xl py-1 z-50 min-w-[160px]"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={e => e.stopPropagation()}
+        >
+          <button
+            onClick={handleUninstallFromContext}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+            data-testid="ctx-uninstall-app"
+          >
+            <Trash2 className="w-4 h-4" />
+            Uninstall
+          </button>
+        </div>
+      )}
+
       <div className="p-4 border-b border-white/10">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -435,6 +478,7 @@ export default function AppStoreApp() {
                 key={app.id}
                 className="flex items-center gap-4 p-3 rounded-lg hover-elevate cursor-pointer"
                 onClick={() => setSelectedApp(app)}
+                onContextMenu={(e) => handleContextMenu(e, app)}
                 data-testid={`app-item-${app.id}`}
               >
                 <div className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
@@ -485,6 +529,7 @@ export default function AppStoreApp() {
                 key={app.id}
                 className="flex items-center gap-4 p-3 rounded-lg hover-elevate cursor-pointer"
                 onClick={() => setSelectedApp(app)}
+                onContextMenu={(e) => handleContextMenu(e, app)}
                 data-testid={`category-app-${app.id}`}
               >
                 <div className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
@@ -509,6 +554,7 @@ export default function AppStoreApp() {
                   key={app.id}
                   className="flex items-center gap-4 p-3 rounded-lg hover-elevate cursor-pointer"
                   onClick={() => setSelectedApp(app)}
+                  onContextMenu={(e) => handleContextMenu(e, app)}
                   data-testid={`installed-app-${app.id}`}
                 >
                   <div className="w-14 h-14 rounded-xl bg-white/5 flex items-center justify-center shrink-0">
