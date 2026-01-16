@@ -19,6 +19,7 @@ import { TerminalApp } from "@/components/apps/TerminalApp";
 import AppStoreApp from "@/components/apps/AppStoreApp";
 import { Power, Lock } from "lucide-react";
 import { useState } from "react";
+import { AnimatePresence } from "framer-motion";
 
 const wallpapers: Record<string, string> = {
   "gradient-1": "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
@@ -211,16 +212,18 @@ export function Desktop() {
       <DesktopIcons />
 
       {/* Windows */}
-      {windows.map(win => {
-        const AppComponent = appComponents[win.appId];
-        if (!AppComponent) return null;
-        
-        return (
-          <Window key={win.id} window={win}>
-            <AppComponent />
-          </Window>
-        );
-      })}
+      <AnimatePresence>
+        {windows.filter(win => !win.isMinimized).map(win => {
+          const AppComponent = appComponents[win.appId];
+          if (!AppComponent) return null;
+          
+          return (
+            <Window key={win.id} window={win}>
+              <AppComponent />
+            </Window>
+          );
+        })}
+      </AnimatePresence>
 
       {/* Start Menu */}
       <StartMenu />

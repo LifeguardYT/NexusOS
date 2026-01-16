@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useOS } from "@/lib/os-context";
 import type { WindowState } from "@shared/schema";
 import { Minus, Square, X, Maximize2 } from "lucide-react";
+import { motion } from "framer-motion";
 
 interface WindowProps {
   window: WindowState;
@@ -95,8 +96,12 @@ export function Window({ window: win, children }: WindowProps) {
     : { left: win.x, top: win.y, width: win.width, height: win.height };
 
   return (
-    <div
+    <motion.div
       ref={windowRef}
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      exit={{ scale: 0.8, opacity: 0 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
       className="absolute flex flex-col rounded-lg overflow-hidden shadow-2xl border border-white/10 dark:border-white/5"
       style={{
         ...windowStyle,
@@ -157,6 +162,6 @@ export function Window({ window: win, children }: WindowProps) {
           <div className="absolute right-0 top-2 bottom-2 w-1 cursor-e-resize" onMouseDown={(e) => handleResizeStart(e, "e")} />
         </>
       )}
-    </div>
+    </motion.div>
   );
 }
