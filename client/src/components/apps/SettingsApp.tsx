@@ -174,6 +174,9 @@ export function SettingsApp() {
   };
 
   const handleDevModeToggle = (checked: boolean) => {
+    // Update local state immediately for responsive UI
+    updateSettings({ developerMode: checked });
+    // Also update on server
     devModeMutation.mutate(checked);
   };
 
