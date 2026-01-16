@@ -41,6 +41,22 @@ interface AuthUser {
 
 type ChatView = "global" | "direct" | "search";
 
+// Bad word filter - replaces profanity with asterisks
+const badWords = [
+  "fuck", "shit", "ass", "bitch", "damn", "crap", "hell", "dick", "cock", 
+  "pussy", "bastard", "asshole", "cunt", "whore", "slut", "fag", "nigger",
+  "nigga", "retard", "piss", "bollocks", "wanker", "twat", "prick"
+];
+
+function filterBadWords(text: string): string {
+  let filtered = text;
+  badWords.forEach(word => {
+    const regex = new RegExp(`\\b${word}\\b`, 'gi');
+    filtered = filtered.replace(regex, '*'.repeat(word.length));
+  });
+  return filtered;
+}
+
 interface AdminStatus {
   isAdmin: boolean;
   isOwner: boolean;
@@ -372,7 +388,7 @@ export function ChatApp() {
                             )}
                           </div>
                         )}
-                        <p className="text-sm break-words">{msg.content}</p>
+                        <p className="text-sm break-words">{filterBadWords(msg.content)}</p>
                         <p className={`text-xs mt-1 ${isOwn ? "text-blue-100" : "text-muted-foreground"}`}>
                           {formatTime(msg.createdAt)}
                         </p>
