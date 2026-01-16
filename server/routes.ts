@@ -364,7 +364,16 @@ export async function registerRoutes(
         .where(eq(messages.isGlobal, true))
         .orderBy(desc(messages.createdAt))
         .limit(100);
-      res.json(globalMessages.reverse());
+      
+      // Add owner/admin status for each sender
+      const messagesWithRoles = await Promise.all(globalMessages.map(async (msg) => {
+        const senderIsOwner = msg.senderId === OWNER_USER_ID;
+        const [senderUser] = await db.select().from(users).where(eq(users.id, msg.senderId));
+        const senderIsAdmin = senderIsOwner || senderUser?.isAdmin === true;
+        return { ...msg, senderIsOwner, senderIsAdmin };
+      }));
+      
+      res.json(messagesWithRoles.reverse());
     } catch (error) {
       console.error("Failed to fetch global messages:", error);
       res.status(500).json({ error: "Failed to fetch messages" });
@@ -422,7 +431,15 @@ export async function registerRoutes(
         .orderBy(desc(messages.createdAt))
         .limit(100);
       
-      res.json(directMessages.reverse());
+      // Add owner/admin status for each sender
+      const messagesWithRoles = await Promise.all(directMessages.map(async (msg) => {
+        const senderIsOwner = msg.senderId === OWNER_USER_ID;
+        const [senderUser] = await db.select().from(users).where(eq(users.id, msg.senderId));
+        const senderIsAdmin = senderIsOwner || senderUser?.isAdmin === true;
+        return { ...msg, senderIsOwner, senderIsAdmin };
+      }));
+      
+      res.json(messagesWithRoles.reverse());
     } catch (error) {
       console.error("Failed to fetch direct messages:", error);
       res.status(500).json({ error: "Failed to fetch messages" });

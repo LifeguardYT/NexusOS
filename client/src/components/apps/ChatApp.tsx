@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { MessageCircle, Users, Search, Send, Globe, User, ArrowLeft, Trash2 } from "lucide-react";
+import { MessageCircle, Users, Search, Send, Globe, User, ArrowLeft, Trash2, Crown, Shield } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -14,6 +14,8 @@ interface Message {
   content: string;
   isGlobal: boolean;
   createdAt: string;
+  senderIsOwner?: boolean;
+  senderIsAdmin?: boolean;
 }
 
 interface Conversation {
@@ -352,7 +354,21 @@ export function ChatApp() {
                         }`}
                       >
                         {!isOwn && chatView === "global" && (
-                          <p className="text-xs font-medium text-blue-400 mb-1">{msg.senderName}</p>
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <p className="text-xs font-medium text-blue-400">{msg.senderName}</p>
+                            {msg.senderIsOwner && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                                <Crown className="w-2.5 h-2.5" />
+                                OWNER
+                              </span>
+                            )}
+                            {msg.senderIsAdmin && !msg.senderIsOwner && (
+                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                                <Shield className="w-2.5 h-2.5" />
+                                ADMIN
+                              </span>
+                            )}
+                          </div>
                         )}
                         <p className="text-sm break-words">{msg.content}</p>
                         <p className={`text-xs mt-1 ${isOwn ? "text-blue-100" : "text-muted-foreground"}`}>
