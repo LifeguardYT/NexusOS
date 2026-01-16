@@ -39,17 +39,30 @@ interface AuthUser {
 
 type ChatView = "global" | "direct" | "search";
 
+interface AdminStatus {
+  isAdmin: boolean;
+  isOwner: boolean;
+  userId: string | null;
+}
+
 export function ChatApp() {
   const [chatView, setChatView] = useState<ChatView>("global");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUserName, setSelectedUserName] = useState<string>("");
   const [messageInput, setMessageInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [cooldown, setCooldown] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { data: currentUser } = useQuery<AuthUser | null>({
     queryKey: ["/api/auth/user"],
   });
+
+  const { data: adminStatus } = useQuery<AdminStatus>({
+    queryKey: ["/api/admin/status"],
+  });
+
+  const isAdmin = adminStatus?.isAdmin || adminStatus?.isOwner;
 
   const { data: globalMessages = [], isLoading: isLoadingGlobal } = useQuery<Message[]>({
     queryKey: ["/api/chat/global"],
@@ -77,6 +90,17 @@ export function ChatApp() {
     enabled: searchQuery.length >= 2,
   });
 
+  const startCooldown = () => {
+    setCooldown(3);
+  };
+
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
+
   const sendGlobalMutation = useMutation({
     mutationFn: async (content: string) => {
       return apiRequest("POST", "/api/chat/global", { content });
@@ -84,6 +108,7 @@ export function ChatApp() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/chat/global"] });
       setMessageInput("");
+      startCooldown();
     },
   });
 
@@ -95,6 +120,7 @@ export function ChatApp() {
       queryClient.invalidateQueries({ queryKey: ["/api/chat/direct", selectedUserId] });
       queryClient.invalidateQueries({ queryKey: ["/api/chat/conversations"] });
       setMessageInput("");
+      startCooldown();
     },
   });
 
@@ -114,13 +140,17 @@ export function ChatApp() {
   }, [globalMessages, directMessages]);
 
   const handleSendMessage = () => {
-    if (!messageInput.trim()) return;
+    if (!messageInput.trim() || cooldown > 0) return;
     
     if (chatView === "global") {
       sendGlobalMutation.mutate(messageInput);
     } else if (chatView === "direct" && selectedUserId) {
       sendDirectMutation.mutate({ userId: selectedUserId, content: messageInput });
     }
+  };
+
+  const canDeleteMessage = (msg: Message) => {
+    return msg.senderId === currentUser?.id || isAdmin;
   };
 
   const handleSelectUser = (user: ChatUser | Conversation) => {
@@ -329,11 +359,11 @@ export function ChatApp() {
                           {formatTime(msg.createdAt)}
                         </p>
                       </div>
-                      {isOwn && (
+                      {canDeleteMessage(msg) && (
                         <button
                           onClick={() => deleteMessageMutation.mutate(msg.id)}
                           className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-red-400 transition-all"
-                          title="Delete message"
+                          title={isOwn ? "Delete message" : "Delete message (Admin)"}
                           data-testid={`btn-delete-message-${msg.id}`}
                         >
                           <Trash2 className="w-3 h-3" />
@@ -356,18 +386,28 @@ export function ChatApp() {
               onChange={(e) => setMessageInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSendMessage()}
               className="flex-1 bg-white/5 border-white/10"
-              disabled={chatView === "direct" && !selectedUserId}
+              disabled={(chatView === "direct" && !selectedUserId) || cooldown > 0}
               data-testid="input-message"
             />
             <Button
               onClick={handleSendMessage}
-              disabled={!messageInput.trim() || (chatView === "direct" && !selectedUserId)}
+              disabled={!messageInput.trim() || (chatView === "direct" && !selectedUserId) || cooldown > 0}
               size="icon"
               data-testid="btn-send-message"
+              title={cooldown > 0 ? `Wait ${cooldown}s` : "Send message"}
             >
-              <Send className="w-4 h-4" />
+              {cooldown > 0 ? (
+                <span className="text-xs font-bold">{cooldown}</span>
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
             </Button>
           </div>
+          {cooldown > 0 && (
+            <p className="text-xs text-muted-foreground mt-1 text-center">
+              Please wait {cooldown} second{cooldown !== 1 ? 's' : ''} before sending another message
+            </p>
+          )}
         </div>
       </div>
     </div>

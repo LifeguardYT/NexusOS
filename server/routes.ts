@@ -461,7 +461,7 @@ export async function registerRoutes(
     }
   });
 
-  // Delete a message (only the sender can delete their own messages)
+  // Delete a message (sender or admin can delete messages)
   app.delete("/api/chat/messages/:messageId", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
@@ -478,8 +478,13 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Message not found" });
       }
 
-      // Check if the current user is the sender
-      if (message.senderId !== userId) {
+      // Check if the current user is an admin or owner
+      const isOwner = userId === process.env.OWNER_USER_ID;
+      const [dbUser] = await db.select().from(users).where(eq(users.id, userId));
+      const isAdmin = isOwner || dbUser?.isAdmin === true;
+
+      // Check if the current user is the sender or an admin
+      if (message.senderId !== userId && !isAdmin) {
         return res.status(403).json({ error: "You can only delete your own messages" });
       }
 
