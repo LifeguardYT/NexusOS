@@ -1,7 +1,7 @@
 import { useOS } from "@/lib/os-context";
 import { 
   Globe, Settings, Folder, Calculator, FileText, CloudSun, Music, 
-  Gamepad2, Bomb, Terminal, Trash2, HardDrive, Bell, MessageCircle
+  Gamepad2, Bomb, Terminal, Trash2, HardDrive, Bell, MessageCircle, Store
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<any>> = {
@@ -17,6 +17,7 @@ const iconMap: Record<string, React.ComponentType<any>> = {
   terminal: Terminal,
   bell: Bell,
   "message-circle": MessageCircle,
+  store: Store,
 };
 
 export function DesktopIcons() {
@@ -26,8 +27,11 @@ export function DesktopIcons() {
 
   const updatesApp = apps.find(app => app.id === "updates");
   const chatApp = apps.find(app => app.id === "chat");
+  const appStoreApp = apps.find(app => app.id === "appstore");
   const desktopApps = [
-    ...apps.slice(0, 6),
+    apps[0], // Browser (row 1)
+    ...(appStoreApp ? [appStoreApp] : []), // App Store (row 2)
+    ...apps.slice(1, 6),
     ...(updatesApp ? [updatesApp] : []),
     { id: "trash", name: "Trash", icon: "trash", color: "bg-gray-500", defaultWidth: 600, defaultHeight: 400 },
     ...(chatApp ? [chatApp] : []),
