@@ -156,6 +156,18 @@ const allApps: AppInfo[] = [
     size: "3 MB",
     isSystemApp: true,
   },
+  {
+    id: "youtube",
+    name: "YouTube",
+    description: "Watch videos, music, and live streams from creators around the world.",
+    icon: <div className="w-8 h-8 bg-red-600 rounded-lg flex items-center justify-center"><div className="w-0 h-0 border-l-[10px] border-l-white border-y-[6px] border-y-transparent ml-1" /></div>,
+    category: "Entertainment",
+    rating: 4.7,
+    downloads: "10B+",
+    size: "Web App",
+    isSystemApp: false,
+    externalUrl: "https://www.youtube.com",
+  },
 ];
 
 const categories = ["All", "Utilities", "Productivity", "Entertainment", "Games", "Social", "Developer Tools", "System"];
