@@ -3,7 +3,7 @@ import { useOS } from "@/lib/os-context";
 import { 
   Folder, FileText, ChevronRight, Home, HardDrive,
   Image, Music, Download, Grid, List, X, FileCode, FileImage,
-  FileVideo, FileAudio, File, Eye
+  FileVideo, FileAudio, File, Eye, Trash2, Pencil
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -66,6 +66,8 @@ const getFileIconSmall = (file: FileItem) => {
       return <File className="w-5 h-5 text-gray-400" />;
   }
 };
+
+const systemFolderIds = ['1', '2', '3', '4'];
 
 interface FileViewerProps {
   file: FileItem;
@@ -189,12 +191,67 @@ function FileViewer({ file, onClose }: FileViewerProps) {
   );
 }
 
+interface RenameDialogProps {
+  file: FileItem;
+  onClose: () => void;
+  onRename: (newName: string) => void;
+}
+
+function RenameDialog({ file, onClose, onRename }: RenameDialogProps) {
+  const [newName, setNewName] = useState(file.name);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newName.trim() && newName !== file.name) {
+      onRename(newName.trim());
+    }
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onClose}>
+      <div 
+        className="bg-card border border-border rounded-lg w-[400px] p-4 shadow-xl"
+        onClick={e => e.stopPropagation()}
+      >
+        <h3 className="text-lg font-medium mb-4">Rename {file.type === 'folder' ? 'Folder' : 'File'}</h3>
+        <form onSubmit={handleSubmit}>
+          <input
+            type="text"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg bg-background border border-border text-sm focus:outline-none focus:border-primary mb-4"
+            autoFocus
+            data-testid="input-rename"
+          />
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" size="sm" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" disabled={!newName.trim()}>
+              Rename
+            </Button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+interface ContextMenuState {
+  x: number;
+  y: number;
+  file: FileItem;
+}
+
 export function FilesApp() {
-  const { files } = useOS();
+  const { files, deleteFile, updateFile } = useOS();
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [viewingFile, setViewingFile] = useState<FileItem | null>(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [renamingFile, setRenamingFile] = useState<FileItem | null>(null);
 
   const currentFiles = files.filter(f => f.parentId === currentFolderId);
 
@@ -228,6 +285,39 @@ export function FilesApp() {
     }
   };
 
+  const handleContextMenu = (e: React.MouseEvent, file: FileItem) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY, file });
+    setSelectedFile(file.id);
+  };
+
+  const closeContextMenu = () => {
+    setContextMenu(null);
+  };
+
+  const handleDelete = (file: FileItem) => {
+    if (systemFolderIds.includes(file.id)) {
+      return;
+    }
+    deleteFile(file.id);
+    closeContextMenu();
+  };
+
+  const handleRename = (file: FileItem) => {
+    if (systemFolderIds.includes(file.id)) {
+      return;
+    }
+    setRenamingFile(file);
+    closeContextMenu();
+  };
+
+  const handleRenameSubmit = (newName: string) => {
+    if (renamingFile) {
+      updateFile(renamingFile.id, { name: newName });
+    }
+  };
+
   const sidebarItems = [
     { id: null, name: "Home", icon: Home },
     { id: "1", name: "Documents", icon: Folder },
@@ -236,10 +326,63 @@ export function FilesApp() {
     { id: "4", name: "Downloads", icon: Download },
   ];
 
+  const isSystemFolder = (file: FileItem) => systemFolderIds.includes(file.id);
+
   return (
-    <div className="h-full flex">
+    <div className="h-full flex" onClick={closeContextMenu}>
       {viewingFile && (
         <FileViewer file={viewingFile} onClose={() => setViewingFile(null)} />
+      )}
+
+      {renamingFile && (
+        <RenameDialog 
+          file={renamingFile} 
+          onClose={() => setRenamingFile(null)} 
+          onRename={handleRenameSubmit}
+        />
+      )}
+
+      {contextMenu && (
+        <div 
+          className="fixed bg-card border border-border rounded-lg shadow-xl py-1 z-50 min-w-[160px]"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={e => e.stopPropagation()}
+        >
+          <button
+            onClick={() => setViewingFile(contextMenu.file)}
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors"
+            data-testid="ctx-open"
+          >
+            <Eye className="w-4 h-4" />
+            Open
+          </button>
+          {!isSystemFolder(contextMenu.file) && (
+            <>
+              <button
+                onClick={() => handleRename(contextMenu.file)}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors"
+                data-testid="ctx-rename"
+              >
+                <Pencil className="w-4 h-4" />
+                Rename
+              </button>
+              <div className="border-t border-border my-1" />
+              <button
+                onClick={() => handleDelete(contextMenu.file)}
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+                data-testid="ctx-delete"
+              >
+                <Trash2 className="w-4 h-4" />
+                Delete
+              </button>
+            </>
+          )}
+          {isSystemFolder(contextMenu.file) && (
+            <div className="px-3 py-2 text-xs text-muted-foreground">
+              System folder (protected)
+            </div>
+          )}
+        </div>
       )}
       
       {/* Sidebar */}
@@ -331,6 +474,7 @@ export function FilesApp() {
                   key={file.id}
                   onClick={() => setSelectedFile(file.id)}
                   onDoubleClick={() => handleDoubleClick(file)}
+                  onContextMenu={(e) => handleContextMenu(e, file)}
                   className={`flex flex-col items-center gap-2 p-3 rounded-lg transition-colors ${
                     selectedFile === file.id ? "bg-primary/10" : "hover:bg-muted"
                   }`}
@@ -348,6 +492,7 @@ export function FilesApp() {
                   key={file.id}
                   onClick={() => setSelectedFile(file.id)}
                   onDoubleClick={() => handleDoubleClick(file)}
+                  onContextMenu={(e) => handleContextMenu(e, file)}
                   className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
                     selectedFile === file.id ? "bg-primary/10" : "hover:bg-muted"
                   }`}

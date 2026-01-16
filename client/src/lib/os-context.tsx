@@ -67,6 +67,7 @@ interface OSContextType {
   apps: App[];
   files: FileItem[];
   addFile: (file: FileItem) => void;
+  updateFile: (id: string, updates: Partial<FileItem>) => void;
   deleteFile: (id: string) => void;
   notes: Note[];
   addNote: (note: Note) => void;
@@ -309,6 +310,10 @@ export function OSProvider({ children }: { children: ReactNode }) {
     setFiles(prev => [...prev, file]);
   }, []);
 
+  const updateFile = useCallback((id: string, updates: Partial<FileItem>) => {
+    setFiles(prev => prev.map(f => f.id === id ? { ...f, ...updates } : f));
+  }, []);
+
   const deleteFile = useCallback((id: string) => {
     setFiles(prev => prev.filter(f => f.id !== id));
   }, []);
@@ -336,6 +341,7 @@ export function OSProvider({ children }: { children: ReactNode }) {
       apps: defaultApps,
       files,
       addFile,
+      updateFile,
       deleteFile,
       notes,
       addNote,
