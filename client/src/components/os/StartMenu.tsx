@@ -176,7 +176,7 @@ export function StartMenu() {
   return (
     <div
       ref={menuRef}
-      className="fixed bottom-14 left-1/2 -translate-x-1/2 w-[600px] rounded-xl overflow-hidden z-50 shadow-2xl border border-white/10"
+      className="fixed bottom-14 left-1/2 -translate-x-1/2 w-[600px] rounded-xl overflow-hidden z-50 shadow-2xl border border-white/10 animate-in slide-in-from-bottom-4 fade-in duration-200"
       style={{
         backgroundColor: "rgba(30, 30, 35, 0.95)",
         backdropFilter: "blur(20px)",
