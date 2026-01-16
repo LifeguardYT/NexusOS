@@ -645,6 +645,30 @@ export async function registerRoutes(
     }
   });
 
+  // Instant shutdown (admin only) - no countdown
+  app.post("/api/shutdown/instant", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId || !(await isUserAdmin(userId))) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      shutdownState = {
+        isShutdown: true,
+        isShuttingDown: false,
+        shutdownTime: null,
+        message: "System shutdown by administrator",
+      };
+
+      broadcastShutdownStatus();
+
+      res.json({ success: true, message: "Instant shutdown executed" });
+    } catch (error) {
+      console.error("Failed to execute instant shutdown:", error);
+      res.status(500).json({ error: "Failed to execute instant shutdown" });
+    }
+  });
+
   // Stop shutdown (admin only)
   app.post("/api/shutdown/stop", isAuthenticated, async (req: any, res) => {
     try {

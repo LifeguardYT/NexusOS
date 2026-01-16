@@ -21,7 +21,7 @@ interface FileSystemNode {
   modified?: Date;
 }
 
-const ADMIN_COMMANDS = ["users", "sysadmin", "logs", "shutdown", "stopshutdown"];
+const ADMIN_COMMANDS = ["users", "sysadmin", "logs", "shutdown", "stopshutdown", "instashutdown"];
 
 const createFileSystem = (): Record<string, FileSystemNode> => ({
   home: {
@@ -408,7 +408,7 @@ export function TerminalApp() {
       }
       
       if (isAdmin) {
-        output += `\x1b[31mAdmin Commands:\x1b[0m\n  users, sysadmin, logs, shutdown, stopshutdown\n\n`;
+        output += `\x1b[31mAdmin Commands:\x1b[0m\n  users, sysadmin, logs, shutdown, stopshutdown, instashutdown\n\n`;
       }
       
       output += "Type 'help <command>' or 'man <command>' for detailed usage.";
@@ -1747,6 +1747,28 @@ System going down for maintenance in 60 seconds!`;
         }
         return `\x1b[32mShutdown cancelled.\x1b[0m
 All users have been restored access to the system.`;
+      } catch (e) {
+        return "Error: Failed to connect to shutdown service";
+      }
+    },
+
+    instashutdown: async (args, isAdmin) => {
+      if (!isAdmin) return "Permission denied: Admin access required";
+      try {
+        const response = await fetch("/api/shutdown/instant", {
+          method: "POST",
+          credentials: "include",
+        });
+        if (!response.ok) {
+          const data = await response.json();
+          return `Error: ${data.error || "Failed to execute instant shutdown"}`;
+        }
+        return `\x1b[31m╔═══════════════════════════════════════════════╗
+║           INSTANT SHUTDOWN EXECUTED           ║
+╠═══════════════════════════════════════════════╣
+║  All non-admin users have been locked out.    ║
+║  Use 'stopshutdown' to restore access.        ║
+╚═══════════════════════════════════════════════╝\x1b[0m`;
       } catch (e) {
         return "Error: Failed to connect to shutdown service";
       }
