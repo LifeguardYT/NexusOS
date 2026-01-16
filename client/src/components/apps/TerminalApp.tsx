@@ -154,8 +154,63 @@ export function TerminalApp() {
     HOSTNAME: "nexusos",
     EDITOR: "nano",
   });
+  const [installedPackages, setInstalledPackages] = useState<Record<string, { version: string; description: string; size: string }>>({
+    bash: { version: "5.0-6", description: "GNU Bourne Again SHell", size: "1,234 kB" },
+    coreutils: { version: "8.30-3", description: "GNU core utilities", size: "6,789 kB" },
+    grep: { version: "3.4-1", description: "GNU grep pattern matching utility", size: "456 kB" },
+    sed: { version: "4.7-1", description: "GNU stream editor", size: "234 kB" },
+    tar: { version: "1.30-6", description: "GNU tar archiving utility", size: "567 kB" },
+    gzip: { version: "1.10-0", description: "GNU compression utility", size: "123 kB" },
+  });
   const inputRef = useRef<HTMLInputElement>(null);
   const terminalRef = useRef<HTMLDivElement>(null);
+
+  const AVAILABLE_PACKAGES: Record<string, { version: string; description: string; size: string; dependencies?: string[] }> = {
+    vim: { version: "8.2.0", description: "Vi IMproved - enhanced vi editor", size: "3,456 kB", dependencies: ["libncurses6"] },
+    nano: { version: "5.4-2", description: "Small, user-friendly text editor", size: "567 kB" },
+    git: { version: "2.34.1", description: "Fast, scalable, distributed version control system", size: "12,345 kB", dependencies: ["libcurl4", "libssl1.1"] },
+    curl: { version: "7.68.0", description: "Command line URL transfer tool", size: "456 kB", dependencies: ["libcurl4"] },
+    wget: { version: "1.20.3", description: "Retrieves files from the web", size: "789 kB" },
+    htop: { version: "3.0.5", description: "Interactive process viewer", size: "234 kB", dependencies: ["libncurses6"] },
+    tree: { version: "1.8.0", description: "Display directory tree structure", size: "89 kB" },
+    neofetch: { version: "7.1.0", description: "Fast, highly customizable system info script", size: "123 kB" },
+    nodejs: { version: "18.17.0", description: "JavaScript runtime built on V8 engine", size: "28,456 kB" },
+    python3: { version: "3.10.6", description: "Interactive high-level programming language", size: "45,678 kB" },
+    "python3-pip": { version: "22.0.2", description: "Python package installer", size: "2,345 kB", dependencies: ["python3"] },
+    nginx: { version: "1.18.0", description: "High-performance web server", size: "1,234 kB" },
+    docker: { version: "20.10.17", description: "Container platform", size: "89,123 kB" },
+    "docker-compose": { version: "2.10.2", description: "Define and run multi-container apps", size: "12,345 kB", dependencies: ["docker"] },
+    postgresql: { version: "14.5", description: "Object-relational SQL database", size: "23,456 kB" },
+    mysql: { version: "8.0.30", description: "MySQL database server", size: "34,567 kB" },
+    redis: { version: "6.2.7", description: "In-memory data structure store", size: "2,345 kB" },
+    mongodb: { version: "6.0.1", description: "NoSQL document database", size: "56,789 kB" },
+    ffmpeg: { version: "4.4.2", description: "Complete, cross-platform solution for audio/video", size: "78,901 kB" },
+    imagemagick: { version: "6.9.11", description: "Image manipulation programs", size: "12,345 kB" },
+    tmux: { version: "3.2a", description: "Terminal multiplexer", size: "456 kB", dependencies: ["libncurses6"] },
+    screen: { version: "4.8.0", description: "Terminal multiplexer with VT100/ANSI emulation", size: "567 kB" },
+    ssh: { version: "8.4p1", description: "Secure shell client", size: "1,234 kB" },
+    openssh: { version: "8.4p1", description: "Secure shell server and client", size: "2,345 kB" },
+    "build-essential": { version: "12.8", description: "Essential build packages", size: "4,567 kB" },
+    gcc: { version: "11.2.0", description: "GNU C compiler", size: "34,567 kB" },
+    "g++": { version: "11.2.0", description: "GNU C++ compiler", size: "45,678 kB" },
+    make: { version: "4.3", description: "GNU make utility", size: "567 kB" },
+    cmake: { version: "3.22.1", description: "Cross-platform build system", size: "8,901 kB" },
+    zip: { version: "3.0-12", description: "Archiver for .zip files", size: "234 kB" },
+    unzip: { version: "6.0-26", description: "De-archiver for .zip files", size: "345 kB" },
+    jq: { version: "1.6", description: "Lightweight command-line JSON processor", size: "123 kB" },
+    ripgrep: { version: "13.0.0", description: "Recursively search directories for a regex pattern", size: "2,345 kB" },
+    fzf: { version: "0.30.0", description: "Command-line fuzzy finder", size: "1,234 kB" },
+    bat: { version: "0.21.0", description: "A cat clone with syntax highlighting", size: "3,456 kB" },
+    exa: { version: "0.10.1", description: "Modern replacement for ls", size: "789 kB" },
+    zsh: { version: "5.8.1", description: "Shell with advanced features", size: "2,345 kB" },
+    fish: { version: "3.4.1", description: "Friendly interactive shell", size: "3,456 kB" },
+    libncurses6: { version: "6.3-2", description: "Shared libraries for terminal handling", size: "456 kB" },
+    libcurl4: { version: "7.68.0", description: "Easy-to-use client-side URL transfer library", size: "345 kB" },
+    "libssl1.1": { version: "1.1.1n", description: "Secure Sockets Layer toolkit", size: "1,234 kB" },
+    neovim: { version: "0.7.2", description: "Hyper-extensible Vim-based text editor", size: "8,901 kB" },
+    emacs: { version: "27.2", description: "GNU Emacs editor", size: "45,678 kB" },
+    code: { version: "1.70.0", description: "Visual Studio Code editor", size: "123,456 kB" },
+  };
 
   const { data: adminStatus } = useQuery<AdminStatus>({
     queryKey: ["/api/admin/status"],
@@ -1055,8 +1110,10 @@ Address: 93.184.216.34`;
       if (cmd === "update") {
         return `Hit:1 http://archive.ubuntu.com/ubuntu focal InRelease
 Hit:2 http://archive.ubuntu.com/ubuntu focal-updates InRelease
+Hit:3 http://security.ubuntu.com/ubuntu focal-security InRelease
 Reading package lists... Done
-Building dependency tree... Done`;
+Building dependency tree... Done
+All packages are up to date.`;
       }
       if (cmd === "upgrade") {
         return `Reading package lists... Done
@@ -1065,34 +1122,201 @@ Calculating upgrade... Done
 0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.`;
       }
       if (cmd === "install") {
-        const pkg = args[1] || "package";
+        const packages = args.slice(1).filter(a => !a.startsWith("-"));
+        if (packages.length === 0) return "E: Unable to locate package";
+        
+        const toInstall: string[] = [];
+        const alreadyInstalled: string[] = [];
+        const notFound: string[] = [];
+        const deps: string[] = [];
+        
+        for (const pkg of packages) {
+          if (installedPackages[pkg]) {
+            alreadyInstalled.push(pkg);
+          } else if (AVAILABLE_PACKAGES[pkg]) {
+            toInstall.push(pkg);
+            const pkgDeps = AVAILABLE_PACKAGES[pkg].dependencies || [];
+            for (const dep of pkgDeps) {
+              if (!installedPackages[dep] && !toInstall.includes(dep) && AVAILABLE_PACKAGES[dep]) {
+                deps.push(dep);
+              }
+            }
+          } else {
+            notFound.push(pkg);
+          }
+        }
+        
+        if (notFound.length > 0) {
+          return `E: Unable to locate package ${notFound[0]}`;
+        }
+        
+        if (alreadyInstalled.length > 0 && toInstall.length === 0) {
+          return `Reading package lists... Done
+Building dependency tree... Done
+${alreadyInstalled[0]} is already the newest version (${installedPackages[alreadyInstalled[0]].version}).
+0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.`;
+        }
+        
+        const allToInstall = [...deps, ...toInstall];
+        let totalSize = 0;
+        for (const pkg of allToInstall) {
+          const size = AVAILABLE_PACKAGES[pkg]?.size || "0 kB";
+          totalSize += parseInt(size.replace(/[^0-9]/g, "")) || 0;
+        }
+        
+        let output = `Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done`;
+        
+        if (deps.length > 0) {
+          output += `\nThe following additional packages will be installed:\n  ${deps.join(" ")}`;
+        }
+        
+        output += `\nThe following NEW packages will be installed:\n  ${allToInstall.join(" ")}
+0 upgraded, ${allToInstall.length} newly installed, 0 to remove.
+Need to get ${totalSize.toLocaleString()} kB of archives.
+After this operation, ${Math.floor(totalSize * 3.5).toLocaleString()} kB of additional disk space will be used.`;
+        
+        for (const pkg of allToInstall) {
+          const pkgInfo = AVAILABLE_PACKAGES[pkg];
+          output += `\nGet:${allToInstall.indexOf(pkg) + 1} http://archive.ubuntu.com/ubuntu focal/main amd64 ${pkg} amd64 ${pkgInfo.version} [${pkgInfo.size}]`;
+        }
+        
+        output += `\nFetched ${totalSize.toLocaleString()} kB in 2s (${Math.floor(totalSize / 2).toLocaleString()} kB/s)`;
+        output += `\nSelecting previously unselected package.`;
+        
+        for (const pkg of allToInstall) {
+          output += `\n(Reading database ... 123456 files and directories currently installed.)
+Preparing to unpack .../${pkg}_${AVAILABLE_PACKAGES[pkg].version}_amd64.deb ...
+Unpacking ${pkg} (${AVAILABLE_PACKAGES[pkg].version}) ...
+Setting up ${pkg} (${AVAILABLE_PACKAGES[pkg].version}) ...`;
+          
+          setInstalledPackages(prev => ({
+            ...prev,
+            [pkg]: {
+              version: AVAILABLE_PACKAGES[pkg].version,
+              description: AVAILABLE_PACKAGES[pkg].description,
+              size: AVAILABLE_PACKAGES[pkg].size,
+            }
+          }));
+        }
+        
+        output += `\nProcessing triggers for man-db (2.9.1-1) ...`;
+        
+        return output;
+      }
+      if (cmd === "remove" || cmd === "purge") {
+        const packages = args.slice(1).filter(a => !a.startsWith("-"));
+        if (packages.length === 0) return "E: Unable to locate package";
+        
+        const toRemove: string[] = [];
+        for (const pkg of packages) {
+          if (installedPackages[pkg]) {
+            toRemove.push(pkg);
+          }
+        }
+        
+        if (toRemove.length === 0) {
+          return `Package '${packages[0]}' is not installed, so not removed`;
+        }
+        
+        for (const pkg of toRemove) {
+          setInstalledPackages(prev => {
+            const newPkgs = { ...prev };
+            delete newPkgs[pkg];
+            return newPkgs;
+          });
+        }
+        
         return `Reading package lists... Done
 Building dependency tree... Done
-The following NEW packages will be installed:
-  ${pkg}
-0 upgraded, 1 newly installed, 0 to remove.
-[Simulated] Would install ${pkg}`;
+The following packages will be REMOVED:
+  ${toRemove.join(" ")}
+0 upgraded, 0 newly installed, ${toRemove.length} to remove.
+Do you want to continue? [Y/n] Y
+(Reading database ... 123456 files and directories currently installed.)
+Removing ${toRemove.join(", ")} ...
+Processing triggers for man-db (2.9.1-1) ...`;
+      }
+      if (cmd === "list") {
+        const showInstalled = args.includes("--installed");
+        if (showInstalled) {
+          const pkgs = Object.entries(installedPackages);
+          if (pkgs.length === 0) return "Listing... Done";
+          return `Listing... Done\n` + pkgs.map(([name, info]) => 
+            `${name}/${info.version} [installed]`
+          ).join("\n");
+        }
+        const allPkgs = { ...AVAILABLE_PACKAGES };
+        return `Listing... Done\n` + Object.entries(allPkgs).slice(0, 20).map(([name, info]) => 
+          `${name}/${info.version} amd64`
+        ).join("\n") + "\n...and more. Use 'apt search <term>' to find specific packages.";
       }
       if (cmd === "search") {
+        const query = args[1]?.toLowerCase() || "";
+        if (!query) return "E: No search term specified";
+        
+        const matches = Object.entries(AVAILABLE_PACKAGES).filter(([name, info]) => 
+          name.toLowerCase().includes(query) || info.description.toLowerCase().includes(query)
+        );
+        
+        if (matches.length === 0) return `Sorting... Done\nFull Text Search... Done`;
+        
         return `Sorting... Done
 Full Text Search... Done
-${args[1] || "package"}/focal 1.0.0 amd64
-  A simulated package`;
+` + matches.slice(0, 10).map(([name, info]) => 
+          `\x1b[32m${name}\x1b[0m/${info.version} amd64\n  ${info.description}`
+        ).join("\n\n");
       }
-      return `apt: command '${cmd}' not found`;
+      if (cmd === "show") {
+        const pkg = args[1];
+        if (!pkg) return "E: No package specified";
+        
+        const info = AVAILABLE_PACKAGES[pkg] || installedPackages[pkg];
+        if (!info) return `E: Unable to locate package ${pkg}`;
+        
+        const isInstalled = !!installedPackages[pkg];
+        return `Package: ${pkg}
+Version: ${info.version}
+Priority: optional
+Section: misc
+Maintainer: NexusOS Package Manager
+Installed-Size: ${parseInt(info.size.replace(/[^0-9]/g, "")) * 3} kB
+Download-Size: ${info.size}
+APT-Sources: http://archive.ubuntu.com/ubuntu focal/main amd64 Packages
+Description: ${info.description}
+${isInstalled ? "\nStatus: Installed" : ""}`;
+      }
+      return `apt: command '${cmd}' not found. Try: apt install, apt remove, apt update, apt upgrade, apt search, apt list, apt show`;
     },
     
     "apt-get": (args) => COMMANDS.apt(args),
     
     dpkg: (args) => {
       if (args.includes("-l")) {
-        return `Desired=Unknown/Install/Remove/Purge/Hold
+        let output = `Desired=Unknown/Install/Remove/Purge/Hold
 | Status=Not/Inst/Conf-files/Unpacked/halF-conf/Half-inst/trig-aWait/Trig-pend
 |/ Err?=(none)/Reinst-required (Status,Err: uppercase=bad)
 ||/ Name           Version      Architecture Description
-+++-==============-============-============-==================================
-ii  bash           5.0-6        amd64        GNU Bourne Again SHell
-ii  coreutils      8.30-3       amd64        GNU core utilities`;
++++-==============-============-============-==================================\n`;
+        for (const [name, info] of Object.entries(installedPackages)) {
+          output += `ii  ${name.padEnd(14)} ${info.version.padEnd(12)} amd64        ${info.description}\n`;
+        }
+        return output.trim();
+      }
+      if (args.includes("-s")) {
+        const pkg = args.filter(a => !a.startsWith("-"))[0];
+        if (!pkg) return "dpkg: --status requires a package name";
+        const info = installedPackages[pkg];
+        if (!info) return `dpkg: package '${pkg}' is not installed`;
+        return `Package: ${pkg}
+Status: install ok installed
+Priority: optional
+Section: misc
+Installed-Size: ${parseInt(info.size.replace(/[^0-9]/g, "")) * 3}
+Maintainer: NexusOS
+Version: ${info.version}
+Description: ${info.description}`;
       }
       return "dpkg: usage: dpkg [<option> ...] <command>";
     },
