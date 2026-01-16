@@ -43,8 +43,8 @@ const externalApps: InstalledAppInfo[] = [
   {
     id: "coolmathgames",
     name: "CoolMathGames",
-    icon: <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded flex items-center justify-center text-white font-bold text-xs">CM</div>,
-    color: "bg-gradient-to-br from-blue-500 to-purple-600",
+    icon: <img src="/assets/coolmathgames-logo.jpeg" alt="CoolMathGames" className="w-6 h-6 rounded object-cover" />,
+    color: "bg-black",
     externalUrl: "https://www.coolmathgames.com/",
     isSystemApp: false,
   },

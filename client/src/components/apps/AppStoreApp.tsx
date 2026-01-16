@@ -172,7 +172,7 @@ const allApps: AppInfo[] = [
     id: "coolmathgames",
     name: "CoolMathGames",
     description: "Play fun brain-training games, puzzles, and strategy games for free.",
-    icon: <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">CM</div>,
+    icon: <img src="/assets/coolmathgames-logo.jpeg" alt="CoolMathGames" className="w-8 h-8 rounded-lg object-cover" />,
     category: "Games",
     rating: 4.6,
     downloads: "5B+",
