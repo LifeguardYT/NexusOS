@@ -309,7 +309,7 @@ export default function AppStoreApp() {
         </div>
       </div>
 
-      <Tabs defaultValue="discover" className="flex-1 flex flex-col">
+      <Tabs defaultValue="discover" className="flex-1 flex flex-col overflow-hidden">
         <TabsList className="w-full justify-start rounded-none border-b border-white/10 bg-transparent h-auto p-0">
           <TabsTrigger 
             value="discover" 
@@ -337,7 +337,7 @@ export default function AppStoreApp() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="discover" className="flex-1 overflow-auto p-4 mt-0">
+        <TabsContent value="discover" className="flex-1 overflow-y-auto p-4 mt-0" style={{ maxHeight: "calc(100% - 100px)" }}>
           {!searchQuery && (
             <>
               <div className="mb-6">
@@ -411,7 +411,7 @@ export default function AppStoreApp() {
           </div>
         </TabsContent>
 
-        <TabsContent value="categories" className="flex-1 overflow-auto p-4 mt-0">
+        <TabsContent value="categories" className="flex-1 overflow-y-auto p-4 mt-0" style={{ maxHeight: "calc(100% - 100px)" }}>
           <div className="flex flex-wrap gap-2 mb-4">
             {categories.map(category => (
               <Button
@@ -447,7 +447,7 @@ export default function AppStoreApp() {
           </div>
         </TabsContent>
 
-        <TabsContent value="installed" className="flex-1 overflow-auto p-4 mt-0">
+        <TabsContent value="installed" className="flex-1 overflow-y-auto p-4 mt-0" style={{ maxHeight: "calc(100% - 100px)" }}>
           <div className="space-y-2">
             {allApps
               .filter(app => app.isSystemApp || isInstalled(app.id))
