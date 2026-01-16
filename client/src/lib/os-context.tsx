@@ -114,10 +114,14 @@ export function OSProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem("os-files");
     return saved ? JSON.parse(saved) : defaultFiles;
   });
-  const [isPoweredOn, setIsPoweredOn] = useState(true);
+  const [isPoweredOn, setIsPoweredOn] = useState(() => {
+    const saved = localStorage.getItem("os-powered-on");
+    return saved ? JSON.parse(saved) : false;
+  });
   const [isShuttingDown, setIsShuttingDown] = useState(false);
   const [isStartingUp, setIsStartingUp] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
+  const [hasCompletedStartup, setHasCompletedStartup] = useState(false);
   
   const [security, setSecurity] = useState<SecuritySettings>(() => {
     const saved = localStorage.getItem("os-security");
@@ -137,10 +141,23 @@ export function OSProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("os-installed-apps", JSON.stringify(installedApps));
   }, [installedApps]);
 
-  // Check if we need to show lock screen on initial load
+  // Save powered on state
   useEffect(() => {
-    if (security.password || security.pin) {
-      setIsLocked(true);
+    localStorage.setItem("os-powered-on", JSON.stringify(isPoweredOn));
+  }, [isPoweredOn]);
+
+  // Auto-start if previously powered on (page refresh scenario)
+  useEffect(() => {
+    if (isPoweredOn && !hasCompletedStartup) {
+      setIsStartingUp(true);
+      setTimeout(() => {
+        setIsStartingUp(false);
+        setHasCompletedStartup(true);
+        // Lock if credentials are set
+        if (security.password || security.pin) {
+          setIsLocked(true);
+        }
+      }, 2000);
     }
   }, []);
 
@@ -173,6 +190,7 @@ export function OSProvider({ children }: { children: ReactNode }) {
       setWindows([]);
       setIsPoweredOn(false);
       setIsShuttingDown(false);
+      setHasCompletedStartup(false);
     }, 1500);
   }, []);
 
@@ -182,11 +200,12 @@ export function OSProvider({ children }: { children: ReactNode }) {
     // Wait for animation to complete
     setTimeout(() => {
       setIsStartingUp(false);
-      // Lock if require sign-in on wake is enabled
+      setHasCompletedStartup(true);
+      // Lock if credentials are set and require sign-in is enabled
       if (security.requireSignInOnWake && (security.password || security.pin)) {
         setIsLocked(true);
       }
-    }, 1500);
+    }, 2000);
   }, [security]);
 
   useEffect(() => {
