@@ -1856,6 +1856,248 @@ See 'help' for available commands.`;
         setLines(prev => [...prev, { type: "error", content: `Error executing ${cmd}` }]);
       }
       setIsProcessing(false);
+    } else if (installedPackages[cmd] || AVAILABLE_PACKAGES[cmd]) {
+      // Check if the command is an installed package that can be executed
+      const pkgInfo = installedPackages[cmd];
+      if (!pkgInfo) {
+        setLines(prev => [...prev, { type: "error", content: `${cmd}: command not found. Install it with: sudo apt install ${cmd}` }]);
+        return;
+      }
+      
+      // Provide simulated output for installed packages
+      const packageOutputs: Record<string, () => string> = {
+        btop: () => `\x1b[32mbtop\x1b[0m - Resource monitor
+┌─ CPU ────────────────────────────────────────────────────┐
+│ ▁▂▃▄▅▆▇█▇▆▅▄▃▂▁▂▃▄▅▆▇█▇▆▅▄ 45% @ 3.2GHz                 │
+│ Core 0: 52%  Core 1: 38%  Core 2: 47%  Core 3: 41%       │
+└──────────────────────────────────────────────────────────┘
+┌─ Memory ─────────────────────────────────────────────────┐
+│ ████████████░░░░░░░░░░░░░░░░░░░░  4.2G / 16G (26%)       │
+│ Swap: ░░░░░░░░░░░░░░░░░░░░░░░░░░  0.0G / 2G (0%)         │
+└──────────────────────────────────────────────────────────┘
+Press 'q' to quit (simulated)`,
+        htop: () => `\x1b[32mhtop\x1b[0m - Interactive process viewer
+  CPU[||||||||||||        32.5%]   Tasks: 187, 412 thr
+  Mem[||||||||||||||||    8.23G/16.0G]   Load: 1.24 1.56 1.32
+  Swp[                    0K/2.00G]   Uptime: 04:32:15
+
+  PID USER      PRI  NI  VIRT   RES   SHR S CPU% MEM%   TIME+ Command
+ 1234 user       20   0  512M   45M   12M S  5.2  0.3  1:23.45 node server.js
+ 5678 user       20   0  256M   32M    8M S  2.1  0.2  0:45.12 npm run dev
+ 9012 root       20   0  128M   16M    4M S  0.5  0.1  0:12.34 systemd
+
+Press q to quit`,
+        vim: () => args.length > 0 
+          ? `\x1b[7m ${args[0]} \x1b[0m
+~
+~
+~                    VIM - Vi IMproved
+~
+~                     version 8.2
+~                 by Bram Moolenaar et al.
+~
+~           type :q to exit    :help for help
+~
+-- INSERT --`
+          : `VIM - Vi IMproved 8.2
+Usage: vim [arguments] [file ...]
+   or: vim [arguments] -
+
+Arguments:
+   --                   Only file names after this
+   -v                   Vi mode
+   -e                   Ex mode
+   -R                   Readonly mode
+   -m                   Modifications not allowed`,
+        nano: () => args.length > 0
+          ? `  GNU nano 6.2                    ${args[0]}
+
+${args[0] === "test.txt" ? "Hello World!\nThis is a test file." : ""}
+
+
+
+
+                              [ New File ]
+^G Help    ^O Write Out   ^W Where Is   ^K Cut       ^T Execute
+^X Exit    ^R Read File   ^\ Replace    ^U Paste     ^J Justify`
+          : `Usage: nano [OPTIONS] [[+LINE[,COLUMN]] FILE]...
+
+To place the cursor on a specific line of a file, put the line
+number with a '+' before the filename.`,
+        neovim: () => `NVIM v0.6.1
+Build type: Release
+Compilation: /usr/bin/cc
+Features: +acl +iconv +tui
+
+Run :checkhealth for more info`,
+        git: () => {
+          if (args[0] === "status") return `On branch main
+Your branch is up to date with 'origin/main'.
+
+nothing to commit, working tree clean`;
+          if (args[0] === "log") return `commit a1b2c3d4e5f6 (HEAD -> main)
+Author: User <user@nexusos.local>
+Date:   ${new Date().toDateString()}
+
+    Initial commit`;
+          if (args[0] === "branch") return `* main`;
+          return `usage: git [-v | --version] [-h | --help] [-C <path>] [-c <name>=<value>]
+           [--exec-path[=<path>]] [--html-path] [--man-path] [--info-path]
+           [-p | --paginate | -P | --no-pager] [--no-replace-objects] [--bare]
+           [--git-dir=<path>] [--work-tree=<path>] [--namespace=<name>]
+           <command> [<args>]`;
+        },
+        nodejs: () => `Welcome to Node.js v18.17.0.
+Type ".help" for more information.
+> `,
+        node: () => `Welcome to Node.js v18.17.0.
+Type ".help" for more information.
+> `,
+        python3: () => `Python 3.10.6 (main, Nov 14 2022, 16:10:14) [GCC 11.3.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> `,
+        python: () => `Python 3.10.6 (main, Nov 14 2022, 16:10:14) [GCC 11.3.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> `,
+        ruby: () => `irb(main):001:0> `,
+        tmux: () => args.length > 0 ? `[tmux session started]` : `usage: tmux [-2CluvV] [-c shell-command] [-f file] [-L socket-name]
+            [-S socket-path] [command [flags]]`,
+        tree: () => {
+          const node = getNode(fileSystem, cwd);
+          if (!node || node.type !== "directory") return "Error reading directory";
+          let output = ".\n";
+          const children = Object.entries(node.children || {});
+          children.forEach(([name, child], i) => {
+            const isLast = i === children.length - 1;
+            const prefix = isLast ? "└── " : "├── ";
+            const color = child.type === "directory" ? "\x1b[34m" : "";
+            output += `${prefix}${color}${name}\x1b[0m\n`;
+          });
+          output += `\n${children.filter(([,c]) => c.type === "directory").length} directories, ${children.filter(([,c]) => c.type === "file").length} files`;
+          return output;
+        },
+        ncdu: () => `ncdu 1.15.1 ~ Use the arrow keys to navigate, press ? for help
+--- ${cwd} ----------------------------------------------------------------
+    4.0 KiB [##########] /Documents
+    2.0 KiB [#####     ] /Downloads  
+    1.0 KiB [##        ]  readme.txt
+    0.5 KiB [#         ]  .bashrc
+
+ Total disk usage:   7.5 KiB  Apparent size:   7.5 KiB  Items: 4`,
+        fzf: () => `fzf 0.29.0
+Usage: fzf [options]
+
+  Search mode:
+    -x, --extended       Extended-search mode
+    -e, --exact          Enable exact-match`,
+        jq: () => args.length > 0 
+          ? `jq - commandline JSON processor [version 1.6]
+Usage: jq [OPTIONS...] FILTER [FILE...]`
+          : `jq - commandline JSON processor [version 1.6]
+Usage: jq [OPTIONS...] FILTER [FILE...]`,
+        docker: () => {
+          if (args[0] === "ps") return `CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES`;
+          if (args[0] === "images") return `REPOSITORY   TAG       IMAGE ID   CREATED   SIZE`;
+          return `Usage:  docker [OPTIONS] COMMAND
+
+A self-sufficient runtime for containers
+
+Management Commands:
+  container   Manage containers
+  image       Manage images
+  network     Manage networks
+  volume      Manage volumes
+
+Commands:
+  build       Build an image from a Dockerfile
+  pull        Pull an image or a repository from a registry
+  push        Push an image or a repository to a registry
+  run         Run a command in a new container`;
+        },
+        nginx: () => `nginx version: nginx/1.18.0 (Ubuntu)
+Usage: nginx [-?hvVtTq] [-s signal] [-c filename] [-p prefix] [-g directives]`,
+        redis: () => `redis-cli 6.0.16
+Type 'help' for help, 'quit' to quit.
+127.0.0.1:6379> `,
+        ffmpeg: () => `ffmpeg version 4.4.2 Copyright (c) 2000-2021 the FFmpeg developers
+  built with gcc 11 (Ubuntu 11.3.0-1ubuntu1~22.04)
+  configuration: --enable-gpl --enable-version3 --enable-nonfree
+  libavutil      56. 70.100 / 56. 70.100
+  libavcodec     58.134.100 / 58.134.100`,
+        neofetch: () => `\x1b[36m        _,met$$$$$gg.          \x1b[0muser@nexusos
+\x1b[36m     ,g$$$$$$$$$$$$$$$P.       \x1b[0m--------------
+\x1b[36m   ,g$$P"     """Y$$.".        \x1b[0mOS: NexusOS 1.0
+\x1b[36m  ,$$P'              \`$$$.     \x1b[0mHost: Web Browser
+\x1b[36m',$$P       ,ggs.     \`$$b:   \x1b[0mKernel: JavaScript ES2022
+\x1b[36m\`d$$'     ,$P"'   .    $$$    \x1b[0mUptime: ${Math.floor(Math.random() * 24)} hours
+\x1b[36m $$P      d$'     ,    $$P    \x1b[0mPackages: ${Object.keys(installedPackages).length} (apt)
+\x1b[36m $$:      $$.   -    ,d$$'    \x1b[0mShell: bash 5.0
+\x1b[36m $$;      Y$b._   _,d$P'      \x1b[0mTerminal: NexusOS Terminal
+\x1b[36m Y$$.    \`.\`"Y$$$$P"'         \x1b[0mCPU: Virtual (4) @ 3.2GHz
+\x1b[36m \`$$b      "-.__              \x1b[0mMemory: 4096MB / 16384MB
+\x1b[36m  \`Y$$
+\x1b[36m   \`Y$$.
+\x1b[36m     \`$$b.
+\x1b[36m       \`Y$$b.
+\x1b[36m          \`"Y$b._
+\x1b[36m              \`"""`,
+        cmatrix: () => `\x1b[32m
+   ▄▄▄▄▄▄▄  ▄▄   ▄▄  ▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄  ▄▄▄▄▄▄   ▄▄▄▄▄▄▄  ▄▄   ▄▄ 
+  █       ██  █▄█  ██       ██       ██   ▄  █ █       ██  █ █  █
+  █       ██       ██   ▄   ██▄     ▄██  █ █ █ █▄     ▄██  █▄█  █
+  █     ▄▄██       ██  █▀█  █ █   █ ██   █▄▄█▄  █   █ ██       █
+  █    █  ██       ██  █▄█  █ █   █ ██    ▄▄  █ █   █ ██▄     ▄█
+  █    █▄▄██ ██▄██ ██       █ █   █ ██   █  █ █ █   █ █ █   █  
+  █▄▄▄▄▄▄▄██▄█   █▄██▄▄▄▄▄▄▄█ █▄▄▄█ ██▄▄▄█  █▄█ █▄▄▄█ █  █▄▄█  
+\x1b[0m
+Press Ctrl+C to exit the Matrix...`,
+        cowsay: () => {
+          const msg = args.join(" ") || "Hello!";
+          const border = "_".repeat(msg.length + 2);
+          return ` ${border}
+< ${msg} >
+ ${"-".repeat(msg.length + 2)}
+        \\   ^__^
+         \\  (oo)\\_______
+            (__)\\       )\\/\\
+                ||----w |
+                ||     ||`;
+        },
+        figlet: () => {
+          const text = args.join(" ") || "Hello";
+          return `
+ _   _      _ _       
+| | | | ___| | | ___  
+| |_| |/ _ \\ | |/ _ \\ 
+|  _  |  __/ | | (_) |
+|_| |_|\\___|_|_|\\___/ 
+                      `;
+        },
+        sl: () => `
+                         (  ) (@@) ( )  (@)  ()    @@    O     @
+                    (@@@)
+                (    )
+             (@@@@)
+           (   )
+        ====        ________                ___________
+    _D _|  |_______/        \\__I_I_____===__|_________|
+     |(_)---  |   H\\________/ |   |        =|___ ___|
+     /     |  |   H  |  |     |   |         ||_| |_||
+    |      |  |   H  |__--------------------| [___] |
+    | ________|___H__/__|_____/[][]~\\_______|       |
+    |/ |   |-----------I_____I [][] []  D   |=======|_
+  __/ =| o |=-~~\\  /~~\\  /~~\\  /~~\\ ____Y___________|__
+   |/-=|___|=    ||    ||    ||    |_____/~\\___/
+    \\_/      \\O=====O=====O=====O_/      \\_/`,
+      };
+      
+      const outputFn = packageOutputs[cmd];
+      if (outputFn) {
+        setLines(prev => [...prev, { type: "output", content: outputFn() }]);
+      } else {
+        // Generic output for packages without specific handlers
+        setLines(prev => [...prev, { type: "output", content: `${cmd} ${pkgInfo.version}\n${pkgInfo.description}\n\nRun '${cmd} --help' for usage information.` }]);
+      }
     } else if (cmd) {
       setLines(prev => [...prev, { type: "error", content: `${cmd}: command not found. Type 'help' for available commands.` }]);
     }
