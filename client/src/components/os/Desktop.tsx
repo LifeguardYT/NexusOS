@@ -4,6 +4,7 @@ import { Taskbar } from "./Taskbar";
 import { StartMenu } from "./StartMenu";
 import { DesktopIcons } from "./DesktopIcons";
 import { ContextMenu } from "./ContextMenu";
+import { ShutdownOverlay } from "./ShutdownOverlay";
 import { BrowserApp } from "@/components/apps/BrowserApp";
 import { SettingsApp } from "@/components/apps/SettingsApp";
 import { CalculatorApp } from "@/components/apps/CalculatorApp";
@@ -18,7 +19,7 @@ import { MinesweeperGame } from "@/components/apps/MinesweeperGame";
 import { TerminalApp } from "@/components/apps/TerminalApp";
 import AppStoreApp from "@/components/apps/AppStoreApp";
 import { Power, Lock } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
 
 const wallpapers: Record<string, string> = {
@@ -50,6 +51,14 @@ export function Desktop() {
   const { settings, windows, showContextMenu, hideContextMenu, setStartMenuOpen, isPoweredOn, isShuttingDown, isStartingUp, isLocked, startup, unlock, security, openWindow } = useOS();
   const [lockInput, setLockInput] = useState("");
   const [lockError, setLockError] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/admin/status")
+      .then((res) => res.json())
+      .then((data) => setIsAdmin(data.isAdmin || data.isOwner))
+      .catch(() => setIsAdmin(false));
+  }, []);
 
   const handleDesktopClick = () => {
     hideContextMenu();
@@ -85,80 +94,86 @@ export function Desktop() {
   if (isLocked && isPoweredOn && !isStartingUp) {
     const isPinMode = security.pin && !security.password;
     return (
-      <div 
-        className="fixed inset-0 flex flex-col items-center justify-center select-none"
-        style={{ 
-          background: wallpapers[settings.wallpaper] || wallpapers["gradient-1"],
-        }}
-        data-testid="lock-screen"
-      >
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-md" />
-        <div className="relative z-10 flex flex-col items-center gap-6 p-8">
-          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-2xl">
-            <Lock className="w-12 h-12 text-white" />
-          </div>
-          <h2 className="text-2xl font-semibold text-white">NexusOS</h2>
-          <p className="text-white/70">Enter your {isPinMode ? "PIN" : "password"} to unlock</p>
-          
-          <div className="flex flex-col items-center gap-3">
-            <input
-              type={isPinMode ? "text" : "password"}
-              value={lockInput}
-              onChange={(e) => {
-                if (isPinMode) {
-                  // Only allow numbers for PIN
-                  const val = e.target.value.replace(/\D/g, '');
-                  setLockInput(val);
-                } else {
-                  setLockInput(e.target.value);
-                }
-                setLockError(false);
-              }}
-              onKeyDown={(e) => e.key === "Enter" && handleUnlock()}
-              placeholder={isPinMode ? "Enter PIN" : "Enter password"}
-              className={`w-64 px-4 py-3 rounded-lg bg-white/10 border ${lockError ? 'border-red-500' : 'border-white/20'} text-white placeholder-white/50 text-center focus:outline-none focus:border-blue-500`}
-              data-testid="input-lock"
-              autoFocus
-            />
-            {lockError && (
-              <p className="text-red-400 text-sm">Incorrect {isPinMode ? "PIN" : "password"}</p>
-            )}
-            <button
-              onClick={handleUnlock}
-              className="px-6 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors"
-              data-testid="btn-unlock"
-            >
-              Unlock
-            </button>
+      <>
+        <div 
+          className="fixed inset-0 flex flex-col items-center justify-center select-none"
+          style={{ 
+            background: wallpapers[settings.wallpaper] || wallpapers["gradient-1"],
+          }}
+          data-testid="lock-screen"
+        >
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-md" />
+          <div className="relative z-10 flex flex-col items-center gap-6 p-8">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-2xl">
+              <Lock className="w-12 h-12 text-white" />
+            </div>
+            <h2 className="text-2xl font-semibold text-white">NexusOS</h2>
+            <p className="text-white/70">Enter your {isPinMode ? "PIN" : "password"} to unlock</p>
+            
+            <div className="flex flex-col items-center gap-3">
+              <input
+                type={isPinMode ? "text" : "password"}
+                value={lockInput}
+                onChange={(e) => {
+                  if (isPinMode) {
+                    // Only allow numbers for PIN
+                    const val = e.target.value.replace(/\D/g, '');
+                    setLockInput(val);
+                  } else {
+                    setLockInput(e.target.value);
+                  }
+                  setLockError(false);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && handleUnlock()}
+                placeholder={isPinMode ? "Enter PIN" : "Enter password"}
+                className={`w-64 px-4 py-3 rounded-lg bg-white/10 border ${lockError ? 'border-red-500' : 'border-white/20'} text-white placeholder-white/50 text-center focus:outline-none focus:border-blue-500`}
+                data-testid="input-lock"
+                autoFocus
+              />
+              {lockError && (
+                <p className="text-red-400 text-sm">Incorrect {isPinMode ? "PIN" : "password"}</p>
+              )}
+              <button
+                onClick={handleUnlock}
+                className="px-6 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors"
+                data-testid="btn-unlock"
+              >
+                Unlock
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+        <ShutdownOverlay isAdmin={isAdmin} />
+      </>
     );
   }
 
   // Shutdown screen
   if (!isPoweredOn) {
     return (
-      <div 
-        className="fixed inset-0 bg-black flex flex-col items-center justify-center select-none animate-fade-in"
-        data-testid="shutdown-screen"
-      >
-        <button
-          onClick={startup}
-          className="group flex flex-col items-center gap-6 p-8 rounded-2xl transition-all hover:bg-white/5"
-          data-testid="btn-startup"
+      <>
+        <div 
+          className="fixed inset-0 bg-black flex flex-col items-center justify-center select-none animate-fade-in"
+          data-testid="shutdown-screen"
         >
-          <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-2xl group-hover:scale-105 transition-transform animate-pulse-slow">
-            <Power className="w-12 h-12 text-white" />
-          </div>
-          <span className="text-xl font-semibold text-white/90 group-hover:text-white transition-colors">
-            Startup NexusOS
-          </span>
-        </button>
-        <p className="absolute bottom-8 text-sm text-white/30">
-          Press the button to start
-        </p>
-      </div>
+          <button
+            onClick={startup}
+            className="group flex flex-col items-center gap-6 p-8 rounded-2xl transition-all hover:bg-white/5"
+            data-testid="btn-startup"
+          >
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-2xl group-hover:scale-105 transition-transform animate-pulse-slow">
+              <Power className="w-12 h-12 text-white" />
+            </div>
+            <span className="text-xl font-semibold text-white/90 group-hover:text-white transition-colors">
+              Startup NexusOS
+            </span>
+          </button>
+          <p className="absolute bottom-8 text-sm text-white/30">
+            Press the button to start
+          </p>
+        </div>
+        <ShutdownOverlay isAdmin={isAdmin} />
+      </>
     );
   }
 
@@ -234,6 +249,9 @@ export function Desktop() {
       {/* Context Menu */}
       <ContextMenu />
     </div>
+
+    {/* Shutdown Overlay - shows warning during countdown and blocks non-admin users after shutdown */}
+    <ShutdownOverlay isAdmin={isAdmin} />
     </>
   );
 }

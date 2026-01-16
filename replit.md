@@ -85,7 +85,23 @@ server/
 - `POST /api/owner/grant-admin` - Owner only: grant admin by username/email
 - `POST /api/owner/users/:userId/admin` - Owner only: grant/revoke admin by user ID
 
+### Global Shutdown System
+Admin-only feature to shut down the OS for all non-admin users:
+- `GET /api/shutdown/status` - Get current shutdown status
+- `POST /api/shutdown` - Admin only: initiate 60-second shutdown countdown
+- `POST /api/shutdown/stop` - Admin only: cancel shutdown and restore access
+
+Terminal commands:
+- `shutdown` - Admin only: broadcasts warning, shuts down OS after 60 seconds for non-admins
+- `stopshutdown` - Admin only: cancels shutdown and restores access for all users
+
+WebSocket endpoint `/ws` broadcasts real-time shutdown status to all connected clients.
+
 ## Recent Changes
+- Added global shutdown system with real-time WebSocket updates and admin-only controls
+- Weather app now displays temperatures in Fahrenheit
+- Updated CoolMathGames app to use custom logo image
+- Removed rating and download counts from App Store UI
 - Added Owner-only tab in Settings with Crown icon for managing admin privileges
 - Implemented owner/admin role separation: owner (from env) vs admins (isAdmin=true in DB)
 - Added owner-only API endpoints for granting/revoking admin privileges

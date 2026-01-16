@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
 import { settingsSchema, insertUpdateSchema, insertMessageSchema, users, messages } from "@shared/schema";
 import { z } from "zod";
@@ -8,6 +9,29 @@ import { updates } from "@shared/schema";
 import { desc, eq, or, and, ilike } from "drizzle-orm";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import os from "os";
+
+// Global shutdown state
+let shutdownState = {
+  isShutdown: false,
+  isShuttingDown: false,
+  shutdownTime: null as number | null,
+  message: "",
+};
+
+// WebSocket clients for real-time updates
+const wsClients = new Set<WebSocket>();
+
+function broadcastShutdownStatus() {
+  const message = JSON.stringify({
+    type: "shutdown_status",
+    ...shutdownState,
+  });
+  wsClients.forEach((client) => {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(message);
+    }
+  });
+}
 
 // Owner user ID - the original owner who can grant admin to others
 const OWNER_USER_ID = process.env.ADMIN_USER_ID || "";
@@ -543,6 +567,93 @@ export async function registerRoutes(
       console.error("Failed to fetch conversations:", error);
       res.status(500).json({ error: "Failed to fetch conversations" });
     }
+  });
+
+  // Get current shutdown status
+  app.get("/api/shutdown/status", (req, res) => {
+    res.json(shutdownState);
+  });
+
+  // Initiate shutdown (admin only)
+  app.post("/api/shutdown", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId || !(await isUserAdmin(userId))) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      if (shutdownState.isShutdown || shutdownState.isShuttingDown) {
+        return res.status(400).json({ error: "System is already shutting down or shutdown" });
+      }
+
+      shutdownState = {
+        isShutdown: false,
+        isShuttingDown: true,
+        shutdownTime: Date.now() + 60000, // 60 seconds from now
+        message: "System going down for maintenance in 60 seconds!",
+      };
+
+      broadcastShutdownStatus();
+
+      // Schedule the actual shutdown
+      setTimeout(() => {
+        if (shutdownState.isShuttingDown) {
+          shutdownState = {
+            isShutdown: true,
+            isShuttingDown: false,
+            shutdownTime: null,
+            message: "Shutdown for maintenance",
+          };
+          broadcastShutdownStatus();
+        }
+      }, 60000);
+
+      res.json({ success: true, message: "Shutdown initiated" });
+    } catch (error) {
+      console.error("Failed to initiate shutdown:", error);
+      res.status(500).json({ error: "Failed to initiate shutdown" });
+    }
+  });
+
+  // Stop shutdown (admin only)
+  app.post("/api/shutdown/stop", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId || !(await isUserAdmin(userId))) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      shutdownState = {
+        isShutdown: false,
+        isShuttingDown: false,
+        shutdownTime: null,
+        message: "",
+      };
+
+      broadcastShutdownStatus();
+
+      res.json({ success: true, message: "Shutdown cancelled" });
+    } catch (error) {
+      console.error("Failed to stop shutdown:", error);
+      res.status(500).json({ error: "Failed to stop shutdown" });
+    }
+  });
+
+  // Setup WebSocket server for real-time shutdown updates
+  const wss = new WebSocketServer({ server: httpServer, path: "/ws" });
+
+  wss.on("connection", (ws) => {
+    wsClients.add(ws);
+    
+    // Send current shutdown status on connect
+    ws.send(JSON.stringify({
+      type: "shutdown_status",
+      ...shutdownState,
+    }));
+
+    ws.on("close", () => {
+      wsClients.delete(ws);
+    });
   });
 
   return httpServer;

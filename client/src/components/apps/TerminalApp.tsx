@@ -21,7 +21,7 @@ interface FileSystemNode {
   modified?: Date;
 }
 
-const ADMIN_COMMANDS = ["users", "sysadmin", "logs", "shutdown"];
+const ADMIN_COMMANDS = ["users", "sysadmin", "logs", "shutdown", "stopshutdown"];
 
 const createFileSystem = (): Record<string, FileSystemNode> => ({
   home: {
@@ -408,7 +408,7 @@ export function TerminalApp() {
       }
       
       if (isAdmin) {
-        output += `\x1b[31mAdmin Commands:\x1b[0m\n  users, sysadmin, logs, shutdown\n\n`;
+        output += `\x1b[31mAdmin Commands:\x1b[0m\n  users, sysadmin, logs, shutdown, stopshutdown\n\n`;
       }
       
       output += "Type 'help <command>' or 'man <command>' for detailed usage.";
@@ -1715,14 +1715,41 @@ Process:
       return logs.join("\n");
     },
     
-    shutdown: (args, isAdmin) => {
+    shutdown: async (args, isAdmin) => {
       if (!isAdmin) return "Permission denied: Admin access required";
-      return `Shutdown initiated...
+      try {
+        const response = await fetch("/api/shutdown", {
+          method: "POST",
+          credentials: "include",
+        });
+        if (!response.ok) {
+          const data = await response.json();
+          return `Error: ${data.error || "Failed to initiate shutdown"}`;
+        }
+        return `\x1b[31mShutdown initiated...\x1b[0m
 Broadcasting message to all terminals...
-System going down for maintenance in 60 seconds!
+System going down for maintenance in 60 seconds!`;
+      } catch (e) {
+        return "Error: Failed to connect to shutdown service";
+      }
+    },
 
-[SIMULATED] - This is a simulated shutdown.
-In a real system, this would gracefully stop all services.`;
+    stopshutdown: async (args, isAdmin) => {
+      if (!isAdmin) return "Permission denied: Admin access required";
+      try {
+        const response = await fetch("/api/shutdown/stop", {
+          method: "POST",
+          credentials: "include",
+        });
+        if (!response.ok) {
+          const data = await response.json();
+          return `Error: ${data.error || "Failed to stop shutdown"}`;
+        }
+        return `\x1b[32mShutdown cancelled.\x1b[0m
+All users have been restored access to the system.`;
+      } catch (e) {
+        return "Error: Failed to connect to shutdown service";
+      }
     },
   };
 
