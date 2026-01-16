@@ -353,17 +353,17 @@ export function ChatApp() {
                             : "bg-white/10 rounded-bl-md"
                         }`}
                       >
-                        {!isOwn && chatView === "global" && (
-                          <div className="flex items-center gap-1.5 mb-1">
-                            <p className="text-xs font-medium text-blue-400">{msg.senderName}</p>
+                        {chatView === "global" && (!isOwn || msg.senderIsOwner || msg.senderIsAdmin) && (
+                          <div className={`flex items-center gap-1.5 mb-1 ${isOwn ? "justify-end" : ""}`}>
+                            {!isOwn && <p className="text-xs font-medium text-blue-400">{msg.senderName}</p>}
                             {msg.senderIsOwner && (
-                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-yellow-500/20 text-yellow-400 border border-yellow-500/30">
+                              <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${isOwn ? "bg-yellow-500/30 text-yellow-200 border border-yellow-400/40" : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"}`}>
                                 <Crown className="w-2.5 h-2.5" />
                                 OWNER
                               </span>
                             )}
                             {msg.senderIsAdmin && !msg.senderIsOwner && (
-                              <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                              <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${isOwn ? "bg-white/20 text-white border border-white/30" : "bg-blue-500/20 text-blue-400 border border-blue-500/30"}`}>
                                 <Shield className="w-2.5 h-2.5" />
                                 ADMIN
                               </span>
