@@ -41,38 +41,70 @@ export function ShutdownOverlay({ isAdmin }: ShutdownOverlayProps) {
   useEffect(() => {
     fetchShutdownStatus();
 
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+    let ws: WebSocket | null = null;
+    let pollingInterval: NodeJS.Timeout | null = null;
+    let reconnectTimeout: NodeJS.Timeout | null = null;
+    let isConnected = false;
 
-    ws.onopen = () => {
-      fetchShutdownStatus();
+    const startPolling = () => {
+      if (pollingInterval) return;
+      pollingInterval = setInterval(fetchShutdownStatus, 10000);
     };
 
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data.type === "shutdown_status") {
-          setShutdownStatus({
-            isShutdown: data.isShutdown,
-            isShuttingDown: data.isShuttingDown,
-            shutdownTime: data.shutdownTime,
-            message: data.message,
-          });
-        }
-      } catch (e) {
-        console.error("Failed to parse WebSocket message:", e);
+    const stopPolling = () => {
+      if (pollingInterval) {
+        clearInterval(pollingInterval);
+        pollingInterval = null;
       }
     };
 
-    ws.onclose = () => {
-      fetchShutdownStatus();
-      setTimeout(() => {
-        window.location.reload();
-      }, 5000);
+    const connectWebSocket = () => {
+      try {
+        const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+
+        ws.onopen = () => {
+          isConnected = true;
+          stopPolling();
+          fetchShutdownStatus();
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === "shutdown_status") {
+              setShutdownStatus({
+                isShutdown: data.isShutdown,
+                isShuttingDown: data.isShuttingDown,
+                shutdownTime: data.shutdownTime,
+                message: data.message,
+              });
+            }
+          } catch (e) {
+            // Ignore parse errors
+          }
+        };
+
+        ws.onclose = () => {
+          isConnected = false;
+          startPolling();
+          reconnectTimeout = setTimeout(connectWebSocket, 5000);
+        };
+
+        ws.onerror = () => {
+          ws?.close();
+        };
+      } catch (e) {
+        startPolling();
+      }
     };
 
+    connectWebSocket();
+
     return () => {
-      ws.close();
+      stopPolling();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (ws) ws.close();
     };
   }, []);
 
