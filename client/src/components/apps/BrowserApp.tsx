@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { ArrowLeft, ArrowRight, RotateCw, Home, Star, Plus, X, Search, Lock, ExternalLink, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -66,6 +66,35 @@ export function BrowserApp() {
   const [historyIndex, setHistoryIndex] = useState(-1);
 
   const activeTab = tabs.find(t => t.id === activeTabId);
+
+  // Check for external navigation request from App Store
+  useEffect(() => {
+    const storedUrl = localStorage.getItem("browser-navigate-url");
+    if (storedUrl) {
+      localStorage.removeItem("browser-navigate-url");
+      // Small delay to ensure browser is fully mounted
+      setTimeout(() => {
+        navigateToUrl(storedUrl);
+      }, 100);
+    }
+  }, []);
+
+  const navigateToUrl = (url: string) => {
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      if (url.includes(".") && !url.includes(" ")) {
+        url = "https://" + url;
+      } else {
+        url = `https://www.google.com/search?q=${encodeURIComponent(url)}&igu=1`;
+      }
+    }
+
+    setTabs(prev => prev.map(t => 
+      t.id === activeTabId ? { ...t, url, title: new URL(url).hostname } : t
+    ));
+    setInputUrl(url);
+    setHistory(prev => [...prev.slice(0, historyIndex + 1), url]);
+    setHistoryIndex(prev => prev + 1);
+  };
 
   const navigateTo = useCallback((url: string) => {
     if (!url.startsWith("http://") && !url.startsWith("https://")) {

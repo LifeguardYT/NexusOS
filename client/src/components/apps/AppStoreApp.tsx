@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Search, Download, Check, Star, Globe, FileText, Calculator, 
   Cloud, Music, Gamepad2, Terminal, Settings, FolderOpen, MessageSquare,
-  Package, TrendingUp, Sparkles, Clock
+  Package, TrendingUp, Sparkles, Clock, Blocks
 } from "lucide-react";
 
 interface AppInfo {
@@ -20,6 +20,7 @@ interface AppInfo {
   downloads: string;
   size: string;
   isSystemApp: boolean;
+  externalUrl?: string;
 }
 
 const allApps: AppInfo[] = [
@@ -155,12 +156,24 @@ const allApps: AppInfo[] = [
     size: "3 MB",
     isSystemApp: true,
   },
+  {
+    id: "roblox",
+    name: "Roblox",
+    description: "Play millions of experiences built by a global community. Create, share, and play with friends.",
+    icon: <Blocks className="w-8 h-8 text-red-500" />,
+    category: "Games",
+    rating: 4.5,
+    downloads: "500M+",
+    size: "Web App",
+    isSystemApp: false,
+    externalUrl: "https://www.roblox.com",
+  },
 ];
 
 const categories = ["All", "Utilities", "Productivity", "Entertainment", "Games", "Social", "Developer Tools", "System"];
 
 export default function AppStoreApp() {
-  const { installedApps, installApp, uninstallApp } = useOS();
+  const { installedApps, installApp, uninstallApp, openWindow } = useOS();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedApp, setSelectedApp] = useState<AppInfo | null>(null);
@@ -200,6 +213,14 @@ export default function AppStoreApp() {
     }
   };
 
+  const handleOpenExternalApp = (app: AppInfo) => {
+    if (app.externalUrl) {
+      openWindow("browser");
+      // Store the URL to open in localStorage so BrowserApp can pick it up
+      localStorage.setItem("browser-navigate-url", app.externalUrl);
+    }
+  };
+
   if (selectedApp) {
     return (
       <div className="h-full bg-background flex flex-col">
@@ -235,13 +256,23 @@ export default function AppStoreApp() {
                   System App
                 </Badge>
               ) : isInstalled(selectedApp.id) ? (
-                <Button
-                  variant="outline"
-                  onClick={() => handleInstallToggle(selectedApp)}
-                  data-testid={`btn-uninstall-${selectedApp.id}`}
-                >
-                  Uninstall
-                </Button>
+                <div className="flex gap-2">
+                  {selectedApp.externalUrl && (
+                    <Button
+                      onClick={() => handleOpenExternalApp(selectedApp)}
+                      data-testid={`btn-open-${selectedApp.id}`}
+                    >
+                      Open
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    onClick={() => handleInstallToggle(selectedApp)}
+                    data-testid={`btn-uninstall-${selectedApp.id}`}
+                  >
+                    Uninstall
+                  </Button>
+                </div>
               ) : (
                 <Button
                   onClick={() => handleInstallToggle(selectedApp)}
