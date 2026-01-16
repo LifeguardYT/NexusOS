@@ -124,7 +124,27 @@ export function StartMenu() {
   const handleContextMenu = (e: React.MouseEvent, app: typeof allDisplayedApps[0]) => {
     e.preventDefault();
     e.stopPropagation();
-    setContextMenu({ x: e.clientX, y: e.clientY, appId: app.id, appName: app.name, isSystemApp: app.isSystemApp });
+    
+    // Get the button element that was right-clicked
+    const target = e.currentTarget as HTMLElement;
+    const rect = target.getBoundingClientRect();
+    
+    // Position menu to the right of the app icon, or left if it would overflow
+    const menuWidth = 180;
+    let x = rect.right + 4;
+    let y = rect.top;
+    
+    // Check if menu would overflow right side of viewport
+    if (x + menuWidth > window.innerWidth - 20) {
+      x = rect.left - menuWidth - 4;
+    }
+    
+    // Ensure menu doesn't go above the viewport
+    if (y < 20) {
+      y = 20;
+    }
+    
+    setContextMenu({ x, y, appId: app.id, appName: app.name, isSystemApp: app.isSystemApp });
   };
 
   const closeContextMenu = () => {
