@@ -6,7 +6,7 @@ import {
   Palette, Monitor, Volume2, Wifi, Bell, User, Lock, Info, 
   Sun, Moon, ChevronRight, Check, Shield, Code, Activity, Users,
   Cpu, HardDrive, Clock, RefreshCw, ArrowLeft, Key, Mail, Ban, UserCheck, Crown, ShieldCheck, ShieldOff,
-  Download, Upload
+  Download, Upload, Trash2
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -296,6 +296,32 @@ export function SettingsApp() {
     };
     reader.readAsText(file);
     event.target.value = "";
+  };
+
+  const handleDeleteData = () => {
+    if (confirm("Are you sure you want to delete all your data? This action cannot be undone.")) {
+      localStorage.removeItem("nexus-notes");
+      localStorage.removeItem("nexus-files");
+      localStorage.removeItem("nexus-settings");
+      localStorage.removeItem("nexus-security");
+      updateSettings({
+        theme: "dark",
+        wallpaper: "gradient-1",
+        accentColor: "blue",
+        brightness: 100,
+        volume: 50,
+        wifi: true,
+        notifications: true,
+        syncEnabled: false,
+        developerMode: false,
+      });
+      updateSecurity({
+        password: null,
+        pin: null,
+        requireSignInOnWake: false,
+      });
+      alert("All data has been deleted.");
+    }
   };
 
   const renderContent = () => {
@@ -953,6 +979,18 @@ export function SettingsApp() {
                   </Button>
                 </label>
               </div>
+            </div>
+
+            <div className="pt-6 mt-6 border-t border-white/10">
+              <Button
+                variant="destructive"
+                className="w-full"
+                onClick={handleDeleteData}
+                data-testid="btn-delete-data"
+              >
+                <Trash2 className="w-4 h-4 mr-2" />
+                Delete Data
+              </Button>
             </div>
           </div>
         );
