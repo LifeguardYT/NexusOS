@@ -1362,8 +1362,17 @@ passwd: password updated successfully`;
         return `User user may run the following commands on nexusos:
     (ALL : ALL) ALL`;
       }
-      return `[sudo] password for ${env.USER}: 
-[Simulated] Running '${args.join(" ")}' as root`;
+      const sudoCmd = args[0];
+      const sudoArgs = args.slice(1);
+      if (COMMANDS[sudoCmd]) {
+        const passwordPrompt = `[sudo] password for ${env.USER}: \n`;
+        const result = COMMANDS[sudoCmd](sudoArgs, true);
+        if (result instanceof Promise) {
+          return result.then(r => passwordPrompt + r);
+        }
+        return passwordPrompt + result;
+      }
+      return `sudo: ${sudoCmd}: command not found`;
     },
     
     ssh: (args) => {
