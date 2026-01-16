@@ -479,7 +479,7 @@ export async function registerRoutes(
       }
 
       // Check if the current user is an admin or owner
-      const isOwner = userId === process.env.OWNER_USER_ID;
+      const isOwner = userId === OWNER_USER_ID;
       const [dbUser] = await db.select().from(users).where(eq(users.id, userId));
       const isAdmin = isOwner || dbUser?.isAdmin === true;
 
