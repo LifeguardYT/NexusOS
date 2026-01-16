@@ -44,7 +44,7 @@ const appComponents: Record<string, React.ComponentType> = {
 };
 
 export function Desktop() {
-  const { settings, windows, showContextMenu, hideContextMenu, setStartMenuOpen, isPoweredOn, isShuttingDown, isStartingUp, isLocked, startup, unlock, security } = useOS();
+  const { settings, windows, showContextMenu, hideContextMenu, setStartMenuOpen, isPoweredOn, isShuttingDown, isStartingUp, isLocked, startup, unlock, security, openWindow } = useOS();
   const [lockInput, setLockInput] = useState("");
   const [lockError, setLockError] = useState(false);
 
@@ -57,8 +57,14 @@ export function Desktop() {
     e.preventDefault();
     showContextMenu(e.clientX, e.clientY, [
       { label: "Refresh", action: () => window.location.reload() },
-      { label: "Display Settings", action: () => {} },
-      { label: "Personalize", action: () => {} },
+      { label: "Display Settings", action: () => {
+        openWindow("settings");
+        hideContextMenu();
+      }},
+      { label: "Personalize", action: () => {
+        openWindow("settings");
+        hideContextMenu();
+      }},
     ]);
   };
 
