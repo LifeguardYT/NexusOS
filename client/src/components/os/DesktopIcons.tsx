@@ -28,9 +28,9 @@ export function DesktopIcons() {
   const chatApp = apps.find(app => app.id === "chat");
   const desktopApps = [
     ...apps.slice(0, 6),
-    ...(chatApp ? [chatApp] : []),
     ...(updatesApp ? [updatesApp] : []),
     { id: "trash", name: "Trash", icon: "trash", color: "bg-gray-500", defaultWidth: 600, defaultHeight: 400 },
+    ...(chatApp ? [chatApp] : []),
   ];
 
   const handleContextMenu = (e: React.MouseEvent, appId: string) => {
