@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
-import { ArrowLeft, ArrowRight, RotateCw, Home, Star, Plus, X, Search, Lock, ExternalLink, AlertTriangle } from "lucide-react";
+import { ArrowLeft, ArrowRight, RotateCw, Home, Star, Plus, X, Search, Lock, ExternalLink, AlertTriangle, Download, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useOS } from "@/lib/os-context";
 
 interface Tab {
   id: string;
@@ -8,11 +9,18 @@ interface Tab {
   title: string;
 }
 
+interface DownloadItem {
+  id: string;
+  name: string;
+  url: string;
+  status: "downloading" | "complete" | "error";
+  type: string;
+}
+
 function getEmbeddableUrl(url: string): { embedUrl: string; isEmbeddable: boolean } {
   try {
     const urlObj = new URL(url);
     
-    // YouTube video URLs - convert to embed
     if (urlObj.hostname.includes("youtube.com")) {
       const videoId = urlObj.searchParams.get("v");
       if (videoId) {
@@ -22,11 +30,9 @@ function getEmbeddableUrl(url: string): { embedUrl: string; isEmbeddable: boolea
       if (shortsMatch) {
         return { embedUrl: `https://www.youtube.com/embed/${shortsMatch[1]}?autoplay=0`, isEmbeddable: true };
       }
-      // YouTube homepage or other pages - not embeddable
       return { embedUrl: url, isEmbeddable: false };
     }
     
-    // youtu.be short links
     if (urlObj.hostname === "youtu.be") {
       const videoId = urlObj.pathname.slice(1);
       if (videoId) {
@@ -56,7 +62,36 @@ function needsExternalWarning(url: string): boolean {
   }
 }
 
+function getFileTypeFromUrl(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname.toLowerCase();
+    
+    if (pathname.match(/\.(jpg|jpeg|png|gif|webp|svg|bmp|ico)$/)) return "image";
+    if (pathname.match(/\.(mp3|wav|ogg|flac|m4a|aac)$/)) return "audio";
+    if (pathname.match(/\.(mp4|webm|mkv|avi|mov)$/)) return "video";
+    if (pathname.match(/\.(pdf|doc|docx|txt|md)$/)) return "document";
+    if (pathname.match(/\.(zip|rar|7z|tar|gz)$/)) return "archive";
+    
+    return "file";
+  } catch {
+    return "file";
+  }
+}
+
+function getFileNameFromUrl(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    const pathname = urlObj.pathname;
+    const fileName = pathname.split('/').pop() || 'download';
+    return decodeURIComponent(fileName);
+  } catch {
+    return 'download';
+  }
+}
+
 export function BrowserApp() {
+  const { addFile, openWindow } = useOS();
   const [tabs, setTabs] = useState<Tab[]>([
     { id: "1", url: "https://www.google.com/webhp?igu=1", title: "Google" }
   ]);
@@ -64,15 +99,16 @@ export function BrowserApp() {
   const [inputUrl, setInputUrl] = useState("https://www.google.com");
   const [history, setHistory] = useState<string[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [showDownloadPanel, setShowDownloadPanel] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState("");
+  const [downloads, setDownloads] = useState<DownloadItem[]>([]);
 
   const activeTab = tabs.find(t => t.id === activeTabId);
 
-  // Check for external navigation request from App Store
   useEffect(() => {
     const storedUrl = localStorage.getItem("browser-navigate-url");
     if (storedUrl) {
       localStorage.removeItem("browser-navigate-url");
-      // Small delay to ensure browser is fully mounted
       setTimeout(() => {
         navigateToUrl(storedUrl);
       }, 100);
@@ -174,6 +210,49 @@ export function BrowserApp() {
     }
   };
 
+  const handleDownload = () => {
+    if (!downloadUrl.trim()) return;
+    
+    let url = downloadUrl.trim();
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      url = "https://" + url;
+    }
+
+    const fileName = getFileNameFromUrl(url);
+    const fileType = getFileTypeFromUrl(url);
+    const downloadId = Date.now().toString();
+
+    const newDownload: DownloadItem = {
+      id: downloadId,
+      name: fileName,
+      url: url,
+      status: "downloading",
+      type: fileType
+    };
+
+    setDownloads(prev => [newDownload, ...prev]);
+    setDownloadUrl("");
+
+    setTimeout(() => {
+      const fileId = `download-${Date.now()}`;
+      addFile({
+        id: fileId,
+        name: fileName,
+        type: "file",
+        content: url,
+        parentId: "4"
+      });
+
+      setDownloads(prev => prev.map(d => 
+        d.id === downloadId ? { ...d, status: "complete" } : d
+      ));
+    }, 1500);
+  };
+
+  const openDownloadsFolder = () => {
+    openWindow("files");
+  };
+
   const quickLinks = [
     { name: "Google", url: "https://www.google.com/webhp?igu=1" },
     { name: "YouTube", url: "https://www.youtube.com" },
@@ -270,6 +349,13 @@ export function BrowserApp() {
         <button className="p-1.5 rounded-lg hover:bg-white/10 transition-colors">
           <Star className="w-4 h-4 text-white/70" />
         </button>
+        <button 
+          onClick={() => setShowDownloadPanel(!showDownloadPanel)}
+          className={`p-1.5 rounded-lg transition-colors ${showDownloadPanel ? 'bg-blue-500/30 text-blue-400' : 'hover:bg-white/10'}`}
+          data-testid="btn-download-toggle"
+        >
+          <Download className="w-4 h-4 text-white/70" />
+        </button>
       </div>
 
       {/* Quick Links */}
@@ -289,53 +375,141 @@ export function BrowserApp() {
       </div>
 
       {/* Browser Content */}
-      <div className="flex-1 bg-gray-900 relative">
-        {(() => {
-          const urlResult = activeTab?.url ? getEmbeddableUrl(activeTab.url) : null;
-          const showWarning = (urlResult && !urlResult.isEmbeddable) || (activeTab?.url && needsExternalWarning(activeTab.url));
-          
-          return (
-            <>
-              {urlResult?.isEmbeddable && (
-                <iframe
-                  id="browser-frame"
-                  src={urlResult.embedUrl}
-                  className="w-full h-full border-0"
-                  sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  title="Browser"
-                  data-testid="browser-iframe"
-                />
-              )}
-              
-              {showWarning && (
-                <div className={`${urlResult?.isEmbeddable ? 'absolute bottom-4 left-4 right-4' : 'absolute inset-0 flex items-center justify-center'}`}>
-                  <div className={`bg-gray-800/95 backdrop-blur-sm border border-gray-700 rounded-lg p-6 ${urlResult?.isEmbeddable ? '' : 'max-w-md text-center'}`}>
-                    <div className={`flex ${urlResult?.isEmbeddable ? 'items-center justify-between' : 'flex-col items-center gap-4'}`}>
-                      <div className={`flex ${urlResult?.isEmbeddable ? 'items-center gap-3' : 'flex-col items-center gap-3'}`}>
-                        <AlertTriangle className="w-8 h-8 text-yellow-500 shrink-0" />
-                        <div className="text-sm">
-                          <p className="text-white font-medium">This site cannot be embedded</p>
-                          <p className="text-gray-400 text-xs mt-1">This website blocks embedding. Click to open in a new tab.</p>
+      <div className="flex-1 bg-gray-900 relative flex">
+        <div className="flex-1 relative">
+          {(() => {
+            const urlResult = activeTab?.url ? getEmbeddableUrl(activeTab.url) : null;
+            const showWarning = (urlResult && !urlResult.isEmbeddable) || (activeTab?.url && needsExternalWarning(activeTab.url));
+            
+            return (
+              <>
+                {urlResult?.isEmbeddable && (
+                  <iframe
+                    id="browser-frame"
+                    src={urlResult.embedUrl}
+                    className="w-full h-full border-0"
+                    sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-presentation"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    title="Browser"
+                    data-testid="browser-iframe"
+                  />
+                )}
+                
+                {showWarning && (
+                  <div className={`${urlResult?.isEmbeddable ? 'absolute bottom-4 left-4 right-4' : 'absolute inset-0 flex items-center justify-center'}`}>
+                    <div className={`bg-gray-800/95 backdrop-blur-sm border border-gray-700 rounded-lg p-6 ${urlResult?.isEmbeddable ? '' : 'max-w-md text-center'}`}>
+                      <div className={`flex ${urlResult?.isEmbeddable ? 'items-center justify-between' : 'flex-col items-center gap-4'}`}>
+                        <div className={`flex ${urlResult?.isEmbeddable ? 'items-center gap-3' : 'flex-col items-center gap-3'}`}>
+                          <AlertTriangle className="w-8 h-8 text-yellow-500 shrink-0" />
+                          <div className="text-sm">
+                            <p className="text-white font-medium">This site cannot be embedded</p>
+                            <p className="text-gray-400 text-xs mt-1">This website blocks embedding. Click to open in a new tab.</p>
+                          </div>
                         </div>
+                        <Button
+                          onClick={() => window.open(activeTab?.url, '_blank')}
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0 gap-2 mt-4"
+                          data-testid="btn-open-external"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          Open in New Tab
+                        </Button>
                       </div>
-                      <Button
-                        onClick={() => window.open(activeTab?.url, '_blank')}
-                        variant="outline"
-                        size="sm"
-                        className="shrink-0 gap-2 mt-4"
-                        data-testid="btn-open-external"
-                      >
-                        <ExternalLink className="w-4 h-4" />
-                        Open in New Tab
-                      </Button>
                     </div>
                   </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
+
+        {/* Download Panel */}
+        {showDownloadPanel && (
+          <div className="w-80 border-l border-gray-700 bg-gray-800/95 flex flex-col">
+            <div className="p-3 border-b border-gray-700 flex items-center justify-between">
+              <h3 className="text-sm font-medium text-white">Downloads</h3>
+              <button 
+                onClick={() => setShowDownloadPanel(false)}
+                className="p-1 rounded hover:bg-white/10"
+              >
+                <X className="w-4 h-4 text-white/60" />
+              </button>
+            </div>
+
+            <div className="p-3 border-b border-gray-700">
+              <p className="text-xs text-gray-400 mb-2">Enter a direct link to download:</p>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={downloadUrl}
+                  onChange={(e) => setDownloadUrl(e.target.value)}
+                  placeholder="https://example.com/file.png"
+                  className="flex-1 px-3 py-2 rounded bg-gray-700 border border-gray-600 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:border-blue-500"
+                  onKeyDown={(e) => e.key === 'Enter' && handleDownload()}
+                  data-testid="input-download-url"
+                />
+                <Button 
+                  size="sm" 
+                  onClick={handleDownload}
+                  disabled={!downloadUrl.trim()}
+                  data-testid="btn-download"
+                >
+                  <Download className="w-4 h-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Supports: Images, Audio, Video, Documents
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-auto p-2">
+              {downloads.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                  <Download className="w-10 h-10 mb-2 opacity-30" />
+                  <p className="text-xs">No downloads yet</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {downloads.map(download => (
+                    <div 
+                      key={download.id}
+                      className="p-2 rounded bg-gray-700/50 border border-gray-600"
+                    >
+                      <div className="flex items-center gap-2">
+                        {download.status === "downloading" ? (
+                          <Loader2 className="w-4 h-4 text-blue-400 animate-spin shrink-0" />
+                        ) : download.status === "complete" ? (
+                          <Check className="w-4 h-4 text-green-400 shrink-0" />
+                        ) : (
+                          <X className="w-4 h-4 text-red-400 shrink-0" />
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-white truncate">{download.name}</p>
+                          <p className="text-[10px] text-gray-500 capitalize">{download.type}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
-            </>
-          );
-        })()}
+            </div>
+
+            <div className="p-3 border-t border-gray-700">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full gap-2"
+                onClick={openDownloadsFolder}
+                data-testid="btn-open-downloads"
+              >
+                <Download className="w-4 h-4" />
+                Open Downloads Folder
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

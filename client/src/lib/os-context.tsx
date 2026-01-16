@@ -66,6 +66,8 @@ interface OSContextType {
   updateWindowSize: (windowId: string, width: number, height: number) => void;
   apps: App[];
   files: FileItem[];
+  addFile: (file: FileItem) => void;
+  deleteFile: (id: string) => void;
   notes: Note[];
   addNote: (note: Note) => void;
   updateNote: (id: string, updates: Partial<Note>) => void;
@@ -106,6 +108,10 @@ export function OSProvider({ children }: { children: ReactNode }) {
   const [notes, setNotes] = useState<Note[]>(() => {
     const saved = localStorage.getItem("os-notes");
     return saved ? JSON.parse(saved) : defaultNotes;
+  });
+  const [files, setFiles] = useState<FileItem[]>(() => {
+    const saved = localStorage.getItem("os-files");
+    return saved ? JSON.parse(saved) : defaultFiles;
   });
   const [isPoweredOn, setIsPoweredOn] = useState(true);
   const [isShuttingDown, setIsShuttingDown] = useState(false);
@@ -194,6 +200,10 @@ export function OSProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem("os-notes", JSON.stringify(notes));
   }, [notes]);
+
+  useEffect(() => {
+    localStorage.setItem("os-files", JSON.stringify(files));
+  }, [files]);
 
   const updateSettings = useCallback((updates: Partial<Settings>) => {
     setSettings(prev => ({ ...prev, ...updates }));
@@ -295,6 +305,14 @@ export function OSProvider({ children }: { children: ReactNode }) {
     setNotes(prev => prev.filter(n => n.id !== id));
   }, []);
 
+  const addFile = useCallback((file: FileItem) => {
+    setFiles(prev => [...prev, file]);
+  }, []);
+
+  const deleteFile = useCallback((id: string) => {
+    setFiles(prev => prev.filter(f => f.id !== id));
+  }, []);
+
   const installApp = useCallback((appId: string) => {
     setInstalledApps(prev => prev.includes(appId) ? prev : [...prev, appId]);
   }, []);
@@ -316,7 +334,9 @@ export function OSProvider({ children }: { children: ReactNode }) {
       updateWindowPosition,
       updateWindowSize,
       apps: defaultApps,
-      files: defaultFiles,
+      files,
+      addFile,
+      deleteFile,
       notes,
       addNote,
       updateNote,
