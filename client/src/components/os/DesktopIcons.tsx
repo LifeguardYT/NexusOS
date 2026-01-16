@@ -21,18 +21,24 @@ const iconMap: Record<string, React.ComponentType<any>> = {
 };
 
 export function DesktopIcons() {
-  const { apps, openWindow, settings, showContextMenu } = useOS();
+  const { apps, openWindow, settings, showContextMenu, desktopShortcuts, removeDesktopShortcut } = useOS();
 
   if (!settings.showDesktopIcons) return null;
 
   const updatesApp = apps.find(app => app.id === "updates");
   const chatApp = apps.find(app => app.id === "chat");
   const appStoreApp = apps.find(app => app.id === "appstore");
+  
+  const customShortcutApps = desktopShortcuts
+    .map(id => apps.find(app => app.id === id))
+    .filter((app): app is typeof apps[0] => app !== undefined);
+  
   const desktopApps = [
     ...apps.slice(0, 6),
     ...(updatesApp ? [updatesApp] : []),
     { id: "trash", name: "Trash", icon: "trash", color: "bg-gray-500", defaultWidth: 600, defaultHeight: 400 },
     ...(chatApp ? [chatApp] : []),
+    ...customShortcutApps.filter(app => !apps.slice(0, 6).includes(app) && app.id !== "updates" && app.id !== "chat"),
   ];
 
   const handleContextMenu = (e: React.MouseEvent, appId: string) => {

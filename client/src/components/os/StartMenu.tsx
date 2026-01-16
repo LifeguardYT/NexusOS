@@ -1,5 +1,5 @@
 import { useOS } from "@/lib/os-context";
-import { Search, Power, User, Trash2, Package } from "lucide-react";
+import { Search, Power, User, Trash2, Package, Monitor } from "lucide-react";
 import { 
   Globe, Settings, Folder, Calculator, FileText, CloudSun, Music, 
   Gamepad2, Bomb, Terminal, MessageSquare, Bell, Store
@@ -65,6 +65,7 @@ interface ContextMenuState {
   y: number;
   appId: string;
   appName: string;
+  isSystemApp: boolean;
 }
 
 interface UserData {
@@ -76,7 +77,7 @@ interface UserData {
 }
 
 export function StartMenu() {
-  const { apps, openWindow, startMenuOpen, setStartMenuOpen, shutdown, installedApps, uninstallApp } = useOS();
+  const { apps, openWindow, startMenuOpen, setStartMenuOpen, shutdown, installedApps, uninstallApp, desktopShortcuts, addDesktopShortcut, removeDesktopShortcut } = useOS();
   const [searchQuery, setSearchQuery] = useState("");
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -123,9 +124,7 @@ export function StartMenu() {
   const handleContextMenu = (e: React.MouseEvent, app: typeof allDisplayedApps[0]) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!app.isSystemApp) {
-      setContextMenu({ x: e.clientX, y: e.clientY, appId: app.id, appName: app.name });
-    }
+    setContextMenu({ x: e.clientX, y: e.clientY, appId: app.id, appName: app.name, isSystemApp: app.isSystemApp });
   };
 
   const closeContextMenu = () => {
@@ -138,6 +137,22 @@ export function StartMenu() {
       closeContextMenu();
     }
   };
+
+  const handleAddToDesktop = () => {
+    if (contextMenu) {
+      addDesktopShortcut(contextMenu.appId);
+      closeContextMenu();
+    }
+  };
+
+  const handleRemoveFromDesktop = () => {
+    if (contextMenu) {
+      removeDesktopShortcut(contextMenu.appId);
+      closeContextMenu();
+    }
+  };
+
+  const isOnDesktop = contextMenu ? desktopShortcuts.includes(contextMenu.appId) : false;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -171,21 +186,42 @@ export function StartMenu() {
     >
       {contextMenu && (
         <div 
-          className="fixed bg-card border border-border rounded-lg shadow-xl py-1 z-[60] min-w-[160px]"
+          className="fixed bg-card border border-border rounded-lg shadow-xl py-1 z-[60] min-w-[180px]"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={e => e.stopPropagation()}
         >
           <div className="px-3 py-1.5 text-xs text-muted-foreground border-b border-border">
             {contextMenu.appName}
           </div>
-          <button
-            onClick={handleUninstall}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
-            data-testid="ctx-uninstall-start"
-          >
-            <Trash2 className="w-4 h-4" />
-            Uninstall
-          </button>
+          {isOnDesktop ? (
+            <button
+              onClick={handleRemoveFromDesktop}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/10 transition-colors"
+              data-testid="ctx-remove-desktop"
+            >
+              <Monitor className="w-4 h-4" />
+              Remove from desktop
+            </button>
+          ) : (
+            <button
+              onClick={handleAddToDesktop}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-white/10 transition-colors"
+              data-testid="ctx-add-desktop"
+            >
+              <Monitor className="w-4 h-4" />
+              Add to desktop
+            </button>
+          )}
+          {!contextMenu.isSystemApp && (
+            <button
+              onClick={handleUninstall}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+              data-testid="ctx-uninstall-start"
+            >
+              <Trash2 className="w-4 h-4" />
+              Uninstall
+            </button>
+          )}
         </div>
       )}
 

@@ -91,6 +91,9 @@ interface OSContextType {
   installedApps: string[];
   installApp: (appId: string) => void;
   uninstallApp: (appId: string) => void;
+  desktopShortcuts: string[];
+  addDesktopShortcut: (appId: string) => void;
+  removeDesktopShortcut: (appId: string) => void;
 }
 
 const OSContext = createContext<OSContextType | null>(null);
@@ -133,6 +136,11 @@ export function OSProvider({ children }: { children: ReactNode }) {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [desktopShortcuts, setDesktopShortcuts] = useState<string[]>(() => {
+    const saved = localStorage.getItem("os-desktop-shortcuts");
+    return saved ? JSON.parse(saved) : [];
+  });
+
   useEffect(() => {
     localStorage.setItem("os-security", JSON.stringify(security));
   }, [security]);
@@ -140,6 +148,10 @@ export function OSProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem("os-installed-apps", JSON.stringify(installedApps));
   }, [installedApps]);
+
+  useEffect(() => {
+    localStorage.setItem("os-desktop-shortcuts", JSON.stringify(desktopShortcuts));
+  }, [desktopShortcuts]);
 
   // Save powered on state
   useEffect(() => {
@@ -345,6 +357,14 @@ export function OSProvider({ children }: { children: ReactNode }) {
     setInstalledApps(prev => prev.filter(id => id !== appId));
   }, []);
 
+  const addDesktopShortcut = useCallback((appId: string) => {
+    setDesktopShortcuts(prev => prev.includes(appId) ? prev : [...prev, appId]);
+  }, []);
+
+  const removeDesktopShortcut = useCallback((appId: string) => {
+    setDesktopShortcuts(prev => prev.filter(id => id !== appId));
+  }, []);
+
   return (
     <OSContext.Provider value={{
       settings,
@@ -384,6 +404,9 @@ export function OSProvider({ children }: { children: ReactNode }) {
       installedApps,
       installApp,
       uninstallApp,
+      desktopShortcuts,
+      addDesktopShortcut,
+      removeDesktopShortcut,
     }}>
       {children}
     </OSContext.Provider>
