@@ -27,8 +27,16 @@ function broadcastShutdownStatus() {
     ...shutdownState,
   });
   wsClients.forEach((client) => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(message);
+    try {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(message);
+      } else {
+        // Remove disconnected clients
+        wsClients.delete(client);
+      }
+    } catch (err) {
+      console.error("Error sending to WebSocket client:", err);
+      wsClients.delete(client);
     }
   });
 }
