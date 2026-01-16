@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { MessageCircle, Users, Search, Send, Globe, User, ArrowLeft } from "lucide-react";
+import { MessageCircle, Users, Search, Send, Globe, User, ArrowLeft, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -95,6 +95,17 @@ export function ChatApp() {
       queryClient.invalidateQueries({ queryKey: ["/api/chat/direct", selectedUserId] });
       queryClient.invalidateQueries({ queryKey: ["/api/chat/conversations"] });
       setMessageInput("");
+    },
+  });
+
+  const deleteMessageMutation = useMutation({
+    mutationFn: async (messageId: string) => {
+      return apiRequest("DELETE", `/api/chat/messages/${messageId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/chat/global"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chat/direct", selectedUserId] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chat/conversations"] });
     },
   });
 
@@ -299,23 +310,35 @@ export function ChatApp() {
                 return (
                   <div
                     key={msg.id}
-                    className={`flex ${isOwn ? "justify-end" : "justify-start"}`}
+                    className={`flex ${isOwn ? "justify-end" : "justify-start"} group`}
                     data-testid={`message-${msg.id}`}
                   >
-                    <div
-                      className={`max-w-[70%] rounded-2xl px-4 py-2 ${
-                        isOwn
-                          ? "bg-blue-500 text-white rounded-br-md"
-                          : "bg-white/10 rounded-bl-md"
-                      }`}
-                    >
-                      {!isOwn && chatView === "global" && (
-                        <p className="text-xs font-medium text-blue-400 mb-1">{msg.senderName}</p>
+                    <div className={`flex items-end gap-1 ${isOwn ? "flex-row-reverse" : "flex-row"}`}>
+                      <div
+                        className={`max-w-[70%] rounded-2xl px-4 py-2 ${
+                          isOwn
+                            ? "bg-blue-500 text-white rounded-br-md"
+                            : "bg-white/10 rounded-bl-md"
+                        }`}
+                      >
+                        {!isOwn && chatView === "global" && (
+                          <p className="text-xs font-medium text-blue-400 mb-1">{msg.senderName}</p>
+                        )}
+                        <p className="text-sm break-words">{msg.content}</p>
+                        <p className={`text-xs mt-1 ${isOwn ? "text-blue-100" : "text-muted-foreground"}`}>
+                          {formatTime(msg.createdAt)}
+                        </p>
+                      </div>
+                      {isOwn && (
+                        <button
+                          onClick={() => deleteMessageMutation.mutate(msg.id)}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-red-400 transition-all"
+                          title="Delete message"
+                          data-testid={`btn-delete-message-${msg.id}`}
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
                       )}
-                      <p className="text-sm break-words">{msg.content}</p>
-                      <p className={`text-xs mt-1 ${isOwn ? "text-blue-100" : "text-muted-foreground"}`}>
-                        {formatTime(msg.createdAt)}
-                      </p>
                     </div>
                   </div>
                 );

@@ -285,6 +285,37 @@ export async function registerRoutes(
     }
   });
 
+  // Delete a message (only the sender can delete their own messages)
+  app.delete("/api/chat/messages/:messageId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const messageId = req.params.messageId;
+      
+      if (!messageId) {
+        return res.status(400).json({ error: "Invalid message ID" });
+      }
+
+      // Find the message first
+      const [message] = await db.select().from(messages).where(eq(messages.id, messageId));
+      
+      if (!message) {
+        return res.status(404).json({ error: "Message not found" });
+      }
+
+      // Check if the current user is the sender
+      if (message.senderId !== userId) {
+        return res.status(403).json({ error: "You can only delete your own messages" });
+      }
+
+      await db.delete(messages).where(eq(messages.id, messageId));
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to delete message:", error);
+      res.status(500).json({ error: "Failed to delete message" });
+    }
+  });
+
   // Search users by username/email for starting a chat
   app.get("/api/chat/users/search", isAuthenticated, async (req: any, res) => {
     try {
