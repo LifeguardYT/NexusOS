@@ -156,18 +156,6 @@ const allApps: AppInfo[] = [
     size: "3 MB",
     isSystemApp: true,
   },
-  {
-    id: "roblox",
-    name: "Roblox",
-    description: "Play millions of experiences built by a global community. Create, share, and play with friends.",
-    icon: <Blocks className="w-8 h-8 text-red-500" />,
-    category: "Games",
-    rating: 4.5,
-    downloads: "500M+",
-    size: "Web App",
-    isSystemApp: false,
-    externalUrl: "https://www.roblox.com",
-  },
 ];
 
 const categories = ["All", "Utilities", "Productivity", "Entertainment", "Games", "Social", "Developer Tools", "System"];
