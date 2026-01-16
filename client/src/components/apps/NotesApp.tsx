@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useOS } from "@/lib/os-context";
-import { Plus, Search, Trash2, FileText } from "lucide-react";
+import { Plus, Search, Trash2, FileText, Save, Check } from "lucide-react";
 import type { Note } from "@shared/schema";
 
 export function NotesApp() {
-  const { notes, addNote, updateNote, deleteNote } = useOS();
+  const { notes, addNote, updateNote, deleteNote, addFile } = useOS();
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(notes[0]?.id || null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [savedNote, setSavedNote] = useState<string | null>(null);
 
   const selectedNote = notes.find(n => n.id === selectedNoteId);
 
@@ -30,6 +31,23 @@ export function NotesApp() {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" });
+  };
+
+  const saveNoteToFiles = (note: Note) => {
+    const fileName = `${note.title.replace(/[^a-zA-Z0-9\s]/g, '').trim() || 'Untitled'}.txt`;
+    const fileContent = `${note.title}\n${'='.repeat(note.title.length)}\n\n${note.content}\n\n---\nCreated: ${formatDate(note.createdAt)}\nLast Updated: ${formatDate(note.updatedAt)}`;
+    
+    const fileId = `note-${note.id}-${Date.now()}`;
+    addFile({
+      id: fileId,
+      name: fileName,
+      type: "file",
+      content: fileContent,
+      parentId: "1"
+    });
+
+    setSavedNote(note.id);
+    setTimeout(() => setSavedNote(null), 2000);
   };
 
   return (
@@ -100,16 +118,34 @@ export function NotesApp() {
                 placeholder="Note title..."
                 data-testid="input-note-title"
               />
-              <button
-                onClick={() => {
-                  deleteNote(selectedNote.id);
-                  setSelectedNoteId(notes.find(n => n.id !== selectedNote.id)?.id || null);
-                }}
-                className="p-2 rounded-lg hover:bg-destructive/10 text-destructive transition-colors"
-                data-testid="btn-delete-note"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => saveNoteToFiles(selectedNote)}
+                  className={`p-2 rounded-lg transition-colors ${
+                    savedNote === selectedNote.id 
+                      ? 'bg-green-500/20 text-green-500' 
+                      : 'hover:bg-primary/10 text-primary'
+                  }`}
+                  title="Save to Documents"
+                  data-testid="btn-save-note"
+                >
+                  {savedNote === selectedNote.id ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    deleteNote(selectedNote.id);
+                    setSelectedNoteId(notes.find(n => n.id !== selectedNote.id)?.id || null);
+                  }}
+                  className="p-2 rounded-lg hover:bg-destructive/10 text-destructive transition-colors"
+                  data-testid="btn-delete-note"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
             <textarea
               value={selectedNote.content}
