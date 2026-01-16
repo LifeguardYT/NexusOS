@@ -178,6 +178,55 @@ export async function registerRoutes(
     }
   });
 
+  // Ban/unban user (admin only)
+  app.post("/api/admin/users/:userId/ban", isAuthenticated, async (req: any, res) => {
+    try {
+      const adminId = req.user?.claims?.sub;
+      if (adminId !== ADMIN_USER_ID) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      
+      const { userId } = req.params;
+      const { banned } = req.body;
+      
+      // Prevent admin from banning themselves
+      if (userId === ADMIN_USER_ID) {
+        return res.status(400).json({ error: "Cannot ban yourself" });
+      }
+      
+      const [updatedUser] = await db.update(users)
+        .set({ banned: banned === true, updatedAt: new Date() })
+        .where(eq(users.id, userId))
+        .returning();
+      
+      if (!updatedUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      res.json({ success: true, user: updatedUser });
+    } catch (error) {
+      console.error("Failed to ban/unban user:", error);
+      res.status(500).json({ error: "Failed to update user ban status" });
+    }
+  });
+
+  // Check if current user is banned
+  app.get("/api/auth/ban-status", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      
+      if (!user) {
+        return res.json({ banned: false });
+      }
+      
+      res.json({ banned: user.banned === true });
+    } catch (error) {
+      console.error("Failed to check ban status:", error);
+      res.status(500).json({ error: "Failed to check ban status" });
+    }
+  });
+
   // ============= CHAT ROUTES =============
 
   // Get global chat messages

@@ -5,11 +5,12 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { 
   Palette, Monitor, Volume2, Wifi, Bell, User, Lock, Info, 
   Sun, Moon, ChevronRight, Check, Shield, Code, Activity, Users,
-  Cpu, HardDrive, Clock, RefreshCw, ArrowLeft, Key, Mail
+  Cpu, HardDrive, Clock, RefreshCw, ArrowLeft, Key, Mail, Ban, UserCheck
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 type SettingsSection = "appearance" | "display" | "sound" | "network" | "notifications" | "accounts" | "about" | "admin" | "developer";
 
@@ -91,6 +92,7 @@ interface UserData {
   lastName: string | null;
   createdAt: string;
   profileImageUrl?: string | null;
+  banned?: boolean | null;
 }
 
 interface AuthUser {
@@ -152,6 +154,24 @@ export function SettingsApp() {
       queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
     },
   });
+
+  const banUserMutation = useMutation({
+    mutationFn: async ({ userId, banned }: { userId: string; banned: boolean }) => {
+      const res = await apiRequest("POST", `/api/admin/users/${userId}/ban`, { banned });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to update ban status");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+  });
+
+  const handleBanUser = (userId: string, currentlyBanned: boolean) => {
+    banUserMutation.mutate({ userId, banned: !currentlyBanned });
+  };
 
   const handleDevModeToggle = (checked: boolean) => {
     devModeMutation.mutate(checked);
@@ -834,27 +854,53 @@ export function SettingsApp() {
               {users?.map((user) => (
                 <div 
                   key={user.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-white/5"
+                  className={`flex items-center justify-between p-3 rounded-lg ${user.banned ? 'bg-red-500/10 border border-red-500/30' : 'bg-white/5'}`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center">
+                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${user.banned ? 'bg-gradient-to-br from-red-500 to-red-700' : 'bg-gradient-to-br from-blue-500 to-purple-500'}`}>
                       <span className="text-white font-medium">
-                        {user.firstName?.[0] || user.email[0].toUpperCase()}
+                        {user.firstName?.[0] || user.email?.[0]?.toUpperCase() || '?'}
                       </span>
                     </div>
                     <div>
-                      <p className="font-medium">
+                      <p className="font-medium flex items-center gap-2 flex-wrap">
                         {user.firstName} {user.lastName}
                         {user.id === adminStatus?.userId && (
-                          <Badge variant="secondary" className="ml-2 text-xs">You</Badge>
+                          <Badge variant="secondary" className="text-xs">You</Badge>
+                        )}
+                        {user.banned && (
+                          <Badge variant="destructive" className="text-xs">Banned</Badge>
                         )}
                       </p>
                       <p className="text-sm text-muted-foreground">{user.email}</p>
                     </div>
                   </div>
-                  <div className="text-right text-sm text-muted-foreground">
-                    <p>ID: {user.id}</p>
-                    <p>Joined: {new Date(user.createdAt).toLocaleDateString()}</p>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right text-sm text-muted-foreground">
+                      <p>Joined: {new Date(user.createdAt).toLocaleDateString()}</p>
+                    </div>
+                    {user.id !== adminStatus?.userId && (
+                      <Button
+                        size="sm"
+                        variant={user.banned ? "outline" : "destructive"}
+                        onClick={() => handleBanUser(user.id, user.banned === true)}
+                        disabled={banUserMutation.isPending}
+                        data-testid={`btn-ban-user-${user.id}`}
+                        className="min-w-[80px]"
+                      >
+                        {user.banned ? (
+                          <>
+                            <UserCheck className="w-4 h-4 mr-1" />
+                            Unban
+                          </>
+                        ) : (
+                          <>
+                            <Ban className="w-4 h-4 mr-1" />
+                            Ban
+                          </>
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -865,10 +911,14 @@ export function SettingsApp() {
 
             <div className="pt-4 border-t border-white/10">
               <h4 className="font-medium mb-3">Admin Stats</h4>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
                   <p className="text-2xl font-bold text-blue-400">{users?.length || 0}</p>
                   <p className="text-sm text-muted-foreground">Total Users</p>
+                </div>
+                <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+                  <p className="text-2xl font-bold text-red-400">{users?.filter(u => u.banned).length || 0}</p>
+                  <p className="text-sm text-muted-foreground">Banned Users</p>
                 </div>
                 <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
                   <p className="text-2xl font-bold text-green-400">Active</p>
