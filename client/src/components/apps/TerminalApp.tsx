@@ -1125,29 +1125,37 @@ Calculating upgrade... Done
         const packages = args.slice(1).filter(a => !a.startsWith("-"));
         if (packages.length === 0) return "E: Unable to locate package";
         
+        const getPackageInfo = (pkg: string) => {
+          if (AVAILABLE_PACKAGES[pkg]) return AVAILABLE_PACKAGES[pkg];
+          const randomSize = Math.floor(Math.random() * 5000) + 100;
+          const majorVer = Math.floor(Math.random() * 10) + 1;
+          const minorVer = Math.floor(Math.random() * 20);
+          const patchVer = Math.floor(Math.random() * 10);
+          return {
+            version: `${majorVer}.${minorVer}.${patchVer}`,
+            description: `${pkg} - Package from Ubuntu repositories`,
+            size: `${randomSize.toLocaleString()} kB`,
+            dependencies: [] as string[],
+          };
+        };
+        
         const toInstall: string[] = [];
         const alreadyInstalled: string[] = [];
-        const notFound: string[] = [];
         const deps: string[] = [];
         
         for (const pkg of packages) {
           if (installedPackages[pkg]) {
             alreadyInstalled.push(pkg);
-          } else if (AVAILABLE_PACKAGES[pkg]) {
+          } else {
             toInstall.push(pkg);
-            const pkgDeps = AVAILABLE_PACKAGES[pkg].dependencies || [];
+            const pkgInfo = getPackageInfo(pkg);
+            const pkgDeps = pkgInfo.dependencies || [];
             for (const dep of pkgDeps) {
-              if (!installedPackages[dep] && !toInstall.includes(dep) && AVAILABLE_PACKAGES[dep]) {
+              if (!installedPackages[dep] && !toInstall.includes(dep) && !deps.includes(dep)) {
                 deps.push(dep);
               }
             }
-          } else {
-            notFound.push(pkg);
           }
-        }
-        
-        if (notFound.length > 0) {
-          return `E: Unable to locate package ${notFound[0]}`;
         }
         
         if (alreadyInstalled.length > 0 && toInstall.length === 0) {
@@ -1159,9 +1167,12 @@ ${alreadyInstalled[0]} is already the newest version (${installedPackages[alread
         
         const allToInstall = [...deps, ...toInstall];
         let totalSize = 0;
+        const pkgInfoCache: Record<string, { version: string; description: string; size: string }> = {};
+        
         for (const pkg of allToInstall) {
-          const size = AVAILABLE_PACKAGES[pkg]?.size || "0 kB";
-          totalSize += parseInt(size.replace(/[^0-9]/g, "")) || 0;
+          const info = getPackageInfo(pkg);
+          pkgInfoCache[pkg] = { version: info.version, description: info.description, size: info.size };
+          totalSize += parseInt(info.size.replace(/[^0-9]/g, "")) || 0;
         }
         
         let output = `Reading package lists... Done
@@ -1178,7 +1189,7 @@ Need to get ${totalSize.toLocaleString()} kB of archives.
 After this operation, ${Math.floor(totalSize * 3.5).toLocaleString()} kB of additional disk space will be used.`;
         
         for (const pkg of allToInstall) {
-          const pkgInfo = AVAILABLE_PACKAGES[pkg];
+          const pkgInfo = pkgInfoCache[pkg];
           output += `\nGet:${allToInstall.indexOf(pkg) + 1} http://archive.ubuntu.com/ubuntu focal/main amd64 ${pkg} amd64 ${pkgInfo.version} [${pkgInfo.size}]`;
         }
         
@@ -1186,17 +1197,18 @@ After this operation, ${Math.floor(totalSize * 3.5).toLocaleString()} kB of addi
         output += `\nSelecting previously unselected package.`;
         
         for (const pkg of allToInstall) {
+          const pkgInfo = pkgInfoCache[pkg];
           output += `\n(Reading database ... 123456 files and directories currently installed.)
-Preparing to unpack .../${pkg}_${AVAILABLE_PACKAGES[pkg].version}_amd64.deb ...
-Unpacking ${pkg} (${AVAILABLE_PACKAGES[pkg].version}) ...
-Setting up ${pkg} (${AVAILABLE_PACKAGES[pkg].version}) ...`;
+Preparing to unpack .../${pkg}_${pkgInfo.version}_amd64.deb ...
+Unpacking ${pkg} (${pkgInfo.version}) ...
+Setting up ${pkg} (${pkgInfo.version}) ...`;
           
           setInstalledPackages(prev => ({
             ...prev,
             [pkg]: {
-              version: AVAILABLE_PACKAGES[pkg].version,
-              description: AVAILABLE_PACKAGES[pkg].description,
-              size: AVAILABLE_PACKAGES[pkg].size,
+              version: pkgInfo.version,
+              description: pkgInfo.description,
+              size: pkgInfo.size,
             }
           }));
         }
