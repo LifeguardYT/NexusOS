@@ -166,7 +166,7 @@ export function MinesweeperGame() {
   return (
     <div 
       className="h-full flex flex-col items-center justify-center bg-gray-900 p-4"
-      onContextMenu={(e) => e.preventDefault()}
+      onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
     >
       {/* Header */}
       <div className="flex items-center justify-between w-full max-w-md mb-4">
