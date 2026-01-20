@@ -22,6 +22,7 @@ interface SectionItem {
   icon: React.ComponentType<any>;
   adminOnly?: boolean;
   ownerOnly?: boolean;
+  developerOnly?: boolean;
 }
 
 const sections: SectionItem[] = [
@@ -33,7 +34,7 @@ const sections: SectionItem[] = [
   { id: "accounts", name: "Accounts", icon: User },
   { id: "about", name: "About", icon: Info },
   { id: "admin", name: "Admin", icon: Shield, adminOnly: true },
-  { id: "developer", name: "Developer", icon: Code, adminOnly: true },
+  { id: "developer", name: "Developer", icon: Code, developerOnly: true },
   { id: "owner", name: "Owner", icon: Crown, ownerOnly: true },
 ];
 
@@ -1417,9 +1418,11 @@ export function SettingsApp() {
   };
 
   const isOwner = adminStatus?.isOwner === true;
+  const isDeveloperMode = settings.developerMode === true;
   const visibleSections = sections.filter(s => {
     if (s.ownerOnly) return isOwner;
     if (s.adminOnly) return isAdmin;
+    if (s.developerOnly) return isDeveloperMode || isAdmin;
     return true;
   });
 
