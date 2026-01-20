@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { settingsSchema, insertUpdateSchema, insertMessageSchema, insertCustomAppSchema, users, messages, customApps } from "@shared/schema";
+import { settingsSchema, insertUpdateSchema, insertMessageSchema, insertCustomAppSchema, insertBugReportSchema, users, messages, customApps, bugReports } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { updates } from "@shared/schema";
@@ -737,6 +737,80 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Failed to stop shutdown:", error);
       res.status(500).json({ error: "Failed to stop shutdown" });
+    }
+  });
+
+  // Bug Reports endpoints
+  
+  // Submit a bug report (authenticated users)
+  app.post("/api/bug-reports", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const userName = req.user?.claims?.name || "Anonymous";
+      
+      if (!userId) {
+        return res.status(401).json({ error: "Authentication required" });
+      }
+
+      const validatedData = insertBugReportSchema.parse({
+        ...req.body,
+        userId,
+        userName,
+      });
+
+      const [newReport] = await db.insert(bugReports).values(validatedData).returning();
+      res.json(newReport);
+    } catch (error) {
+      console.error("Failed to submit bug report:", error);
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid bug report data", details: error.errors });
+      } else {
+        res.status(500).json({ error: "Failed to submit bug report" });
+      }
+    }
+  });
+
+  // Get all bug reports (admins/owners only)
+  app.get("/api/bug-reports", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId || !(await isUserAdmin(userId))) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+
+      const allReports = await db.select().from(bugReports).orderBy(desc(bugReports.createdAt));
+      res.json(allReports);
+    } catch (error) {
+      console.error("Failed to fetch bug reports:", error);
+      res.status(500).json({ error: "Failed to fetch bug reports" });
+    }
+  });
+
+  // Mark bug report as resolved (owner only)
+  app.patch("/api/bug-reports/:id/resolve", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId || !isOwner(userId)) {
+        return res.status(403).json({ error: "Owner access required" });
+      }
+
+      const { id } = req.params;
+      const { resolved } = req.body;
+
+      const [updatedReport] = await db
+        .update(bugReports)
+        .set({ resolved: resolved ?? true })
+        .where(eq(bugReports.id, id))
+        .returning();
+
+      if (!updatedReport) {
+        return res.status(404).json({ error: "Bug report not found" });
+      }
+
+      res.json(updatedReport);
+    } catch (error) {
+      console.error("Failed to update bug report:", error);
+      res.status(500).json({ error: "Failed to update bug report" });
     }
   });
 
