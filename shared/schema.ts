@@ -103,3 +103,18 @@ export const messages = pgTable("messages", {
 export const insertMessageSchema = createInsertSchema(messages).omit({ id: true, createdAt: true });
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type Message = typeof messages.$inferSelect;
+
+// Custom Apps table (admin-added apps in App Store)
+export const customApps = pgTable("custom_apps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  logoBase64: text("logo_base64").notNull(),
+  category: text("category").notNull().default("Other"),
+  externalUrl: text("external_url"),
+  createdAt: text("created_at").notNull().default(sql`now()`),
+});
+
+export const insertCustomAppSchema = createInsertSchema(customApps).omit({ id: true, createdAt: true });
+export type InsertCustomApp = z.infer<typeof insertCustomAppSchema>;
+export type CustomApp = typeof customApps.$inferSelect;
