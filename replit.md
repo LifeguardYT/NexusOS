@@ -106,7 +106,19 @@ Admins can add custom apps to the App Store that are visible to all users:
 
 The "Add App" tab in the App Store is only visible to admins and allows uploading a logo, setting app name, description, category, and optional external URL.
 
+### Bug Report System
+Users can report bugs through the "Report Bug" system app on the desktop:
+- `POST /api/bug-reports` - Authenticated users: submit a bug report (location, description)
+- `GET /api/bug-reports` - Admin only: view all bug reports
+- `PATCH /api/bug-reports/:id/resolve` - Owner only: mark bug report as resolved/reopened
+
+The Bug Report app shows:
+- All users: Form to submit bug reports with location and description
+- Admins/Owner: Expandable section to view all bug reports with status badges
+- Owner only: Resolve/Reopen buttons on each bug report
+
 ## Recent Changes
+- Added Bug Report system app on desktop for users to report bugs, admins to view, and owner to resolve
 - Added admin-only "Add App" feature in App Store with logo upload, name, description, category
 - Added instashutdown command for instant global shutdown (no countdown)
 - Added global shutdown system with real-time WebSocket updates and admin-only controls
