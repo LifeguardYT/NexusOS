@@ -1155,10 +1155,10 @@ export function SettingsApp() {
         );
 
       case "developer":
-        if (!isAdmin) {
+        if (!isAdmin && settings.developerMode !== true) {
           return (
             <div className="flex items-center justify-center h-full text-muted-foreground">
-              <p>Admin access required</p>
+              <p>Developer mode not enabled</p>
             </div>
           );
         }
