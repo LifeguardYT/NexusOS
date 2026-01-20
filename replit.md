@@ -93,11 +93,22 @@ Admin-only feature to shut down the OS for all non-admin users:
 
 Terminal commands:
 - `shutdown` - Admin only: broadcasts warning, shuts down OS after 60 seconds for non-admins
+- `instashutdown` - Admin only: instant shutdown with no countdown
 - `stopshutdown` - Admin only: cancels shutdown and restores access for all users
 
 WebSocket endpoint `/ws` broadcasts real-time shutdown status to all connected clients.
 
+### App Store Admin Features
+Admins can add custom apps to the App Store that are visible to all users:
+- `GET /api/custom-apps` - Get all custom apps
+- `POST /api/custom-apps` - Admin only: add a new app (name, description, logoBase64, category, externalUrl)
+- `DELETE /api/custom-apps/:id` - Admin only: remove a custom app
+
+The "Add App" tab in the App Store is only visible to admins and allows uploading a logo, setting app name, description, category, and optional external URL.
+
 ## Recent Changes
+- Added admin-only "Add App" feature in App Store with logo upload, name, description, category
+- Added instashutdown command for instant global shutdown (no countdown)
 - Added global shutdown system with real-time WebSocket updates and admin-only controls
 - Weather app now displays temperatures in Fahrenheit
 - Updated CoolMathGames app to use custom logo image
