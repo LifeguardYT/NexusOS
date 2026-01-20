@@ -82,7 +82,7 @@ export function BugReportApp() {
           </div>
           <div>
             <h1 className="text-xl font-bold">Report a Bug</h1>
-            <p className="text-sm text-muted-foreground">Help us improve NexusOS</p>
+            <p className="text-sm text-muted-foreground">Help me improve NexusOS</p>
           </div>
         </div>
 
