@@ -746,7 +746,12 @@ export async function registerRoutes(
   app.post("/api/bug-reports", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
-      const realUserName = req.user?.claims?.name || "User";
+      const claims = req.user?.claims || {};
+      const realUserName = claims.name || 
+        (claims.first_name && claims.last_name ? `${claims.first_name} ${claims.last_name}` : null) ||
+        claims.first_name || 
+        claims.email || 
+        "User";
       const isAnonymous = req.body.anonymous === true;
       const userName = isAnonymous ? "Anonymous" : realUserName;
       
