@@ -46,8 +46,8 @@ export function BugReportApp() {
   });
 
   const resolveMutation = useMutation({
-    mutationFn: async ({ id, resolved }: { id: string; resolved: boolean }) => {
-      return apiRequest("PATCH", `/api/bug-reports/${id}/resolve`, { resolved });
+    mutationFn: async (id: string) => {
+      return apiRequest("DELETE", `/api/bug-reports/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/bug-reports"] });
@@ -74,7 +74,7 @@ export function BugReportApp() {
   const isAdmin = adminStatus?.isAdmin === true;
   const isOwner = adminStatus?.isOwner === true;
 
-  const unresolvedCount = bugReports.filter(r => !r.resolved).length;
+  const reportCount = bugReports.length;
 
   return (
     <div className="h-full bg-background flex flex-col">
@@ -113,9 +113,9 @@ export function BugReportApp() {
           >
             <List className="w-4 h-4" />
             View Reports
-            {unresolvedCount > 0 && (
+            {reportCount > 0 && (
               <Badge variant="destructive" className="ml-1 text-xs px-1.5 py-0">
-                {unresolvedCount}
+                {reportCount}
               </Badge>
             )}
           </button>
@@ -214,28 +214,15 @@ export function BugReportApp() {
               bugReports.map((report) => (
                 <div
                   key={report.id}
-                  className={`p-4 rounded-lg border ${
-                    report.resolved 
-                      ? "bg-muted/30 border-border opacity-60" 
-                      : "bg-card border-border"
-                  }`}
+                  className="p-4 rounded-lg border bg-card border-border"
                   data-testid={`bug-report-${report.id}`}
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <Badge variant={report.resolved ? "secondary" : "destructive"}>
-                          {report.resolved ? (
-                            <>
-                              <CheckCircle className="w-3 h-3 mr-1" />
-                              Resolved
-                            </>
-                          ) : (
-                            <>
-                              <Clock className="w-3 h-3 mr-1" />
-                              Open
-                            </>
-                          )}
+                        <Badge variant="destructive">
+                          <Clock className="w-3 h-3 mr-1" />
+                          Open
                         </Badge>
                         <span className="text-xs text-muted-foreground">
                           by {report.userName}
@@ -254,15 +241,12 @@ export function BugReportApp() {
                     {isOwner && (
                       <Button
                         size="sm"
-                        variant={report.resolved ? "outline" : "default"}
-                        onClick={() => resolveMutation.mutate({ 
-                          id: report.id, 
-                          resolved: !report.resolved 
-                        })}
+                        variant="default"
+                        onClick={() => resolveMutation.mutate(report.id)}
                         disabled={resolveMutation.isPending}
                         data-testid={`btn-resolve-${report.id}`}
                       >
-                        {report.resolved ? "Reopen" : "Resolve"}
+                        Resolve
                       </Button>
                     )}
                   </div>

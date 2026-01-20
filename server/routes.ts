@@ -789,8 +789,8 @@ export async function registerRoutes(
     }
   });
 
-  // Mark bug report as resolved (owner only)
-  app.patch("/api/bug-reports/:id/resolve", isAuthenticated, async (req: any, res) => {
+  // Resolve (delete) bug report (owner only)
+  app.delete("/api/bug-reports/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId || !isOwner(userId)) {
@@ -798,22 +798,20 @@ export async function registerRoutes(
       }
 
       const { id } = req.params;
-      const { resolved } = req.body;
 
-      const [updatedReport] = await db
-        .update(bugReports)
-        .set({ resolved: resolved ?? true })
+      const [deletedReport] = await db
+        .delete(bugReports)
         .where(eq(bugReports.id, id))
         .returning();
 
-      if (!updatedReport) {
+      if (!deletedReport) {
         return res.status(404).json({ error: "Bug report not found" });
       }
 
-      res.json(updatedReport);
+      res.json({ success: true, message: "Bug report resolved and deleted" });
     } catch (error) {
-      console.error("Failed to update bug report:", error);
-      res.status(500).json({ error: "Failed to update bug report" });
+      console.error("Failed to delete bug report:", error);
+      res.status(500).json({ error: "Failed to delete bug report" });
     }
   });
 
