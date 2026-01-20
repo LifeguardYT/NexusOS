@@ -29,6 +29,7 @@ interface AppInfo {
   size: string;
   isSystemApp: boolean;
   externalUrl?: string;
+  customAppId?: string;
 }
 
 const allApps: AppInfo[] = [
@@ -333,7 +334,10 @@ export default function AppStoreApp() {
   const handleContextMenu = (e: React.MouseEvent, app: AppInfo) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!app.isSystemApp && isInstalled(app.id)) {
+    // Show context menu for installed non-system apps OR custom apps (for admins to delete)
+    const canShowUninstall = !app.isSystemApp && isInstalled(app.id);
+    const canShowDelete = isAdmin && app.customAppId;
+    if (canShowUninstall || canShowDelete) {
       setContextMenu({ x: e.clientX, y: e.clientY, app });
     }
   };
@@ -345,6 +349,13 @@ export default function AppStoreApp() {
   const handleUninstallFromContext = () => {
     if (contextMenu) {
       uninstallApp(contextMenu.app.id);
+      closeContextMenu();
+    }
+  };
+
+  const handleDeleteFromStore = () => {
+    if (contextMenu?.app.customAppId) {
+      deleteAppMutation.mutate(contextMenu.app.customAppId);
       closeContextMenu();
     }
   };
@@ -512,14 +523,26 @@ export default function AppStoreApp() {
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={e => e.stopPropagation()}
         >
-          <button
-            onClick={handleUninstallFromContext}
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
-            data-testid="ctx-uninstall-app"
-          >
-            <Trash2 className="w-4 h-4" />
-            Uninstall
-          </button>
+          {!contextMenu.app.isSystemApp && isInstalled(contextMenu.app.id) && (
+            <button
+              onClick={handleUninstallFromContext}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+              data-testid="ctx-uninstall-app"
+            >
+              <Trash2 className="w-4 h-4" />
+              Uninstall
+            </button>
+          )}
+          {isAdmin && contextMenu.app.customAppId && (
+            <button
+              onClick={handleDeleteFromStore}
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors"
+              data-testid="ctx-delete-from-store"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete from Store
+            </button>
+          )}
         </div>
       )}
 
