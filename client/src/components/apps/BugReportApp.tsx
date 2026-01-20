@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { apiRequest } from "@/lib/queryClient";
 import type { BugReport } from "@shared/schema";
 
@@ -13,6 +14,7 @@ export function BugReportApp() {
   const [activeTab, setActiveTab] = useState<"report" | "view">("report");
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
+  const [anonymous, setAnonymous] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -26,7 +28,7 @@ export function BugReportApp() {
   });
 
   const submitMutation = useMutation({
-    mutationFn: async (data: { location: string; description: string }) => {
+    mutationFn: async (data: { location: string; description: string; anonymous: boolean }) => {
       return apiRequest("POST", "/api/bug-reports", data);
     },
     onSuccess: () => {
@@ -34,6 +36,7 @@ export function BugReportApp() {
       setSubmitError(null);
       setLocation("");
       setDescription("");
+      setAnonymous(false);
       queryClient.invalidateQueries({ queryKey: ["/api/bug-reports"] });
       setTimeout(() => setSubmitted(false), 3000);
     },
@@ -54,7 +57,7 @@ export function BugReportApp() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!location.trim() || !description.trim()) return;
-    submitMutation.mutate({ location, description });
+    submitMutation.mutate({ location, description, anonymous });
   };
 
   const formatDate = (dateString: string) => {
@@ -167,6 +170,21 @@ export function BugReportApp() {
                     className="w-full min-h-[150px] resize-none"
                     data-testid="input-bug-description"
                   />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    id="anonymous"
+                    checked={anonymous}
+                    onCheckedChange={(checked) => setAnonymous(checked === true)}
+                    data-testid="checkbox-anonymous"
+                  />
+                  <label 
+                    htmlFor="anonymous" 
+                    className="text-sm text-muted-foreground cursor-pointer select-none"
+                  >
+                    Submit anonymously (hide my username)
+                  </label>
                 </div>
 
                 <Button

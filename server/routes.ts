@@ -746,14 +746,17 @@ export async function registerRoutes(
   app.post("/api/bug-reports", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
-      const userName = req.user?.claims?.name || "Anonymous";
+      const realUserName = req.user?.claims?.name || "User";
+      const isAnonymous = req.body.anonymous === true;
+      const userName = isAnonymous ? "Anonymous" : realUserName;
       
       if (!userId) {
         return res.status(401).json({ error: "Authentication required" });
       }
 
       const validatedData = insertBugReportSchema.parse({
-        ...req.body,
+        location: req.body.location,
+        description: req.body.description,
         userId,
         userName,
       });
