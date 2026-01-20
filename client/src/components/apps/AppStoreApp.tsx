@@ -462,15 +462,45 @@ export default function AppStoreApp() {
                   >
                     Uninstall
                   </Button>
+                  {isAdmin && selectedApp.customAppId && (
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        deleteAppMutation.mutate(selectedApp.customAppId!);
+                        setSelectedApp(null);
+                      }}
+                      disabled={deleteAppMutation.isPending}
+                      data-testid={`btn-delete-from-store-${selectedApp.id}`}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete from Store
+                    </Button>
+                  )}
                 </div>
               ) : (
-                <Button
-                  onClick={() => handleInstallToggle(selectedApp)}
-                  data-testid={`btn-install-${selectedApp.id}`}
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  Install
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => handleInstallToggle(selectedApp)}
+                    data-testid={`btn-install-${selectedApp.id}`}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Install
+                  </Button>
+                  {isAdmin && selectedApp.customAppId && (
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        deleteAppMutation.mutate(selectedApp.customAppId!);
+                        setSelectedApp(null);
+                      }}
+                      disabled={deleteAppMutation.isPending}
+                      data-testid={`btn-delete-from-store-${selectedApp.id}`}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Delete from Store
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           </div>
