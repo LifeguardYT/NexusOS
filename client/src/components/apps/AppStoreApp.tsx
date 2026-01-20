@@ -1,15 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useOS } from "@/lib/os-context";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Search, Download, Check, Star, Globe, FileText, Calculator, 
   Cloud, Music, Gamepad2, Terminal, Settings, FolderOpen, MessageSquare,
-  Package, TrendingUp, Sparkles, Clock, Blocks, Trash2
+  Package, TrendingUp, Sparkles, Clock, Blocks, Trash2, Plus, Upload, Image, Shield
 } from "lucide-react";
 import geometryLessonsMonsterLogo from "@assets/download_(79)_1768587249858.png";
+import type { CustomApp } from "@shared/schema";
 
 interface AppInfo {
   id: string;
@@ -217,10 +224,111 @@ interface ContextMenuState {
 
 export default function AppStoreApp() {
   const { installedApps, installApp, uninstallApp, openWindow } = useOS();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedApp, setSelectedApp] = useState<AppInfo | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  
+  // Admin state
+  const [newAppName, setNewAppName] = useState("");
+  const [newAppDescription, setNewAppDescription] = useState("");
+  const [newAppCategory, setNewAppCategory] = useState("Other");
+  const [newAppUrl, setNewAppUrl] = useState("");
+  const [newAppLogo, setNewAppLogo] = useState<string>("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Check admin status
+  const { data: adminStatus } = useQuery<{ isAdmin: boolean; isOwner: boolean }>({
+    queryKey: ["/api/admin/status"],
+  });
+
+  // Fetch custom apps
+  const { data: customAppsData = [] } = useQuery<CustomApp[]>({
+    queryKey: ["/api/custom-apps"],
+  });
+
+  // Create custom app mutation
+  const createAppMutation = useMutation({
+    mutationFn: async (appData: { name: string; description: string; logoBase64: string; category: string; externalUrl?: string }) => {
+      return apiRequest("POST", "/api/custom-apps", appData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/custom-apps"] });
+      setNewAppName("");
+      setNewAppDescription("");
+      setNewAppCategory("Other");
+      setNewAppUrl("");
+      setNewAppLogo("");
+      toast({ title: "App added successfully!", description: "The app is now available in the App Store for all users." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to add app", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Delete custom app mutation
+  const deleteAppMutation = useMutation({
+    mutationFn: async (appId: string) => {
+      return apiRequest("DELETE", `/api/custom-apps/${appId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/custom-apps"] });
+      toast({ title: "App removed", description: "The app has been removed from the App Store." });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Failed to remove app", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 500000) {
+        toast({ title: "File too large", description: "Please select an image under 500KB", variant: "destructive" });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewAppLogo(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleAddApp = () => {
+    if (!newAppName.trim() || !newAppDescription.trim() || !newAppLogo) {
+      toast({ title: "Missing information", description: "Please fill in all required fields and upload a logo", variant: "destructive" });
+      return;
+    }
+    createAppMutation.mutate({
+      name: newAppName.trim(),
+      description: newAppDescription.trim(),
+      logoBase64: newAppLogo,
+      category: newAppCategory,
+      externalUrl: newAppUrl.trim() || undefined,
+    });
+  };
+
+  const isAdmin = adminStatus?.isAdmin || adminStatus?.isOwner;
+
+  // Convert custom apps to AppInfo format
+  const customAppInfos: AppInfo[] = customAppsData.map((app) => ({
+    id: `custom-${app.id}`,
+    name: app.name,
+    description: app.description,
+    icon: <img src={app.logoBase64} alt={app.name} className="w-8 h-8 rounded-lg object-cover" />,
+    category: app.category || "Other",
+    rating: 5.0,
+    downloads: "New",
+    size: "Web App",
+    isSystemApp: false,
+    externalUrl: app.externalUrl || undefined,
+    customAppId: app.id,
+  }));
+
+  // Combine all apps
+  const combinedApps = [...allApps, ...customAppInfos];
 
   const handleContextMenu = (e: React.MouseEvent, app: AppInfo) => {
     e.preventDefault();
@@ -241,14 +349,14 @@ export default function AppStoreApp() {
     }
   };
 
-  const filteredApps = allApps.filter(app => {
+  const filteredApps = combinedApps.filter(app => {
     const matchesSearch = app.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           app.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === "All" || app.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const featuredApps = allApps.filter(app => ["browser", "terminal", "notes", "chat"].includes(app.id));
+  const featuredApps = combinedApps.filter(app => ["browser", "terminal", "notes", "chat"].includes(app.id));
 
   const renderStars = (rating: number) => {
     return (
@@ -454,6 +562,16 @@ export default function AppStoreApp() {
             <Check className="w-4 h-4 mr-2" />
             Installed
           </TabsTrigger>
+          {isAdmin && (
+            <TabsTrigger 
+              value="add-app"
+              className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary"
+              data-testid="tab-add-app"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Add App
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="discover" className="flex-1 overflow-y-auto p-4 mt-0" style={{ maxHeight: "calc(100% - 100px)" }}>
@@ -567,7 +685,7 @@ export default function AppStoreApp() {
 
         <TabsContent value="installed" className="flex-1 overflow-y-auto p-4 mt-0" style={{ maxHeight: "calc(100% - 100px)" }}>
           <div className="space-y-2">
-            {allApps
+            {combinedApps
               .filter(app => app.isSystemApp || isInstalled(app.id))
               .map(app => (
                 <div
@@ -603,6 +721,141 @@ export default function AppStoreApp() {
               ))}
           </div>
         </TabsContent>
+
+        {isAdmin && (
+          <TabsContent value="add-app" className="flex-1 overflow-y-auto p-4 mt-0" style={{ maxHeight: "calc(100% - 100px)" }}>
+            <div className="max-w-md mx-auto space-y-6">
+              <div className="text-center mb-6">
+                <Shield className="w-12 h-12 text-primary mx-auto mb-2" />
+                <h2 className="text-xl font-bold">Add New App</h2>
+                <p className="text-sm text-muted-foreground">Add a new app to the App Store for all users</p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="app-logo">App Logo</Label>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                    data-testid="input-app-logo"
+                  />
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="mt-2 w-24 h-24 rounded-xl bg-white/5 border-2 border-dashed border-white/20 flex items-center justify-center cursor-pointer hover:border-primary/50 transition-colors"
+                    data-testid="btn-upload-logo"
+                  >
+                    {newAppLogo ? (
+                      <img src={newAppLogo} alt="App logo" className="w-full h-full rounded-xl object-cover" />
+                    ) : (
+                      <div className="text-center">
+                        <Image className="w-8 h-8 text-muted-foreground mx-auto mb-1" />
+                        <span className="text-xs text-muted-foreground">Upload</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <Label htmlFor="app-name">App Name *</Label>
+                  <Input
+                    id="app-name"
+                    value={newAppName}
+                    onChange={(e) => setNewAppName(e.target.value)}
+                    placeholder="Enter app name"
+                    className="mt-1"
+                    data-testid="input-app-name"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="app-description">Description *</Label>
+                  <Textarea
+                    id="app-description"
+                    value={newAppDescription}
+                    onChange={(e) => setNewAppDescription(e.target.value)}
+                    placeholder="Describe what the app does..."
+                    className="mt-1"
+                    rows={3}
+                    data-testid="input-app-description"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="app-category">Category</Label>
+                  <Select value={newAppCategory} onValueChange={setNewAppCategory}>
+                    <SelectTrigger className="mt-1" data-testid="select-app-category">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.filter(c => c !== "All").map(category => (
+                        <SelectItem key={category} value={category}>{category}</SelectItem>
+                      ))}
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="app-url">External URL (optional)</Label>
+                  <Input
+                    id="app-url"
+                    value={newAppUrl}
+                    onChange={(e) => setNewAppUrl(e.target.value)}
+                    placeholder="https://example.com"
+                    className="mt-1"
+                    data-testid="input-app-url"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">If provided, the app will open in the browser</p>
+                </div>
+
+                <Button
+                  onClick={handleAddApp}
+                  disabled={createAppMutation.isPending}
+                  className="w-full"
+                  data-testid="btn-add-app"
+                >
+                  {createAppMutation.isPending ? (
+                    "Adding..."
+                  ) : (
+                    <>
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add App
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              {customAppsData.length > 0 && (
+                <div className="mt-8">
+                  <h3 className="font-semibold mb-3">Your Added Apps</h3>
+                  <div className="space-y-2">
+                    {customAppsData.map(app => (
+                      <div key={app.id} className="flex items-center gap-3 p-3 rounded-lg bg-white/5">
+                        <img src={app.logoBase64} alt={app.name} className="w-10 h-10 rounded-lg object-cover" />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium truncate">{app.name}</h4>
+                          <p className="text-xs text-muted-foreground truncate">{app.category}</p>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => deleteAppMutation.mutate(app.id)}
+                          disabled={deleteAppMutation.isPending}
+                          data-testid={`btn-delete-custom-app-${app.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
