@@ -54,6 +54,14 @@ interface SecuritySettings {
   requireSignInOnWake: boolean;
 }
 
+export interface DebugLogEntry {
+  id: string;
+  timestamp: Date;
+  type: "info" | "warn" | "error" | "event";
+  category: string;
+  message: string;
+}
+
 interface OSContextType {
   settings: Settings;
   updateSettings: (updates: Partial<Settings>) => void;
@@ -95,6 +103,9 @@ interface OSContextType {
   desktopShortcuts: string[];
   addDesktopShortcut: (appId: string) => void;
   removeDesktopShortcut: (appId: string) => void;
+  debugLogs: DebugLogEntry[];
+  addDebugLog: (type: DebugLogEntry["type"], category: string, message: string) => void;
+  clearDebugLogs: () => void;
 }
 
 const OSContext = createContext<OSContextType | null>(null);
@@ -142,6 +153,23 @@ export function OSProvider({ children }: { children: ReactNode }) {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [debugLogs, setDebugLogs] = useState<DebugLogEntry[]>([]);
+
+  const addDebugLog = useCallback((type: DebugLogEntry["type"], category: string, message: string) => {
+    const entry: DebugLogEntry = {
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: new Date(),
+      type,
+      category,
+      message,
+    };
+    setDebugLogs(prev => [...prev.slice(-99), entry]);
+  }, []);
+
+  const clearDebugLogs = useCallback(() => {
+    setDebugLogs([]);
+  }, []);
+
   useEffect(() => {
     localStorage.setItem("os-security", JSON.stringify(security));
   }, [security]);
@@ -163,12 +191,15 @@ export function OSProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (isPoweredOn && !hasCompletedStartup) {
       setIsStartingUp(true);
+      addDebugLog("info", "System", "System resuming from previous session");
       setTimeout(() => {
         setIsStartingUp(false);
         setHasCompletedStartup(true);
+        addDebugLog("event", "System", "Startup complete");
         // Lock if credentials are set
         if (security.password || security.pin) {
           setIsLocked(true);
+          addDebugLog("info", "Security", "Lock screen activated");
         }
       }, 2000);
     }
@@ -196,6 +227,7 @@ export function OSProvider({ children }: { children: ReactNode }) {
   }, [security]);
 
   const shutdown = useCallback(() => {
+    addDebugLog("event", "System", "Shutdown initiated");
     setStartMenuOpen(false);
     setIsShuttingDown(true);
     // Wait for animation to complete
@@ -204,22 +236,26 @@ export function OSProvider({ children }: { children: ReactNode }) {
       setIsPoweredOn(false);
       setIsShuttingDown(false);
       setHasCompletedStartup(false);
+      addDebugLog("info", "System", "System powered off");
     }, 1500);
-  }, []);
+  }, [addDebugLog]);
 
   const startup = useCallback(() => {
+    addDebugLog("event", "System", "System startup initiated");
     setIsStartingUp(true);
     setIsPoweredOn(true);
     // Wait for animation to complete
     setTimeout(() => {
       setIsStartingUp(false);
       setHasCompletedStartup(true);
+      addDebugLog("info", "System", "System startup complete");
       // Lock if credentials are set and require sign-in is enabled
       if (security.requireSignInOnWake && (security.password || security.pin)) {
         setIsLocked(true);
+        addDebugLog("info", "Security", "Lock screen activated");
       }
     }, 2000);
-  }, [security]);
+  }, [security, addDebugLog]);
 
   useEffect(() => {
     localStorage.setItem("os-settings", JSON.stringify(settings));
@@ -408,6 +444,9 @@ export function OSProvider({ children }: { children: ReactNode }) {
       desktopShortcuts,
       addDesktopShortcut,
       removeDesktopShortcut,
+      debugLogs,
+      addDebugLog,
+      clearDebugLogs,
     }}>
       {children}
     </OSContext.Provider>

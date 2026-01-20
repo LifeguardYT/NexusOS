@@ -6,7 +6,7 @@ import {
   Palette, Monitor, Volume2, Wifi, Bell, User, Lock, Info, 
   Sun, Moon, ChevronRight, Check, Shield, Code, Activity, Users,
   Cpu, HardDrive, Clock, RefreshCw, ArrowLeft, Key, Mail, Ban, UserCheck, Crown, ShieldCheck, ShieldOff,
-  Download, Upload, Trash2
+  Download, Upload, Trash2, Terminal
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -113,7 +113,7 @@ interface AuthUser {
 type AccountSubSection = "main" | "profile" | "signin";
 
 export function SettingsApp() {
-  const { settings, updateSettings, security, updateSecurity } = useOS();
+  const { settings, updateSettings, security, updateSecurity, debugLogs, clearDebugLogs } = useOS();
   const [activeSection, setActiveSection] = useState<SettingsSection>("appearance");
   const [accountSubSection, setAccountSubSection] = useState<AccountSubSection>("main");
   const [showPasswordSetup, setShowPasswordSetup] = useState(false);
@@ -1242,6 +1242,51 @@ export function SettingsApp() {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {settings.developerMode && (
+              <div className="space-y-4 pt-4 border-t border-white/10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-green-400">
+                    <Terminal className="w-5 h-5" />
+                    <h4 className="font-medium">Debug Console</h4>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => clearDebugLogs()}
+                    data-testid="btn-clear-debug-logs"
+                  >
+                    Clear Logs
+                  </Button>
+                </div>
+                <div className="p-3 rounded-lg bg-black/50 font-mono text-xs h-48 overflow-auto">
+                  {debugLogs.length === 0 ? (
+                    <p className="text-muted-foreground">No debug logs yet. System events will appear here.</p>
+                  ) : (
+                    debugLogs.map(log => (
+                      <div key={log.id} className="flex gap-2 py-0.5">
+                        <span className="text-muted-foreground shrink-0">
+                          {log.timestamp.toLocaleTimeString()}
+                        </span>
+                        <span className={`shrink-0 ${
+                          log.type === "error" ? "text-red-400" :
+                          log.type === "warn" ? "text-yellow-400" :
+                          log.type === "event" ? "text-blue-400" :
+                          "text-gray-400"
+                        }`}>
+                          [{log.type.toUpperCase()}]
+                        </span>
+                        <span className="text-purple-400 shrink-0">[{log.category}]</span>
+                        <span className="text-foreground">{log.message}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Developer mode enables: Debug console, additional terminal commands (debug, sysinfo, logs), and performance monitoring.
+                </p>
               </div>
             )}
           </div>

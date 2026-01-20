@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useOS } from "@/lib/os-context";
 
 interface TerminalLine {
   type: "input" | "output" | "error";
@@ -133,6 +134,9 @@ const resolvePath = (cwd: string, path: string): string => {
 };
 
 export function TerminalApp() {
+  const { settings, addDebugLog, debugLogs, windows } = useOS();
+  const developerMode = settings.developerMode;
+  
   const [lines, setLines] = useState<TerminalLine[]>([
     { type: "output", content: "NexusOS Terminal v1.0.0" },
     { type: "output", content: "Type 'help' for available commands.\n" },
@@ -411,7 +415,115 @@ export function TerminalApp() {
         output += `\x1b[31mAdmin Commands:\x1b[0m\n  users, sysadmin, logs, shutdown, stopshutdown, instashutdown\n\n`;
       }
       
+      if (developerMode) {
+        output += `\x1b[32mDeveloper Commands:\x1b[0m\n  debug, sysinfo, devlog, perf, windows\n\n`;
+      }
+      
       output += "Type 'help <command>' or 'man <command>' for detailed usage.";
+      return output;
+    },
+    
+    debug: () => {
+      if (!developerMode) {
+        return "debug: command requires developer mode to be enabled. Go to Settings > Developer to enable.";
+      }
+      addDebugLog("info", "Terminal", "Debug command executed");
+      const memoryInfo = (performance as any).memory;
+      let output = "\x1b[32m=== Debug Information ===\x1b[0m\n\n";
+      output += `Developer Mode: \x1b[32mEnabled\x1b[0m\n`;
+      output += `Open Windows: ${windows.length}\n`;
+      output += `Debug Log Entries: ${debugLogs.length}\n`;
+      output += `Session Storage: ${Object.keys(localStorage).length} items\n`;
+      if (memoryInfo) {
+        output += `JS Heap Used: ${(memoryInfo.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB\n`;
+        output += `JS Heap Total: ${(memoryInfo.totalJSHeapSize / 1024 / 1024).toFixed(2)} MB\n`;
+      }
+      output += `\nUse 'devlog' to view debug logs or 'perf' for performance metrics.`;
+      return output;
+    },
+    
+    sysinfo: () => {
+      if (!developerMode) {
+        return "sysinfo: command requires developer mode to be enabled.";
+      }
+      addDebugLog("info", "Terminal", "System info requested");
+      let output = "\x1b[36m=== System Information ===\x1b[0m\n\n";
+      output += `User Agent: ${navigator.userAgent.substring(0, 60)}...\n`;
+      output += `Language: ${navigator.language}\n`;
+      output += `Online: ${navigator.onLine ? "Yes" : "No"}\n`;
+      output += `Platform: ${navigator.platform}\n`;
+      output += `Cookies Enabled: ${navigator.cookieEnabled ? "Yes" : "No"}\n`;
+      output += `Screen: ${window.screen.width}x${window.screen.height}\n`;
+      output += `Color Depth: ${window.screen.colorDepth}-bit\n`;
+      output += `Device Pixel Ratio: ${window.devicePixelRatio}\n`;
+      return output;
+    },
+    
+    devlog: (args) => {
+      if (!developerMode) {
+        return "devlog: command requires developer mode to be enabled.";
+      }
+      if (args[0] === "clear") {
+        return "Use Settings > Developer > Clear Logs to clear the debug log.";
+      }
+      if (debugLogs.length === 0) {
+        return "No debug logs available. System events will be logged here when developer mode is enabled.";
+      }
+      let output = "\x1b[33m=== Debug Logs ===\x1b[0m\n\n";
+      const recentLogs = debugLogs.slice(-20);
+      for (const log of recentLogs) {
+        const time = log.timestamp.toLocaleTimeString();
+        const typeColor = log.type === "error" ? "\x1b[31m" : 
+                          log.type === "warn" ? "\x1b[33m" : 
+                          log.type === "event" ? "\x1b[34m" : "\x1b[37m";
+        output += `${time} ${typeColor}[${log.type.toUpperCase()}]\x1b[0m [${log.category}] ${log.message}\n`;
+      }
+      if (debugLogs.length > 20) {
+        output += `\n... and ${debugLogs.length - 20} more entries (showing last 20)`;
+      }
+      return output;
+    },
+    
+    perf: () => {
+      if (!developerMode) {
+        return "perf: command requires developer mode to be enabled.";
+      }
+      addDebugLog("info", "Terminal", "Performance metrics requested");
+      const timing = performance.timing;
+      const memoryInfo = (performance as any).memory;
+      let output = "\x1b[35m=== Performance Metrics ===\x1b[0m\n\n";
+      if (timing.loadEventEnd && timing.navigationStart) {
+        output += `Page Load Time: ${timing.loadEventEnd - timing.navigationStart}ms\n`;
+      }
+      if (timing.domContentLoadedEventEnd && timing.navigationStart) {
+        output += `DOM Ready: ${timing.domContentLoadedEventEnd - timing.navigationStart}ms\n`;
+      }
+      if (memoryInfo) {
+        output += `\n\x1b[36mMemory Usage:\x1b[0m\n`;
+        output += `  Used: ${(memoryInfo.usedJSHeapSize / 1024 / 1024).toFixed(2)} MB\n`;
+        output += `  Total: ${(memoryInfo.totalJSHeapSize / 1024 / 1024).toFixed(2)} MB\n`;
+        output += `  Limit: ${(memoryInfo.jsHeapSizeLimit / 1024 / 1024).toFixed(2)} MB\n`;
+      }
+      output += `\nOpen Windows: ${windows.length}`;
+      return output;
+    },
+    
+    windows: () => {
+      if (!developerMode) {
+        return "windows: command requires developer mode to be enabled.";
+      }
+      if (windows.length === 0) {
+        return "No windows currently open.";
+      }
+      let output = "\x1b[36m=== Open Windows ===\x1b[0m\n\n";
+      for (const win of windows) {
+        const status = win.isMinimized ? "[minimized]" : win.isMaximized ? "[maximized]" : "";
+        output += `${win.title} ${status}\n`;
+        output += `  ID: ${win.id}\n`;
+        output += `  Position: (${win.x}, ${win.y})\n`;
+        output += `  Size: ${win.width}x${win.height}\n`;
+        output += `  Z-Index: ${win.zIndex}\n\n`;
+      }
       return output;
     },
     
