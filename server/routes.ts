@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { settingsSchema, insertUpdateSchema, insertMessageSchema, users, messages } from "@shared/schema";
+import { settingsSchema, insertUpdateSchema, insertMessageSchema, insertCustomAppSchema, users, messages, customApps } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { updates } from "@shared/schema";
@@ -157,6 +157,53 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Failed to delete update:", error);
       res.status(500).json({ error: "Failed to delete update" });
+    }
+  });
+
+  // Get all custom apps
+  app.get("/api/custom-apps", async (req, res) => {
+    try {
+      const allApps = await db.select().from(customApps).orderBy(desc(customApps.createdAt));
+      res.json(allApps);
+    } catch (error) {
+      console.error("Failed to fetch custom apps:", error);
+      res.status(500).json({ error: "Failed to fetch custom apps" });
+    }
+  });
+
+  // Create a new custom app (admin only)
+  app.post("/api/custom-apps", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId || !(await isUserAdmin(userId))) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const data = insertCustomAppSchema.parse(req.body);
+      const [newApp] = await db.insert(customApps).values(data).returning();
+      res.json(newApp);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ error: "Invalid app data", details: error.errors });
+      } else {
+        console.error("Failed to create custom app:", error);
+        res.status(500).json({ error: "Failed to create custom app" });
+      }
+    }
+  });
+
+  // Delete a custom app (admin only)
+  app.delete("/api/custom-apps/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId || !(await isUserAdmin(userId))) {
+        return res.status(403).json({ error: "Admin access required" });
+      }
+      const { id } = req.params;
+      await db.delete(customApps).where(eq(customApps.id, id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to delete custom app:", error);
+      res.status(500).json({ error: "Failed to delete custom app" });
     }
   });
 
