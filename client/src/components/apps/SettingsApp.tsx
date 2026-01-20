@@ -126,6 +126,7 @@ export function SettingsApp() {
   const [adminUsername, setAdminUsername] = useState("");
   const [grantAdminError, setGrantAdminError] = useState("");
   const [grantAdminSuccess, setGrantAdminSuccess] = useState("");
+  const [versionClickCount, setVersionClickCount] = useState(0);
 
   const { data: currentUser } = useQuery<AuthUser | null>({
     queryKey: ["/api/auth/user"],
@@ -996,6 +997,16 @@ export function SettingsApp() {
         );
 
       case "about":
+        const handleVersionClick = () => {
+          if (settings.developerMode) return;
+          const newCount = versionClickCount + 1;
+          setVersionClickCount(newCount);
+          if (newCount >= 5) {
+            updateSettings({ developerMode: true });
+            setVersionClickCount(0);
+          }
+        };
+        
         return (
           <div className="space-y-6">
             <div className="flex items-center gap-4">
@@ -1004,7 +1015,21 @@ export function SettingsApp() {
               </div>
               <div>
                 <h2 className="text-xl font-bold">NexusOS</h2>
-                <p className="text-sm text-muted-foreground">Version 1.1.0</p>
+                <p 
+                  className={`text-sm text-muted-foreground cursor-pointer select-none transition-colors ${
+                    versionClickCount > 0 && versionClickCount < 5 ? 'text-blue-400' : ''
+                  } ${settings.developerMode ? 'text-green-400' : ''}`}
+                  onClick={handleVersionClick}
+                  data-testid="text-version"
+                >
+                  Version 1.1.0
+                  {versionClickCount > 0 && versionClickCount < 5 && (
+                    <span className="ml-2 text-xs">({5 - versionClickCount} more...)</span>
+                  )}
+                  {settings.developerMode && (
+                    <span className="ml-2 text-xs text-green-400">(Developer Mode Active)</span>
+                  )}
+                </p>
               </div>
             </div>
             <div className="space-y-2 text-sm">
