@@ -997,8 +997,9 @@ export function SettingsApp() {
         );
 
       case "about":
+        const isDeveloperModeEnabled = settings.developerMode === true;
         const handleVersionClick = () => {
-          if (settings.developerMode) return;
+          if (isDeveloperModeEnabled) return;
           const newCount = versionClickCount + 1;
           setVersionClickCount(newCount);
           if (newCount >= 5) {
@@ -1018,7 +1019,7 @@ export function SettingsApp() {
                 <p 
                   className={`text-sm text-muted-foreground cursor-pointer select-none transition-colors ${
                     versionClickCount > 0 && versionClickCount < 5 ? 'text-blue-400' : ''
-                  } ${settings.developerMode ? 'text-green-400' : ''}`}
+                  } ${isDeveloperModeEnabled ? 'text-green-400' : ''}`}
                   onClick={handleVersionClick}
                   data-testid="text-version"
                 >
@@ -1026,7 +1027,7 @@ export function SettingsApp() {
                   {versionClickCount > 0 && versionClickCount < 5 && (
                     <span className="ml-2 text-xs">({5 - versionClickCount} more...)</span>
                   )}
-                  {settings.developerMode && (
+                  {isDeveloperModeEnabled && (
                     <span className="ml-2 text-xs text-green-400">(Developer Mode Active)</span>
                   )}
                 </p>
