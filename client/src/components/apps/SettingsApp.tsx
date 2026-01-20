@@ -241,7 +241,7 @@ export function SettingsApp() {
 
   const handleExportData = () => {
     const exportData = {
-      version: "1.0.0",
+      version: "1.1.0",
       exportedAt: new Date().toISOString(),
       settings: settings,
       security: {
@@ -1004,7 +1004,7 @@ export function SettingsApp() {
               </div>
               <div>
                 <h2 className="text-xl font-bold">NexusOS</h2>
-                <p className="text-sm text-muted-foreground">Version 1.0.0</p>
+                <p className="text-sm text-muted-foreground">Version 1.1.0</p>
               </div>
             </div>
             <div className="space-y-2 text-sm">
