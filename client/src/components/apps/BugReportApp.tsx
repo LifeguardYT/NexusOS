@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Bug, Send, CheckCircle, Clock, AlertCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { Bug, Send, CheckCircle, Clock, AlertCircle, ChevronDown, ChevronUp, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ export function BugReportApp() {
   const [location, setLocation] = useState("");
   const [description, setDescription] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [showAdminSection, setShowAdminSection] = useState(false);
 
   const { data: adminStatus } = useQuery<{ isAdmin: boolean; isOwner: boolean; userId: string | null }>({
@@ -30,10 +31,14 @@ export function BugReportApp() {
     },
     onSuccess: () => {
       setSubmitted(true);
+      setSubmitError(null);
       setLocation("");
       setDescription("");
       queryClient.invalidateQueries({ queryKey: ["/api/bug-reports"] });
       setTimeout(() => setSubmitted(false), 3000);
+    },
+    onError: (error: Error) => {
+      setSubmitError(error.message || "Failed to submit bug report. Please try again.");
     },
   });
 
@@ -80,6 +85,24 @@ export function BugReportApp() {
             <p className="text-sm text-muted-foreground">Help us improve NexusOS</p>
           </div>
         </div>
+
+        {submitError && (
+          <div className="flex items-center gap-3 p-4 rounded-lg bg-red-500/10 border border-red-500/20">
+            <XCircle className="w-5 h-5 text-red-500" />
+            <div className="flex-1">
+              <p className="text-red-500 font-medium">Failed to submit bug report</p>
+              <p className="text-red-400 text-sm">{submitError}</p>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setSubmitError(null)}
+              className="text-red-500 hover:text-red-400"
+            >
+              Dismiss
+            </Button>
+          </div>
+        )}
 
         {submitted ? (
           <div className="flex items-center gap-3 p-4 rounded-lg bg-green-500/10 border border-green-500/20">

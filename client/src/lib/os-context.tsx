@@ -32,6 +32,7 @@ const defaultApps: App[] = [
   { id: "minesweeper", name: "Minesweeper", icon: "bomb", color: "bg-slate-600", defaultWidth: 400, defaultHeight: 500 },
   { id: "terminal", name: "Terminal", icon: "terminal", color: "bg-black", defaultWidth: 700, defaultHeight: 500 },
   { id: "appstore", name: "App Store", icon: "store", color: "bg-purple-500", defaultWidth: 700, defaultHeight: 550 },
+  { id: "bugreport", name: "Report Bug", icon: "bug", color: "bg-red-500", defaultWidth: 500, defaultHeight: 600 },
 ];
 
 const defaultFiles: FileItem[] = [

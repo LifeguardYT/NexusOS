@@ -1,7 +1,7 @@
 import { useOS } from "@/lib/os-context";
 import { 
   Globe, Settings, Folder, Calculator, FileText, CloudSun, Music, 
-  Gamepad2, Bomb, Terminal, Trash2, HardDrive, Bell, MessageCircle, Store
+  Gamepad2, Bomb, Terminal, Trash2, HardDrive, Bell, MessageCircle, Store, Bug
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<any>> = {
@@ -18,6 +18,7 @@ const iconMap: Record<string, React.ComponentType<any>> = {
   bell: Bell,
   "message-circle": MessageCircle,
   store: Store,
+  bug: Bug,
 };
 
 export function DesktopIcons() {
@@ -28,6 +29,7 @@ export function DesktopIcons() {
   const updatesApp = apps.find(app => app.id === "updates");
   const chatApp = apps.find(app => app.id === "chat");
   const appStoreApp = apps.find(app => app.id === "appstore");
+  const bugReportApp = apps.find(app => app.id === "bugreport");
   
   const customShortcutApps = desktopShortcuts
     .map(id => apps.find(app => app.id === id))
@@ -94,6 +96,21 @@ export function DesktopIcons() {
           </div>
           <span className="text-[11px] text-white text-center leading-tight drop-shadow-lg">
             App Store
+          </span>
+        </button>
+      )}
+      {bugReportApp && (
+        <button
+          onDoubleClick={() => openWindow("bugreport")}
+          onContextMenu={(e) => handleContextMenu(e, "bugreport")}
+          className="w-20 flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-white/10 transition-colors group"
+          data-testid="desktop-icon-bugreport"
+        >
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-red-500 shadow-lg group-hover:scale-105 transition-transform">
+            <Bug className="w-6 h-6 text-white" />
+          </div>
+          <span className="text-[11px] text-white text-center leading-tight drop-shadow-lg">
+            Report Bug
           </span>
         </button>
       )}

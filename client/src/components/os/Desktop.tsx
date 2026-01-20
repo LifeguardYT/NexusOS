@@ -18,6 +18,7 @@ import { SnakeGame } from "@/components/apps/SnakeGame";
 import { MinesweeperGame } from "@/components/apps/MinesweeperGame";
 import { TerminalApp } from "@/components/apps/TerminalApp";
 import AppStoreApp from "@/components/apps/AppStoreApp";
+import { BugReportApp } from "@/components/apps/BugReportApp";
 import { Power, Lock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
@@ -45,6 +46,7 @@ const appComponents: Record<string, React.ComponentType> = {
   minesweeper: MinesweeperGame,
   terminal: TerminalApp,
   appstore: AppStoreApp,
+  bugreport: BugReportApp,
 };
 
 export function Desktop() {

@@ -2,7 +2,7 @@ import { useOS } from "@/lib/os-context";
 import { Search, Power, User, Trash2, Package, Monitor } from "lucide-react";
 import { 
   Globe, Settings, Folder, Calculator, FileText, CloudSun, Music, 
-  Gamepad2, Bomb, Terminal, MessageSquare, Bell, Store
+  Gamepad2, Bomb, Terminal, MessageSquare, Bell, Store, Bug
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -22,6 +22,7 @@ const iconMap: Record<string, React.ComponentType<any>> = {
   "message-circle": MessageSquare,
   bell: Bell,
   store: Store,
+  bug: Bug,
 };
 
 interface InstalledAppInfo {
