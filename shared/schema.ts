@@ -118,3 +118,18 @@ export const customApps = pgTable("custom_apps", {
 export const insertCustomAppSchema = createInsertSchema(customApps).omit({ id: true, createdAt: true });
 export type InsertCustomApp = z.infer<typeof insertCustomAppSchema>;
 export type CustomApp = typeof customApps.$inferSelect;
+
+// Bug Reports table
+export const bugReports = pgTable("bug_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  userName: text("user_name").notNull(),
+  location: text("location").notNull(),
+  description: text("description").notNull(),
+  resolved: boolean("resolved").notNull().default(false),
+  createdAt: text("created_at").notNull().default(sql`now()`),
+});
+
+export const insertBugReportSchema = createInsertSchema(bugReports).omit({ id: true, createdAt: true, resolved: true });
+export type InsertBugReport = z.infer<typeof insertBugReportSchema>;
+export type BugReport = typeof bugReports.$inferSelect;
