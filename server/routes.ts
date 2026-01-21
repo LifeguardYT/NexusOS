@@ -16,6 +16,7 @@ let shutdownState = {
   isShuttingDown: false,
   shutdownTime: null as number | null,
   message: "",
+  reason: null as string | null,
 };
 
 // WebSocket clients for real-time updates
@@ -677,6 +678,7 @@ export async function registerRoutes(
         isShuttingDown: true,
         shutdownTime: Date.now() + 60000, // 60 seconds from now
         message: "System going down for maintenance in 60 seconds!",
+        reason: null,
       };
 
       broadcastShutdownStatus();
@@ -689,6 +691,7 @@ export async function registerRoutes(
             isShuttingDown: false,
             shutdownTime: null,
             message: "Shutdown for maintenance",
+            reason: null,
           };
           broadcastShutdownStatus();
         }
@@ -709,11 +712,13 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Admin access required" });
       }
 
+      const reason = req.body?.reason;
       shutdownState = {
         isShutdown: true,
         isShuttingDown: false,
         shutdownTime: null,
         message: "System shutdown by administrator",
+        reason: reason || null,
       };
 
       broadcastShutdownStatus();
@@ -738,6 +743,7 @@ export async function registerRoutes(
         isShuttingDown: false,
         shutdownTime: null,
         message: "",
+        reason: null,
       };
 
       broadcastShutdownStatus();

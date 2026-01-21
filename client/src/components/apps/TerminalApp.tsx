@@ -1873,18 +1873,22 @@ All users have been restored access to the system.`;
     instashutdown: async (args, isAdmin) => {
       if (!adminStatus?.isOwner) return "Permission denied: Owner access required";
       try {
+        const reason = args.length > 0 ? args.join(" ") : null;
         const response = await fetch("/api/shutdown/instant", {
           method: "POST",
           credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason }),
         });
         if (!response.ok) {
           const data = await response.json();
           return `Error: ${data.error || "Failed to execute instant shutdown"}`;
         }
+        const reasonDisplay = reason ? `\n║  Reason: ${reason.substring(0, 37).padEnd(37)} ║` : "";
         return `\x1b[31m╔═══════════════════════════════════════════════╗
 ║           INSTANT SHUTDOWN EXECUTED           ║
 ╠═══════════════════════════════════════════════╣
-║  All non-admin users have been locked out.    ║
+║  All non-admin users have been locked out.    ║${reasonDisplay}
 ║  Use 'stopshutdown' to restore access.        ║
 ╚═══════════════════════════════════════════════╝\x1b[0m`;
       } catch (e) {

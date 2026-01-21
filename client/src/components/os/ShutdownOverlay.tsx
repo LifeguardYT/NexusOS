@@ -6,6 +6,7 @@ interface ShutdownStatus {
   isShuttingDown: boolean;
   shutdownTime: number | null;
   message: string;
+  reason?: string | null;
 }
 
 interface ShutdownOverlayProps {
@@ -18,6 +19,7 @@ export function ShutdownOverlay({ isAdmin }: ShutdownOverlayProps) {
     isShuttingDown: false,
     shutdownTime: null,
     message: "",
+    reason: null,
   });
   const [countdown, setCountdown] = useState<number | null>(null);
 
@@ -31,6 +33,7 @@ export function ShutdownOverlay({ isAdmin }: ShutdownOverlayProps) {
           isShuttingDown: data.isShuttingDown,
           shutdownTime: data.shutdownTime,
           message: data.message,
+          reason: data.reason,
         });
       }
     } catch (e) {
@@ -78,6 +81,7 @@ export function ShutdownOverlay({ isAdmin }: ShutdownOverlayProps) {
                 isShuttingDown: data.isShuttingDown,
                 shutdownTime: data.shutdownTime,
                 message: data.message,
+                reason: data.reason,
               });
             }
           } catch (e) {
@@ -129,6 +133,9 @@ export function ShutdownOverlay({ isAdmin }: ShutdownOverlayProps) {
       >
         <Power className="w-24 h-24 text-white/30 mb-8" />
         <h1 className="text-3xl font-bold text-white mb-4">{shutdownStatus.message}</h1>
+        {shutdownStatus.reason && (
+          <p className="text-white/80 text-lg mb-4">{shutdownStatus.reason}</p>
+        )}
         <p className="text-white/60 text-lg">Please contact your system administrator.</p>
       </div>
     );
