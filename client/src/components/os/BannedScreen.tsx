@@ -1,15 +1,10 @@
-import { Ban, LogOut } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Ban } from "lucide-react";
 
 interface BannedScreenProps {
   reason: string | null;
 }
 
 export function BannedScreen({ reason }: BannedScreenProps) {
-  const handleLogout = () => {
-    window.location.href = "/api/logout";
-  };
-
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-red-950 to-black flex items-center justify-center z-[9999]">
       <div className="text-center max-w-md p-8">
@@ -30,19 +25,9 @@ export function BannedScreen({ reason }: BannedScreenProps) {
           </div>
         )}
         
-        <p className="text-sm text-gray-500 mb-8">
+        <p className="text-sm text-gray-500">
           If you believe this was a mistake, please contact an administrator.
         </p>
-        
-        <Button 
-          variant="outline" 
-          onClick={handleLogout}
-          className="border-red-500/50 text-red-400 hover:bg-red-500/20"
-          data-testid="btn-banned-logout"
-        >
-          <LogOut className="w-4 h-4 mr-2" />
-          Sign Out
-        </Button>
       </div>
     </div>
   );
