@@ -264,7 +264,7 @@ export function SettingsApp() {
 
   const handleExportData = () => {
     const exportData = {
-      version: "1.1.1",
+      version: "1.1.2",
       exportedAt: new Date().toISOString(),
       settings: settings,
       security: {
@@ -1045,7 +1045,7 @@ export function SettingsApp() {
                   onClick={handleVersionClick}
                   data-testid="text-version"
                 >
-                  Version 1.1.1
+                  Version 1.1.2
                   {versionClickCount > 0 && versionClickCount < 5 && (
                     <span className="ml-2 text-xs">({5 - versionClickCount} more...)</span>
                   )}
