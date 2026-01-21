@@ -9,6 +9,7 @@ interface TerminalLine {
 
 interface AdminStatus {
   isAdmin: boolean;
+  isOwner: boolean;
   userId?: string;
 }
 
@@ -22,7 +23,8 @@ interface FileSystemNode {
   modified?: Date;
 }
 
-const ADMIN_COMMANDS = ["users", "sysadmin", "logs", "shutdown", "stopshutdown", "instashutdown"];
+const ADMIN_COMMANDS = ["users", "sysadmin", "logs"];
+const OWNER_COMMANDS = ["shutdown", "stopshutdown", "instashutdown"];
 
 const createFileSystem = (): Record<string, FileSystemNode> => ({
   home: {
@@ -412,7 +414,11 @@ export function TerminalApp() {
       }
       
       if (isAdmin) {
-        output += `\x1b[31mAdmin Commands:\x1b[0m\n  users, sysadmin, logs, shutdown, stopshutdown, instashutdown\n\n`;
+        output += `\x1b[31mAdmin Commands:\x1b[0m\n  users, sysadmin, logs\n\n`;
+      }
+      
+      if (adminStatus?.isOwner) {
+        output += `\x1b[35mOwner Commands:\x1b[0m\n  shutdown, stopshutdown, instashutdown\n\n`;
       }
       
       if (developerMode) {
@@ -1828,7 +1834,7 @@ Process:
     },
     
     shutdown: async (args, isAdmin) => {
-      if (!isAdmin) return "Permission denied: Admin access required";
+      if (!adminStatus?.isOwner) return "Permission denied: Owner access required";
       try {
         const response = await fetch("/api/shutdown", {
           method: "POST",
@@ -1847,7 +1853,7 @@ System going down for maintenance in 60 seconds!`;
     },
 
     stopshutdown: async (args, isAdmin) => {
-      if (!isAdmin) return "Permission denied: Admin access required";
+      if (!adminStatus?.isOwner) return "Permission denied: Owner access required";
       try {
         const response = await fetch("/api/shutdown/stop", {
           method: "POST",
@@ -1865,7 +1871,7 @@ All users have been restored access to the system.`;
     },
 
     instashutdown: async (args, isAdmin) => {
-      if (!isAdmin) return "Permission denied: Admin access required";
+      if (!adminStatus?.isOwner) return "Permission denied: Owner access required";
       try {
         const response = await fetch("/api/shutdown/instant", {
           method: "POST",
@@ -2003,6 +2009,11 @@ See 'help' for available commands.`;
     if (cmd in COMMANDS) {
       if (ADMIN_COMMANDS.includes(cmd) && !isAdmin) {
         setLines(prev => [...prev, { type: "error", content: `${cmd}: Permission denied - Admin access required` }]);
+        return;
+      }
+      
+      if (OWNER_COMMANDS.includes(cmd) && !adminStatus?.isOwner) {
+        setLines(prev => [...prev, { type: "error", content: `${cmd}: Permission denied - Owner access required` }]);
         return;
       }
       
