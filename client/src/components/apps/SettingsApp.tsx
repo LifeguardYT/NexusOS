@@ -13,6 +13,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 type SettingsSection = "appearance" | "display" | "sound" | "network" | "notifications" | "accounts" | "about" | "admin" | "developer" | "owner";
 
@@ -128,6 +130,9 @@ export function SettingsApp() {
   const [grantAdminError, setGrantAdminError] = useState("");
   const [grantAdminSuccess, setGrantAdminSuccess] = useState("");
   const [versionClickCount, setVersionClickCount] = useState(0);
+  const [banModalOpen, setBanModalOpen] = useState(false);
+  const [banTargetUser, setBanTargetUser] = useState<{id: string; name: string} | null>(null);
+  const [banReason, setBanReason] = useState("");
 
   const { data: currentUser } = useQuery<AuthUser | null>({
     queryKey: ["/api/auth/user"],
@@ -167,8 +172,8 @@ export function SettingsApp() {
   });
 
   const banUserMutation = useMutation({
-    mutationFn: async ({ userId, banned }: { userId: string; banned: boolean }) => {
-      const res = await apiRequest("POST", `/api/admin/users/${userId}/ban`, { banned });
+    mutationFn: async ({ userId, banned, reason }: { userId: string; banned: boolean; reason?: string }) => {
+      const res = await apiRequest("POST", `/api/admin/users/${userId}/ban`, { banned, reason });
       if (!res.ok) {
         const error = await res.json();
         throw new Error(error.error || "Failed to update ban status");
@@ -177,11 +182,27 @@ export function SettingsApp() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+      setBanModalOpen(false);
+      setBanTargetUser(null);
+      setBanReason("");
     },
   });
 
-  const handleBanUser = (userId: string, currentlyBanned: boolean) => {
-    banUserMutation.mutate({ userId, banned: !currentlyBanned });
+  const handleBanUser = (userId: string, currentlyBanned: boolean, userName: string) => {
+    if (currentlyBanned) {
+      // Unbanning - no reason needed
+      banUserMutation.mutate({ userId, banned: false });
+    } else {
+      // Banning - open modal to get reason
+      setBanTargetUser({ id: userId, name: userName });
+      setBanModalOpen(true);
+    }
+  };
+  
+  const confirmBan = () => {
+    if (banTargetUser && banReason.trim()) {
+      banUserMutation.mutate({ userId: banTargetUser.id, banned: true, reason: banReason.trim() });
+    }
   };
 
   const grantAdminMutation = useMutation({
@@ -1108,7 +1129,7 @@ export function SettingsApp() {
                       <Button
                         size="sm"
                         variant={user.banned ? "outline" : "destructive"}
-                        onClick={() => handleBanUser(user.id, user.banned === true)}
+                        onClick={() => handleBanUser(user.id, user.banned === true, `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'User')}
                         disabled={banUserMutation.isPending}
                         data-testid={`btn-ban-user-${user.id}`}
                         className="min-w-[80px]"
@@ -1466,6 +1487,53 @@ export function SettingsApp() {
         <h2 className="text-2xl font-bold mb-6 capitalize">{activeSection}</h2>
         {renderContent()}
       </div>
+      
+      {/* Ban Reason Modal */}
+      <Dialog open={banModalOpen} onOpenChange={(open) => {
+        setBanModalOpen(open);
+        if (!open) {
+          setBanTargetUser(null);
+          setBanReason("");
+        }
+      }}>
+        <DialogContent className="bg-zinc-900 border-zinc-700">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Ban className="w-5 h-5 text-red-500" />
+              Ban User
+            </DialogTitle>
+            <DialogDescription>
+              You are about to ban <strong>{banTargetUser?.name}</strong>. Please provide a reason for this action.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea
+              placeholder="Enter the reason for banning this user..."
+              value={banReason}
+              onChange={(e) => setBanReason(e.target.value)}
+              className="min-h-[100px] bg-zinc-800 border-zinc-600"
+              data-testid="input-ban-reason"
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setBanModalOpen(false)}
+              data-testid="btn-cancel-ban"
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={confirmBan}
+              disabled={!banReason.trim() || banUserMutation.isPending}
+              data-testid="btn-confirm-ban"
+            >
+              {banUserMutation.isPending ? "Banning..." : "Confirm Ban"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

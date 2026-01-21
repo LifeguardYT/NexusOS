@@ -287,7 +287,7 @@ export async function registerRoutes(
       }
       
       const { userId } = req.params;
-      const { banned } = req.body;
+      const { banned, reason } = req.body;
       
       // Prevent banning the owner or yourself
       if (userId === OWNER_USER_ID) {
@@ -297,8 +297,17 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Cannot ban yourself" });
       }
       
+      // Require a reason when banning
+      if (banned === true && (!reason || reason.trim() === "")) {
+        return res.status(400).json({ error: "A ban reason is required" });
+      }
+      
       const [updatedUser] = await db.update(users)
-        .set({ banned: banned === true, updatedAt: new Date() })
+        .set({ 
+          banned: banned === true, 
+          banReason: banned === true ? reason.trim() : null,
+          updatedAt: new Date() 
+        })
         .where(eq(users.id, userId))
         .returning();
       
@@ -399,10 +408,10 @@ export async function registerRoutes(
       const [user] = await db.select().from(users).where(eq(users.id, userId));
       
       if (!user) {
-        return res.json({ banned: false });
+        return res.json({ banned: false, reason: null });
       }
       
-      res.json({ banned: user.banned === true });
+      res.json({ banned: user.banned === true, reason: user.banReason || null });
     } catch (error) {
       console.error("Failed to check ban status:", error);
       res.status(500).json({ error: "Failed to check ban status" });
