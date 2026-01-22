@@ -63,6 +63,7 @@ interface AdminStatus {
   isAdmin: boolean;
   isOwner: boolean;
   userId?: string;
+  ownerId?: string;
 }
 
 interface SystemDiagnostics {
@@ -1125,7 +1126,7 @@ export function SettingsApp() {
                     <div className="text-right text-sm text-muted-foreground">
                       <p>Joined: {new Date(user.createdAt).toLocaleDateString()}</p>
                     </div>
-                    {user.id !== adminStatus?.userId && (
+                    {user.id !== adminStatus?.userId && user.id !== adminStatus?.ownerId && (
                       <Button
                         size="sm"
                         variant={user.banned ? "outline" : "destructive"}

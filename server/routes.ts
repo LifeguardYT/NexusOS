@@ -72,14 +72,14 @@ export async function registerRoutes(
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
-        return res.json({ isAdmin: false, isOwner: false, userId: null });
+        return res.json({ isAdmin: false, isOwner: false, userId: null, ownerId: null });
       }
       const adminStatus = await isUserAdmin(userId);
       const ownerStatus = isOwner(userId);
-      res.json({ isAdmin: adminStatus, isOwner: ownerStatus, userId });
+      res.json({ isAdmin: adminStatus, isOwner: ownerStatus, userId, ownerId: OWNER_USER_ID });
     } catch (error) {
       console.error("Failed to check admin status:", error);
-      res.json({ isAdmin: false, isOwner: false, userId: null });
+      res.json({ isAdmin: false, isOwner: false, userId: null, ownerId: null });
     }
   });
 
