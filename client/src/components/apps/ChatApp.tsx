@@ -389,11 +389,8 @@ export function ChatApp() {
                             : "bg-white/10 rounded-bl-md"
                         }`}
                       >
-                        {chatView === "global" && (
+                        {(msg.senderIsOwner || msg.senderIsAdmin) && (
                           <div className={`flex items-center flex-wrap gap-1.5 mb-1 ${isOwn ? "justify-end" : ""}`}>
-                            <p className={`text-xs font-medium ${isOwn ? "text-blue-100" : "text-blue-400"}`}>
-                              {isOwn ? "You" : msg.senderName}
-                            </p>
                             {msg.senderIsOwner && (
                               <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${isOwn ? "bg-yellow-500/30 text-yellow-200 border border-yellow-400/40" : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"}`}>
                                 <Crown className="w-2.5 h-2.5" />
@@ -407,6 +404,11 @@ export function ChatApp() {
                               </span>
                             )}
                           </div>
+                        )}
+                        {chatView === "global" && !isOwn && (
+                          <p className={`text-xs font-medium mb-1 ${isOwn ? "text-blue-100" : "text-blue-400"}`}>
+                            {msg.senderName}
+                          </p>
                         )}
                         <p className="text-sm break-words">{filterBadWords(msg.content)}</p>
                         <p className={`text-xs mt-1 ${isOwn ? "text-blue-100" : "text-muted-foreground"}`}>
