@@ -123,6 +123,50 @@ export async function registerRoutes(
   await setupAuth(app);
   registerAuthRoutes(app);
 
+  // Middleware to catch banned users on login and record their IP
+  // This runs after auth so we can check if the authenticated user is banned
+  app.use(async (req: any, res, next) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (userId) {
+        // Check if this user is banned
+        const [user] = await db.select().from(users).where(eq(users.id, userId));
+        if (user?.banned) {
+          const clientIp = getClientIp(req);
+          
+          // Update user's lastIp
+          await db.update(users)
+            .set({ lastIp: clientIp })
+            .where(eq(users.id, userId));
+          
+          // Add their IP to banned list if not already there
+          if (clientIp && clientIp !== 'unknown') {
+            const [existingBan] = await db.select().from(bannedIps).where(eq(bannedIps.ipAddress, clientIp));
+            if (!existingBan) {
+              await db.insert(bannedIps).values({
+                ipAddress: clientIp,
+                reason: user.banReason || "Account banned",
+                bannedUserId: userId,
+                bannedUserName: user.firstName || user.email || "Unknown user"
+              });
+            }
+          }
+          
+          // Log them out and block access
+          req.logout(() => {});
+          return res.status(403).json({ 
+            error: "Account banned", 
+            reason: user.banReason || "Your account has been banned",
+            banned: true
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error checking banned status on login:", error);
+    }
+    next();
+  });
+
   // Middleware to track user IP on authenticated requests
   app.use(async (req: any, res, next) => {
     try {
