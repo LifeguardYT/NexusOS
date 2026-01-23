@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { settingsSchema, insertUpdateSchema, insertMessageSchema, insertCustomAppSchema, insertBugReportSchema, users, messages, customApps, bugReports } from "@shared/schema";
+import { settingsSchema, insertUpdateSchema, insertMessageSchema, insertCustomAppSchema, insertBugReportSchema, users, messages, customApps, bugReports, bannedIps } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { updates } from "@shared/schema";
@@ -57,6 +57,15 @@ function isOwner(userId: string): boolean {
   return userId === OWNER_USER_ID;
 }
 
+// Helper function to get client IP address
+function getClientIp(req: any): string {
+  const forwardedFor = req.headers['x-forwarded-for'];
+  if (forwardedFor) {
+    return forwardedFor.split(',')[0].trim();
+  }
+  return req.ip || req.connection?.remoteAddress || 'unknown';
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -66,6 +75,46 @@ export async function registerRoutes(
   // Setup authentication
   await setupAuth(app);
   registerAuthRoutes(app);
+
+  // Check if IP is banned (public endpoint, no auth required)
+  app.get("/api/ip-ban-status", async (req: any, res) => {
+    try {
+      const clientIp = getClientIp(req);
+      const [bannedIp] = await db.select().from(bannedIps).where(eq(bannedIps.ipAddress, clientIp));
+      
+      if (bannedIp) {
+        return res.json({ 
+          banned: true, 
+          reason: bannedIp.reason,
+          bannedUserName: bannedIp.bannedUserName
+        });
+      }
+      
+      res.json({ banned: false, reason: null });
+    } catch (error) {
+      console.error("Failed to check IP ban status:", error);
+      res.json({ banned: false, reason: null });
+    }
+  });
+
+  // Middleware to track user IP on authenticated requests
+  app.use(async (req: any, res, next) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (userId) {
+        const clientIp = getClientIp(req);
+        // Update user's last known IP (don't await to avoid slowing down requests)
+        db.update(users)
+          .set({ lastIp: clientIp })
+          .where(eq(users.id, userId))
+          .execute()
+          .catch(err => console.error("Failed to update user IP:", err));
+      }
+    } catch (error) {
+      // Don't block the request if IP tracking fails
+    }
+    next();
+  });
 
   // Get admin status for current user
   app.get("/api/admin/status", async (req: any, res) => {
