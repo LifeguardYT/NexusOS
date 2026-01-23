@@ -1,4 +1,4 @@
-import { useOS } from "@/lib/os-context";
+import { useOS, type CustomAppInfo } from "@/lib/os-context";
 import { Search, Power, User, Trash2, Package, Monitor } from "lucide-react";
 import { 
   Globe, Settings, Folder, Calculator, FileText, CloudSun, Music, 
@@ -78,7 +78,7 @@ interface UserData {
 }
 
 export function StartMenu() {
-  const { apps, openWindow, startMenuOpen, setStartMenuOpen, shutdown, installedApps, uninstallApp, desktopShortcuts, addDesktopShortcut, removeDesktopShortcut } = useOS();
+  const { apps, openWindow, startMenuOpen, setStartMenuOpen, shutdown, installedApps, uninstallApp, desktopShortcuts, addDesktopShortcut, removeDesktopShortcut, customAppsInfo } = useOS();
   const [searchQuery, setSearchQuery] = useState("");
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -96,6 +96,15 @@ export function StartMenu() {
     ? `${user.firstName[0]}${user.lastName?.[0] || ''}`.toUpperCase()
     : user?.email?.[0]?.toUpperCase() || 'U';
 
+  const installedCustomApps = customAppsInfo.map(app => ({
+    id: app.id,
+    name: app.name,
+    icon: <img src={app.logoBase64} alt={app.name} className="w-6 h-6 rounded object-cover" />,
+    color: "bg-gray-500",
+    isSystemApp: false,
+    externalUrl: app.externalUrl,
+  }));
+
   const allDisplayedApps = [
     ...apps.map(app => ({
       id: app.id,
@@ -106,6 +115,7 @@ export function StartMenu() {
       externalUrl: undefined,
     })),
     ...externalApps.filter(app => installedApps.includes(app.id)),
+    ...installedCustomApps,
   ];
 
   const filteredApps = allDisplayedApps.filter(app => 
@@ -113,7 +123,9 @@ export function StartMenu() {
   );
 
   const handleAppClick = (app: typeof allDisplayedApps[0]) => {
-    if (app.externalUrl) {
+    if (app.id.startsWith("custom-")) {
+      openWindow(app.id);
+    } else if (app.externalUrl) {
       openWindow("browser");
       localStorage.setItem("browser-navigate-url", app.externalUrl);
     } else {
