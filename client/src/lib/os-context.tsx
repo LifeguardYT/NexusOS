@@ -54,6 +54,14 @@ interface SecuritySettings {
   requireSignInOnWake: boolean;
 }
 
+export interface CustomAppInfo {
+  id: string;
+  name: string;
+  externalUrl: string;
+  logoBase64: string;
+  category?: string;
+}
+
 export interface DebugLogEntry {
   id: string;
   timestamp: Date;
@@ -98,8 +106,10 @@ interface OSContextType {
   security: SecuritySettings;
   updateSecurity: (updates: Partial<SecuritySettings>) => void;
   installedApps: string[];
-  installApp: (appId: string) => void;
+  installApp: (appId: string, customAppInfo?: CustomAppInfo) => void;
   uninstallApp: (appId: string) => void;
+  customAppsInfo: CustomAppInfo[];
+  openCustomApp: (appId: string) => void;
   desktopShortcuts: string[];
   addDesktopShortcut: (appId: string) => void;
   removeDesktopShortcut: (appId: string) => void;
@@ -148,6 +158,11 @@ export function OSProvider({ children }: { children: ReactNode }) {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const [customAppsInfo, setCustomAppsInfo] = useState<CustomAppInfo[]>(() => {
+    const saved = localStorage.getItem("os-custom-apps-info");
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [desktopShortcuts, setDesktopShortcuts] = useState<string[]>(() => {
     const saved = localStorage.getItem("os-desktop-shortcuts");
     return saved ? JSON.parse(saved) : [];
@@ -177,6 +192,10 @@ export function OSProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem("os-installed-apps", JSON.stringify(installedApps));
   }, [installedApps]);
+
+  useEffect(() => {
+    localStorage.setItem("os-custom-apps-info", JSON.stringify(customAppsInfo));
+  }, [customAppsInfo]);
 
   useEffect(() => {
     localStorage.setItem("os-desktop-shortcuts", JSON.stringify(desktopShortcuts));
@@ -279,6 +298,33 @@ export function OSProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const openWindow = useCallback((appId: string) => {
+    if (appId.startsWith("custom-")) {
+      const customApp = customAppsInfo.find(app => app.id === appId);
+      if (customApp && customApp.externalUrl) {
+        localStorage.setItem("browser-navigate-url", customApp.externalUrl);
+        const browserApp = defaultApps.find(a => a.id === "browser");
+        if (browserApp) {
+          const offset = (windows.length % 5) * 30;
+          const newWindow: WindowState = {
+            id: `browser-${Date.now()}`,
+            appId: "browser",
+            title: customApp.name,
+            x: 100 + offset,
+            y: 50 + offset,
+            width: browserApp.defaultWidth,
+            height: browserApp.defaultHeight,
+            isMaximized: false,
+            isMinimized: false,
+            zIndex: nextZIndex,
+          };
+          setWindows(prev => [...prev, newWindow]);
+          setNextZIndex(prev => prev + 1);
+          setStartMenuOpen(false);
+        }
+        return;
+      }
+    }
+
     const app = defaultApps.find(a => a.id === appId);
     if (!app) return;
 
@@ -317,7 +363,7 @@ export function OSProvider({ children }: { children: ReactNode }) {
     setWindows(prev => [...prev, newWindow]);
     setNextZIndex(prev => prev + 1);
     setStartMenuOpen(false);
-  }, [windows, nextZIndex]);
+  }, [windows, nextZIndex, customAppsInfo]);
 
   const closeWindow = useCallback((windowId: string) => {
     setWindows(prev => prev.filter(w => w.id !== windowId));
@@ -386,13 +432,30 @@ export function OSProvider({ children }: { children: ReactNode }) {
     setFiles(prev => prev.filter(f => f.id !== id));
   }, []);
 
-  const installApp = useCallback((appId: string) => {
+  const installApp = useCallback((appId: string, customAppInfo?: CustomAppInfo) => {
     setInstalledApps(prev => prev.includes(appId) ? prev : [...prev, appId]);
+    if (customAppInfo) {
+      setCustomAppsInfo(prev => {
+        const exists = prev.some(app => app.id === customAppInfo.id);
+        return exists ? prev : [...prev, customAppInfo];
+      });
+    }
   }, []);
 
   const uninstallApp = useCallback((appId: string) => {
     setInstalledApps(prev => prev.filter(id => id !== appId));
+    if (appId.startsWith("custom-")) {
+      setCustomAppsInfo(prev => prev.filter(app => app.id !== appId));
+    }
   }, []);
+
+  const openCustomApp = useCallback((appId: string) => {
+    const customApp = customAppsInfo.find(app => app.id === appId);
+    if (customApp && customApp.externalUrl) {
+      localStorage.setItem("browser-navigate-url", customApp.externalUrl);
+      openWindow("browser");
+    }
+  }, [customAppsInfo]);
 
   const addDesktopShortcut = useCallback((appId: string) => {
     setDesktopShortcuts(prev => prev.includes(appId) ? prev : [...prev, appId]);
@@ -441,6 +504,8 @@ export function OSProvider({ children }: { children: ReactNode }) {
       installedApps,
       installApp,
       uninstallApp,
+      customAppsInfo,
+      openCustomApp,
       desktopShortcuts,
       addDesktopShortcut,
       removeDesktopShortcut,
