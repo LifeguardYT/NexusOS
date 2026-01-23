@@ -352,6 +352,12 @@ export async function registerRoutes(
         return res.status(400).json({ error: "A ban reason is required" });
       }
       
+      // Get the user first to get their last known IP
+      const [targetUser] = await db.select().from(users).where(eq(users.id, userId));
+      if (!targetUser) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
       const [updatedUser] = await db.update(users)
         .set({ 
           banned: banned === true, 
@@ -361,8 +367,27 @@ export async function registerRoutes(
         .where(eq(users.id, userId))
         .returning();
       
-      if (!updatedUser) {
-        return res.status(404).json({ error: "User not found" });
+      // Handle IP banning
+      if (banned === true) {
+        // If user has a known IP, add it to banned IPs
+        if (targetUser.lastIp && targetUser.lastIp !== 'unknown') {
+          // Check if IP is already banned
+          const [existingBan] = await db.select().from(bannedIps).where(eq(bannedIps.ipAddress, targetUser.lastIp));
+          if (!existingBan) {
+            const userName = `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim() || targetUser.email || 'Unknown User';
+            await db.insert(bannedIps).values({
+              ipAddress: targetUser.lastIp,
+              reason: reason.trim(),
+              bannedUserId: userId,
+              bannedUserName: userName,
+            });
+          }
+        }
+      } else {
+        // Unbanning - remove the IP from banned IPs if it exists
+        if (targetUser.lastIp) {
+          await db.delete(bannedIps).where(eq(bannedIps.ipAddress, targetUser.lastIp));
+        }
       }
       
       res.json({ success: true, user: updatedUser });
