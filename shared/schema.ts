@@ -38,6 +38,7 @@ export const windowStateSchema = z.object({
   isMaximized: z.boolean().default(false),
   isMinimized: z.boolean().default(false),
   zIndex: z.number(),
+  customAppUrl: z.string().optional(),
 });
 
 export type WindowState = z.infer<typeof windowStateSchema>;

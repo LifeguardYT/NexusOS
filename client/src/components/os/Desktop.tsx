@@ -19,6 +19,7 @@ import { MinesweeperGame } from "@/components/apps/MinesweeperGame";
 import { TerminalApp } from "@/components/apps/TerminalApp";
 import AppStoreApp from "@/components/apps/AppStoreApp";
 import { BugReportApp } from "@/components/apps/BugReportApp";
+import CustomWebApp from "@/components/apps/CustomWebApp";
 import { Power, Lock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
@@ -231,6 +232,14 @@ export function Desktop() {
       {/* Windows */}
       <AnimatePresence>
         {windows.filter(win => !win.isMinimized).map(win => {
+          if (win.customAppUrl) {
+            return (
+              <Window key={win.id} window={win}>
+                <CustomWebApp url={win.customAppUrl} name={win.title} />
+              </Window>
+            );
+          }
+          
           const AppComponent = appComponents[win.appId];
           if (!AppComponent) return null;
           

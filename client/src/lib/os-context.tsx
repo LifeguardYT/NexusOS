@@ -301,26 +301,23 @@ export function OSProvider({ children }: { children: ReactNode }) {
     if (appId.startsWith("custom-")) {
       const customApp = customAppsInfo.find(app => app.id === appId);
       if (customApp && customApp.externalUrl) {
-        localStorage.setItem("browser-navigate-url", customApp.externalUrl);
-        const browserApp = defaultApps.find(a => a.id === "browser");
-        if (browserApp) {
-          const offset = (windows.length % 5) * 30;
-          const newWindow: WindowState = {
-            id: `browser-${Date.now()}`,
-            appId: "browser",
-            title: customApp.name,
-            x: 100 + offset,
-            y: 50 + offset,
-            width: browserApp.defaultWidth,
-            height: browserApp.defaultHeight,
-            isMaximized: false,
-            isMinimized: false,
-            zIndex: nextZIndex,
-          };
-          setWindows(prev => [...prev, newWindow]);
-          setNextZIndex(prev => prev + 1);
-          setStartMenuOpen(false);
-        }
+        const offset = (windows.length % 5) * 30;
+        const newWindow: WindowState = {
+          id: `${appId}-${Date.now()}`,
+          appId: appId,
+          title: customApp.name,
+          x: 100 + offset,
+          y: 50 + offset,
+          width: 1000,
+          height: 700,
+          isMaximized: false,
+          isMinimized: false,
+          zIndex: nextZIndex,
+          customAppUrl: customApp.externalUrl,
+        };
+        setWindows(prev => [...prev, newWindow]);
+        setNextZIndex(prev => prev + 1);
+        setStartMenuOpen(false);
         return;
       }
     }
@@ -450,12 +447,8 @@ export function OSProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const openCustomApp = useCallback((appId: string) => {
-    const customApp = customAppsInfo.find(app => app.id === appId);
-    if (customApp && customApp.externalUrl) {
-      localStorage.setItem("browser-navigate-url", customApp.externalUrl);
-      openWindow("browser");
-    }
-  }, [customAppsInfo]);
+    openWindow(appId);
+  }, []);
 
   const addDesktopShortcut = useCallback((appId: string) => {
     setDesktopShortcuts(prev => prev.includes(appId) ? prev : [...prev, appId]);
