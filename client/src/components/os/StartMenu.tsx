@@ -96,14 +96,16 @@ export function StartMenu() {
     ? `${user.firstName[0]}${user.lastName?.[0] || ''}`.toUpperCase()
     : user?.email?.[0]?.toUpperCase() || 'U';
 
-  const installedCustomApps = customAppsInfo.map(app => ({
-    id: app.id,
-    name: app.name,
-    icon: <img src={app.logoBase64} alt={app.name} className="w-6 h-6 rounded object-cover" />,
-    color: "bg-gray-500",
-    isSystemApp: false,
-    externalUrl: app.externalUrl,
-  }));
+  const installedCustomApps = customAppsInfo
+    .filter(app => installedApps.includes(app.id))
+    .map(app => ({
+      id: app.id,
+      name: app.name,
+      icon: <img src={app.logoBase64} alt={app.name} className="w-6 h-6 rounded object-cover" />,
+      color: "bg-gray-500",
+      isSystemApp: false,
+      externalUrl: app.externalUrl,
+    }));
 
   const allDisplayedApps = [
     ...apps.map(app => ({
