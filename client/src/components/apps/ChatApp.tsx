@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { MessageCircle, Users, Search, Send, Globe, User, ArrowLeft, Trash2, Crown, Shield } from "lucide-react";
+import { MessageCircle, Users, Search, Send, Globe, User, ArrowLeft, Trash2, Crown, Shield, Smile } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import data from "@emoji-mart/data";
+import Picker from "@emoji-mart/react";
 
 interface Message {
   id: string;
@@ -70,7 +72,10 @@ export function ChatApp() {
   const [messageInput, setMessageInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [cooldown, setCooldown] = useState(0);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const { data: currentUser } = useQuery<AuthUser | null>({
     queryKey: ["/api/auth/user"],
@@ -156,6 +161,21 @@ export function ChatApp() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [globalMessages, directMessages]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleEmojiSelect = (emoji: any) => {
+    setMessageInput((prev) => prev + emoji.native);
+    inputRef.current?.focus();
+  };
 
   const handleSendMessage = () => {
     if (!messageInput.trim() || cooldown > 0) return;
@@ -412,9 +432,36 @@ export function ChatApp() {
           </div>
         </ScrollArea>
 
-        <div className="p-3 border-t border-white/10">
+        <div className="p-3 border-t border-white/10 relative">
+          {showEmojiPicker && (
+            <div 
+              ref={emojiPickerRef}
+              className="absolute bottom-16 left-3 z-50"
+              data-testid="emoji-picker"
+            >
+              <Picker 
+                data={data} 
+                onEmojiSelect={handleEmojiSelect}
+                theme="dark"
+                previewPosition="none"
+                skinTonePosition="none"
+              />
+            </div>
+          )}
           <div className="flex gap-2">
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              disabled={(chatView === "direct" && !selectedUserId) || cooldown > 0}
+              data-testid="btn-emoji-picker"
+              title="Add emoji"
+            >
+              <Smile className="w-4 h-4" />
+            </Button>
             <Input
+              ref={inputRef}
               placeholder={chatView === "global" ? "Message everyone..." : `Message ${selectedUserName}...`}
               value={messageInput}
               onChange={(e) => setMessageInput(e.target.value)}
