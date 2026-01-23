@@ -117,7 +117,18 @@ The Bug Report app shows:
 - Admins/Owner: Expandable section to view all bug reports with status badges
 - Owner only: Resolve/Reopen buttons on each bug report
 
+### IP Ban System
+When a user is banned, their IP address is also blocked:
+- User IPs are tracked via the `lastIp` field in the users table
+- When banning a user, their last known IP is added to `banned_ips` table
+- When unbanning, the IP is removed from the banned IPs list
+- IP ban middleware blocks banned IPs from all API endpoints (returns 403)
+- `GET /api/ip-ban-status` - Public endpoint to check if current IP is banned
+- Banned IPs cannot access the system even without logging in
+- Shows "Access Denied" screen with reason for IP bans
+
 ## Recent Changes
+- Added IP banning system - banned users' IPs are blocked even if they log out
 - Added Bug Report system app on desktop for users to report bugs, admins to view, and owner to resolve
 - Added admin-only "Add App" feature in App Store with logo upload, name, description, category
 - Added instashutdown command for instant global shutdown (no countdown)
