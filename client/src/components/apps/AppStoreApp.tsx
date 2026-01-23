@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useOS } from "@/lib/os-context";
+import { useOS, type CustomAppInfo } from "@/lib/os-context";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -391,7 +391,23 @@ export default function AppStoreApp() {
     if (isInstalled(app.id)) {
       uninstallApp(app.id);
     } else {
-      installApp(app.id);
+      if (app.id.startsWith("custom-") && app.customAppId) {
+        const customAppData = customAppsData.find(ca => ca.id === app.customAppId);
+        if (customAppData) {
+          const customAppInfo: CustomAppInfo = {
+            id: app.id,
+            name: app.name,
+            externalUrl: customAppData.externalUrl || "",
+            logoBase64: customAppData.logoBase64,
+            category: app.category,
+          };
+          installApp(app.id, customAppInfo);
+        } else {
+          installApp(app.id);
+        }
+      } else {
+        installApp(app.id);
+      }
     }
   };
 
