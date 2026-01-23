@@ -73,9 +73,12 @@ export function ChatApp() {
   const [searchQuery, setSearchQuery] = useState("");
   const [cooldown, setCooldown] = useState(0);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [isUserScrolledUp, setIsUserScrolledUp] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const prevMessageCountRef = useRef(0);
 
   const { data: currentUser } = useQuery<AuthUser | null>({
     queryKey: ["/api/auth/user"],
@@ -158,9 +161,23 @@ export function ChatApp() {
     },
   });
 
+  const messages = chatView === "global" ? globalMessages : directMessages;
+  const currentMessageCount = messages.length;
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [globalMessages, directMessages]);
+    const hasNewMessages = currentMessageCount > prevMessageCountRef.current;
+    prevMessageCountRef.current = currentMessageCount;
+    
+    if (hasNewMessages && !isUserScrolledUp) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [currentMessageCount, isUserScrolledUp]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const isAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < 50;
+    setIsUserScrolledUp(!isAtBottom);
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -179,6 +196,8 @@ export function ChatApp() {
 
   const handleSendMessage = () => {
     if (!messageInput.trim() || cooldown > 0) return;
+    
+    setIsUserScrolledUp(false);
     
     if (chatView === "global") {
       sendGlobalMutation.mutate(messageInput);
@@ -215,7 +234,6 @@ export function ChatApp() {
     return date.toLocaleDateString();
   };
 
-  const messages = chatView === "global" ? globalMessages : directMessages;
   const isLoading = chatView === "global" ? isLoadingGlobal : isLoadingDirect;
 
   if (!currentUser) {
@@ -359,7 +377,7 @@ export function ChatApp() {
           </div>
         </div>
 
-        <ScrollArea className="flex-1 p-4">
+        <ScrollArea className="flex-1 p-4" onScrollCapture={handleScroll}>
           <div className="space-y-4">
             {isLoading ? (
               <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
