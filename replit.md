@@ -128,6 +128,7 @@ When a user is banned, their IP address is also blocked:
 - Shows "Access Denied" screen with reason for IP bans
 
 ## Recent Changes
+- Custom apps from App Store now open inside NexusOS as web apps (in browser window) instead of opening externally
 - Added IP banning system - banned users' IPs are blocked even if they log out
 - Added Bug Report system app on desktop for users to report bugs, admins to view, and owner to resolve
 - Added admin-only "Add App" feature in App Store with logo upload, name, description, category
