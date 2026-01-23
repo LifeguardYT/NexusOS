@@ -72,11 +72,7 @@ export async function registerRoutes(
 ): Promise<Server> {
   const DEFAULT_USER_ID = "default-user";
 
-  // Setup authentication
-  await setupAuth(app);
-  registerAuthRoutes(app);
-
-  // Check if IP is banned (public endpoint, no auth required)
+  // Check if IP is banned (public endpoint, no auth required) - MUST BE FIRST
   app.get("/api/ip-ban-status", async (req: any, res) => {
     try {
       const clientIp = getClientIp(req);
@@ -96,6 +92,36 @@ export async function registerRoutes(
       res.json({ banned: false, reason: null });
     }
   });
+
+  // Middleware to block banned IPs from accessing ALL API endpoints - MUST BE BEFORE AUTH
+  app.use("/api", async (req: any, res, next) => {
+    // Allow the IP ban status check endpoint to pass through
+    if (req.path === "/ip-ban-status") {
+      return next();
+    }
+    
+    try {
+      const clientIp = getClientIp(req);
+      const [bannedIp] = await db.select().from(bannedIps).where(eq(bannedIps.ipAddress, clientIp));
+      
+      if (bannedIp) {
+        return res.status(403).json({ 
+          error: "Access denied", 
+          reason: bannedIp.reason,
+          ipBanned: true
+        });
+      }
+      next();
+    } catch (error) {
+      console.error("Failed to check IP ban in middleware:", error);
+      // Fail-closed for security - deny access if we can't verify IP status
+      return res.status(500).json({ error: "Service temporarily unavailable" });
+    }
+  });
+
+  // Setup authentication - AFTER IP ban middleware
+  await setupAuth(app);
+  registerAuthRoutes(app);
 
   // Middleware to track user IP on authenticated requests
   app.use(async (req: any, res, next) => {

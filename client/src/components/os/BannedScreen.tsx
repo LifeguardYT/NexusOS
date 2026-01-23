@@ -1,21 +1,31 @@
-import { Ban } from "lucide-react";
+import { Ban, Wifi } from "lucide-react";
 
 interface BannedScreenProps {
   reason: string | null;
+  isIpBan?: boolean;
 }
 
-export function BannedScreen({ reason }: BannedScreenProps) {
+export function BannedScreen({ reason, isIpBan = false }: BannedScreenProps) {
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-red-950 to-black flex items-center justify-center z-[9999]">
       <div className="text-center max-w-md p-8">
         <div className="w-24 h-24 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-6">
-          <Ban className="w-12 h-12 text-red-500" />
+          {isIpBan ? (
+            <Wifi className="w-12 h-12 text-red-500" />
+          ) : (
+            <Ban className="w-12 h-12 text-red-500" />
+          )}
         </div>
         
-        <h1 className="text-4xl font-bold text-white mb-4">Account Banned</h1>
+        <h1 className="text-4xl font-bold text-white mb-4">
+          {isIpBan ? "Access Denied" : "Account Banned"}
+        </h1>
         
         <p className="text-gray-300 mb-6">
-          Your account has been suspended from NexusOS.
+          {isIpBan 
+            ? "Your network has been blocked from accessing NexusOS."
+            : "Your account has been suspended from NexusOS."
+          }
         </p>
         
         {reason && (
