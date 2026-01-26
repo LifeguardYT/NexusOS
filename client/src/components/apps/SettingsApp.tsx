@@ -1046,7 +1046,7 @@ export function SettingsApp() {
                   onClick={handleVersionClick}
                   data-testid="text-version"
                 >
-                  Version 1.1.5
+                  Version 2.0.0
                   {versionClickCount > 0 && versionClickCount < 5 && (
                     <span className="ml-2 text-xs">({5 - versionClickCount} more...)</span>
                   )}
