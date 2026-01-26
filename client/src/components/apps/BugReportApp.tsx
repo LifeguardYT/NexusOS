@@ -71,8 +71,9 @@ export function BugReportApp() {
     });
   };
 
-  const isAdmin = adminStatus?.isAdmin === true;
-  const isOwner = adminStatus?.isOwner === true;
+  const isLoggedIn = adminStatus?.userId !== null && adminStatus?.userId !== undefined;
+  const isAdmin = isLoggedIn && adminStatus?.isAdmin === true;
+  const isOwner = isLoggedIn && adminStatus?.isOwner === true;
 
   const reportCount = bugReports.length;
 
