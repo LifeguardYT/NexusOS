@@ -188,6 +188,9 @@ export async function registerRoutes(
 
   // Get admin status for current user
   app.get("/api/admin/status", async (req: any, res) => {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {

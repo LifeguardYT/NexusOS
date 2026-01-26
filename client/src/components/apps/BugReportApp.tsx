@@ -20,6 +20,7 @@ export function BugReportApp() {
 
   const { data: adminStatus } = useQuery<{ isAdmin: boolean; isOwner: boolean; userId: string | null }>({
     queryKey: ["/api/admin/status"],
+    staleTime: 0,
   });
 
   const { data: bugReports = [], isLoading: reportsLoading } = useQuery<BugReport[]>({
@@ -71,7 +72,7 @@ export function BugReportApp() {
     });
   };
 
-  const isLoggedIn = adminStatus?.userId !== null && adminStatus?.userId !== undefined;
+  const isLoggedIn = !!adminStatus?.userId;
   const isAdmin = isLoggedIn && adminStatus?.isAdmin === true;
   const isOwner = isLoggedIn && adminStatus?.isOwner === true;
 

@@ -16,9 +16,10 @@ export function UpdatesApp() {
 
   const { data: adminStatus } = useQuery<AdminStatus>({
     queryKey: ["/api/admin/status"],
+    staleTime: 0,
   });
 
-  const isLoggedIn = adminStatus?.userId !== null && adminStatus?.userId !== undefined;
+  const isLoggedIn = !!adminStatus?.userId;
   const isAdmin = isLoggedIn && (adminStatus?.isAdmin ?? false);
 
   const { data: updates = [], isLoading } = useQuery<Update[]>({
