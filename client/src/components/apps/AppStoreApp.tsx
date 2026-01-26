@@ -391,20 +391,20 @@ export default function AppStoreApp() {
     if (isInstalled(app.id)) {
       uninstallApp(app.id);
     } else {
-      if (app.id.startsWith("custom-") && app.customAppId) {
-        const customAppData = customAppsData.find(ca => ca.id === app.customAppId);
-        if (customAppData) {
-          const customAppInfo: CustomAppInfo = {
-            id: app.id,
-            name: app.name,
-            externalUrl: customAppData.externalUrl || "",
-            logoBase64: customAppData.logoBase64,
-            category: app.category,
-          };
-          installApp(app.id, customAppInfo);
-        } else {
-          installApp(app.id);
+      if (app.externalUrl) {
+        let logoBase64 = "";
+        if (app.id.startsWith("custom-") && app.customAppId) {
+          const customAppData = customAppsData.find(ca => ca.id === app.customAppId);
+          logoBase64 = customAppData?.logoBase64 || "";
         }
+        const customAppInfo: CustomAppInfo = {
+          id: app.id,
+          name: app.name,
+          externalUrl: app.externalUrl,
+          logoBase64: logoBase64,
+          category: app.category,
+        };
+        installApp(app.id, customAppInfo);
       } else {
         installApp(app.id);
       }
@@ -413,9 +413,7 @@ export default function AppStoreApp() {
 
   const handleOpenExternalApp = (app: AppInfo) => {
     if (app.externalUrl) {
-      openWindow("browser");
-      // Store the URL to open in localStorage so BrowserApp can pick it up
-      localStorage.setItem("browser-navigate-url", app.externalUrl);
+      openWindow(app.id);
     }
   };
 

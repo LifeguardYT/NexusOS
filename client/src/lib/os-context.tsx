@@ -298,28 +298,26 @@ export function OSProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const openWindow = useCallback((appId: string) => {
-    if (appId.startsWith("custom-")) {
-      const customApp = customAppsInfo.find(app => app.id === appId);
-      if (customApp && customApp.externalUrl) {
-        const offset = (windows.length % 5) * 30;
-        const newWindow: WindowState = {
-          id: `${appId}-${Date.now()}`,
-          appId: appId,
-          title: customApp.name,
-          x: 100 + offset,
-          y: 50 + offset,
-          width: 1000,
-          height: 700,
-          isMaximized: false,
-          isMinimized: false,
-          zIndex: nextZIndex,
-          customAppUrl: customApp.externalUrl,
-        };
-        setWindows(prev => [...prev, newWindow]);
-        setNextZIndex(prev => prev + 1);
-        setStartMenuOpen(false);
-        return;
-      }
+    const customApp = customAppsInfo.find(app => app.id === appId);
+    if (customApp && customApp.externalUrl) {
+      const offset = (windows.length % 5) * 30;
+      const newWindow: WindowState = {
+        id: `${appId}-${Date.now()}`,
+        appId: appId,
+        title: customApp.name,
+        x: 100 + offset,
+        y: 50 + offset,
+        width: 1000,
+        height: 700,
+        isMaximized: false,
+        isMinimized: false,
+        zIndex: nextZIndex,
+        customAppUrl: customApp.externalUrl,
+      };
+      setWindows(prev => [...prev, newWindow]);
+      setNextZIndex(prev => prev + 1);
+      setStartMenuOpen(false);
+      return;
     }
 
     const app = defaultApps.find(a => a.id === appId);
@@ -441,9 +439,7 @@ export function OSProvider({ children }: { children: ReactNode }) {
 
   const uninstallApp = useCallback((appId: string) => {
     setInstalledApps(prev => prev.filter(id => id !== appId));
-    if (appId.startsWith("custom-")) {
-      setCustomAppsInfo(prev => prev.filter(app => app.id !== appId));
-    }
+    setCustomAppsInfo(prev => prev.filter(app => app.id !== appId));
   }, []);
 
   const openCustomApp = useCallback((appId: string) => {
