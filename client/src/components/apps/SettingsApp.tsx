@@ -265,7 +265,7 @@ export function SettingsApp() {
 
   const handleExportData = () => {
     const exportData = {
-      version: "1.1.5",
+      version: "2.0.0",
       exportedAt: new Date().toISOString(),
       settings: settings,
       security: {
