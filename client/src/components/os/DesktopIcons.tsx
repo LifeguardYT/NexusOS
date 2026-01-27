@@ -1,7 +1,8 @@
 import { useOS } from "@/lib/os-context";
 import { 
   Globe, Settings, Folder, Calculator, FileText, CloudSun, Music, 
-  Gamepad2, Bomb, Terminal, Trash2, HardDrive, Bell, MessageCircle, Store, Bug
+  Gamepad2, Bomb, Terminal, Trash2, HardDrive, Bell, MessageCircle, Store, Bug,
+  Grid3X3, Spade, Paintbrush, Camera, Mail, Video
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<any>> = {
@@ -19,6 +20,12 @@ const iconMap: Record<string, React.ComponentType<any>> = {
   "message-circle": MessageCircle,
   store: Store,
   bug: Bug,
+  "grid-3x3": Grid3X3,
+  spade: Spade,
+  paintbrush: Paintbrush,
+  camera: Camera,
+  mail: Mail,
+  video: Video,
 };
 
 export function DesktopIcons() {

@@ -20,6 +20,13 @@ import { TerminalApp } from "@/components/apps/TerminalApp";
 import AppStoreApp from "@/components/apps/AppStoreApp";
 import { BugReportApp } from "@/components/apps/BugReportApp";
 import CustomWebApp from "@/components/apps/CustomWebApp";
+import { TetrisGame } from "@/components/apps/TetrisGame";
+import { Game2048 } from "@/components/apps/Game2048";
+import { SolitaireGame } from "@/components/apps/SolitaireGame";
+import { PaintApp } from "@/components/apps/PaintApp";
+import { CameraApp } from "@/components/apps/CameraApp";
+import { EmailApp } from "@/components/apps/EmailApp";
+import { VideoCallApp } from "@/components/apps/VideoCallApp";
 import { Power, Lock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
@@ -48,6 +55,13 @@ const appComponents: Record<string, React.ComponentType> = {
   terminal: TerminalApp,
   appstore: AppStoreApp,
   bugreport: BugReportApp,
+  tetris: TetrisGame,
+  "2048": Game2048,
+  solitaire: SolitaireGame,
+  paint: PaintApp,
+  camera: CameraApp,
+  email: EmailApp,
+  videocall: VideoCallApp,
 };
 
 export function Desktop() {

@@ -33,6 +33,13 @@ const defaultApps: App[] = [
   { id: "terminal", name: "Terminal", icon: "terminal", color: "bg-black", defaultWidth: 700, defaultHeight: 500 },
   { id: "appstore", name: "App Store", icon: "store", color: "bg-purple-500", defaultWidth: 700, defaultHeight: 550 },
   { id: "bugreport", name: "Report Bug", icon: "bug", color: "bg-red-500", defaultWidth: 500, defaultHeight: 600 },
+  { id: "tetris", name: "Tetris", icon: "gamepad-2", color: "bg-cyan-500", defaultWidth: 450, defaultHeight: 600 },
+  { id: "2048", name: "2048", icon: "grid-3x3", color: "bg-amber-600", defaultWidth: 450, defaultHeight: 550 },
+  { id: "solitaire", name: "Solitaire", icon: "spade", color: "bg-emerald-600", defaultWidth: 900, defaultHeight: 650 },
+  { id: "paint", name: "Paint", icon: "paintbrush", color: "bg-rose-500", defaultWidth: 900, defaultHeight: 650 },
+  { id: "camera", name: "Camera", icon: "camera", color: "bg-gray-700", defaultWidth: 700, defaultHeight: 550 },
+  { id: "email", name: "Email", icon: "mail", color: "bg-blue-600", defaultWidth: 900, defaultHeight: 600 },
+  { id: "videocall", name: "Video Call", icon: "video", color: "bg-teal-500", defaultWidth: 900, defaultHeight: 650 },
 ];
 
 const defaultFiles: FileItem[] = [

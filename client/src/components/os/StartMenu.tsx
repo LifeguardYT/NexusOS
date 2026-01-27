@@ -2,7 +2,8 @@ import { useOS, type CustomAppInfo } from "@/lib/os-context";
 import { Search, Power, User, Trash2, Package, Monitor } from "lucide-react";
 import { 
   Globe, Settings, Folder, Calculator, FileText, CloudSun, Music, 
-  Gamepad2, Bomb, Terminal, MessageSquare, Bell, Store, Bug
+  Gamepad2, Bomb, Terminal, MessageSquare, Bell, Store, Bug,
+  Grid3X3, Spade, Paintbrush, Camera, Mail, Video
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -23,6 +24,12 @@ const iconMap: Record<string, React.ComponentType<any>> = {
   bell: Bell,
   store: Store,
   bug: Bug,
+  "grid-3x3": Grid3X3,
+  spade: Spade,
+  paintbrush: Paintbrush,
+  camera: Camera,
+  mail: Mail,
+  video: Video,
 };
 
 interface InstalledAppInfo {
