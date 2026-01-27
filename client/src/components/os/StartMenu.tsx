@@ -85,10 +85,13 @@ interface UserData {
   profileImageUrl: string | null;
 }
 
+const APPS_PER_PAGE = 15;
+
 export function StartMenu() {
   const { apps, openWindow, startMenuOpen, setStartMenuOpen, shutdown, installedApps, uninstallApp, desktopShortcuts, addDesktopShortcut, removeDesktopShortcut, customAppsInfo } = useOS();
   const [searchQuery, setSearchQuery] = useState("");
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const { data: user } = useQuery<UserData>({
@@ -133,6 +136,17 @@ export function StartMenu() {
   const filteredApps = allDisplayedApps.filter(app => 
     app.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredApps.length / APPS_PER_PAGE);
+  const paginatedApps = searchQuery 
+    ? filteredApps // Show all results when searching
+    : filteredApps.slice(currentPage * APPS_PER_PAGE, (currentPage + 1) * APPS_PER_PAGE);
+  
+  // Reset to first page when search query changes
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [searchQuery]);
 
   const handleAppClick = (app: typeof allDisplayedApps[0]) => {
     if (app.id.startsWith("custom-")) {
@@ -284,10 +298,29 @@ export function StartMenu() {
       </div>
 
       {/* Apps Grid */}
-      <div className="p-4">
-        <h3 className="text-xs font-semibold text-white/50 mb-3 uppercase tracking-wide">All Apps</h3>
+      <div className="p-4 flex-1">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wide">All Apps</h3>
+          {!searchQuery && totalPages > 1 && (
+            <div className="flex items-center gap-2">
+              {Array.from({ length: totalPages }, (_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setCurrentPage(i)}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    currentPage === i 
+                      ? 'bg-white w-4' 
+                      : 'bg-white/30 hover:bg-white/50'
+                  }`}
+                  data-testid={`page-indicator-${i}`}
+                  title={`Page ${i + 1}`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
         <div className="grid grid-cols-5 gap-2">
-          {filteredApps.map(app => {
+          {paginatedApps.map(app => {
             const isExternal = 'externalUrl' in app && app.externalUrl;
             const IconComponent = typeof app.icon === 'string' ? iconMap[app.icon] || Globe : null;
             
@@ -317,7 +350,7 @@ export function StartMenu() {
           })}
         </div>
 
-        {filteredApps.length === 0 && (
+        {paginatedApps.length === 0 && (
           <div className="text-center py-8 text-white/40">
             <Package className="w-10 h-10 mx-auto mb-2 opacity-50" />
             <p className="text-sm">No apps found</p>
