@@ -39,6 +39,7 @@ interface InstalledAppInfo {
   color: string;
   externalUrl?: string;
   isSystemApp: boolean;
+  iconImage?: string;
 }
 
 const externalApps: InstalledAppInfo[] = [
@@ -112,6 +113,7 @@ export function StartMenu() {
       color: "bg-gray-500",
       isSystemApp: false,
       externalUrl: app.externalUrl,
+      iconImage: undefined as string | undefined,
     }));
 
   const allDisplayedApps = [
@@ -122,6 +124,7 @@ export function StartMenu() {
       color: app.color,
       isSystemApp: true,
       externalUrl: undefined,
+      iconImage: app.iconImage,
     })),
     ...externalApps.filter(app => installedApps.includes(app.id)),
     ...installedCustomApps,
@@ -296,9 +299,9 @@ export function StartMenu() {
                 className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/10 transition-colors group relative"
                 data-testid={`start-app-${app.id}`}
               >
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${('iconImage' in app && app.iconImage) ? '' : app.color} shadow-lg group-hover:scale-105 transition-transform overflow-hidden`}>
-                  {'iconImage' in app && app.iconImage ? (
-                    <img src={app.iconImage as string} alt={app.name} className="w-full h-full object-cover" />
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${app.iconImage ? '' : app.color} shadow-lg group-hover:scale-105 transition-transform overflow-hidden`}>
+                  {app.iconImage ? (
+                    <img src={app.iconImage} alt={app.name} className="w-full h-full object-cover rounded-xl" />
                   ) : IconComponent ? (
                     <IconComponent className="w-6 h-6 text-white" />
                   ) : (
