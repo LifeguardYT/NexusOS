@@ -57,18 +57,6 @@ function createMockEmails(userEmail: string): Email[] {
       isStarred: true,
       folder: "inbox",
     },
-    {
-      id: "3",
-      from: "Newsletter",
-      fromEmail: "Newsletter@nexusos.com",
-      to: userEmail,
-      subject: "Weekly Tech Digest",
-      body: "Here's your weekly roundup of the latest in technology:\n\n1. New breakthroughs in AI\n2. Latest software updates\n3. Upcoming tech events\n4. Industry insights\n\nRead more on our website!",
-      timestamp: new Date(Date.now() - 86400000),
-      isRead: false,
-      isStarred: false,
-      folder: "inbox",
-    },
   ];
 }
 
