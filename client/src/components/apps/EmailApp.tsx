@@ -35,8 +35,8 @@ function createMockEmails(userEmail: string): Email[] {
   return [
     {
       id: "1",
-      from: "John Smith",
-      fromEmail: "JohnSmith@nexusos.com",
+      from: "LifeguardYT",
+      fromEmail: "LifeguardYT@nexusos.com",
       to: userEmail,
       subject: "Welcome to NexusOS!",
       body: "Hello!\n\nWelcome to NexusOS Mail. This is your first email in the system.\n\nWe hope you enjoy using NexusOS and all its features. If you have any questions, feel free to reach out.\n\nBest regards,\nThe NexusOS Team",
