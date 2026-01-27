@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Bot } from "lucide-react";
 
 type Player = "X" | "O" | null;
 
@@ -8,8 +8,9 @@ export function TicTacToeGame() {
   const [board, setBoard] = useState<Player[]>(Array(9).fill(null));
   const [isXNext, setIsXNext] = useState(true);
   const [scores, setScores] = useState({ X: 0, O: 0, ties: 0 });
+  const [isThinking, setIsThinking] = useState(false);
 
-  const calculateWinner = (squares: Player[]): Player => {
+  const calculateWinner = useCallback((squares: Player[]): Player => {
     const lines = [
       [0, 1, 2], [3, 4, 5], [6, 7, 8],
       [0, 3, 6], [1, 4, 7], [2, 5, 8],
@@ -21,7 +22,7 @@ export function TicTacToeGame() {
       }
     }
     return null;
-  };
+  }, []);
 
   const getWinningLine = (squares: Player[]): number[] | null => {
     const lines = [
@@ -38,17 +39,92 @@ export function TicTacToeGame() {
     return null;
   };
 
+  const minimax = useCallback((squares: Player[], isMaximizing: boolean, depth: number): number => {
+    const winner = calculateWinner(squares);
+    if (winner === "O") return 10 - depth;
+    if (winner === "X") return depth - 10;
+    if (squares.every(cell => cell !== null)) return 0;
+
+    if (isMaximizing) {
+      let bestScore = -Infinity;
+      for (let i = 0; i < 9; i++) {
+        if (squares[i] === null) {
+          squares[i] = "O";
+          const score = minimax(squares, false, depth + 1);
+          squares[i] = null;
+          bestScore = Math.max(score, bestScore);
+        }
+      }
+      return bestScore;
+    } else {
+      let bestScore = Infinity;
+      for (let i = 0; i < 9; i++) {
+        if (squares[i] === null) {
+          squares[i] = "X";
+          const score = minimax(squares, true, depth + 1);
+          squares[i] = null;
+          bestScore = Math.min(score, bestScore);
+        }
+      }
+      return bestScore;
+    }
+  }, [calculateWinner]);
+
+  const getBestMove = useCallback((squares: Player[]): number => {
+    let bestScore = -Infinity;
+    let bestMove = -1;
+
+    for (let i = 0; i < 9; i++) {
+      if (squares[i] === null) {
+        squares[i] = "O";
+        const score = minimax(squares, false, 0);
+        squares[i] = null;
+        if (score > bestScore) {
+          bestScore = score;
+          bestMove = i;
+        }
+      }
+    }
+
+    return bestMove;
+  }, [minimax]);
+
   const winner = calculateWinner(board);
   const winningLine = getWinningLine(board);
   const isDraw = !winner && board.every(cell => cell !== null);
 
+  useEffect(() => {
+    if (!isXNext && !winner && !isDraw && !isThinking) {
+      setIsThinking(true);
+      const timer = setTimeout(() => {
+        const bestMove = getBestMove([...board]);
+        if (bestMove !== -1) {
+          const newBoard = [...board];
+          newBoard[bestMove] = "O";
+          setBoard(newBoard);
+          setIsXNext(true);
+
+          const newWinner = calculateWinner(newBoard);
+          if (newWinner) {
+            setScores(prev => ({ ...prev, [newWinner]: prev[newWinner] + 1 }));
+          } else if (newBoard.every(cell => cell !== null)) {
+            setScores(prev => ({ ...prev, ties: prev.ties + 1 }));
+          }
+        }
+        setIsThinking(false);
+      }, 500);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isXNext, winner, isDraw, board, getBestMove, calculateWinner, isThinking]);
+
   const handleClick = (index: number) => {
-    if (board[index] || winner) return;
+    if (board[index] || winner || !isXNext || isThinking) return;
 
     const newBoard = [...board];
-    newBoard[index] = isXNext ? "X" : "O";
+    newBoard[index] = "X";
     setBoard(newBoard);
-    setIsXNext(!isXNext);
+    setIsXNext(false);
 
     const newWinner = calculateWinner(newBoard);
     if (newWinner) {
@@ -61,6 +137,7 @@ export function TicTacToeGame() {
   const resetGame = () => {
     setBoard(Array(9).fill(null));
     setIsXNext(true);
+    setIsThinking(false);
   };
 
   const resetScores = () => {
@@ -70,11 +147,15 @@ export function TicTacToeGame() {
 
   return (
     <div className="flex flex-col items-center justify-center h-full bg-gradient-to-b from-indigo-900 to-purple-900 p-4" data-testid="tictactoe-game">
-      <h1 className="text-3xl font-bold text-white mb-4">Tic-Tac-Toe</h1>
+      <h1 className="text-3xl font-bold text-white mb-2">Tic-Tac-Toe</h1>
+      <div className="flex items-center gap-2 text-white/70 mb-4">
+        <Bot className="w-4 h-4" />
+        <span className="text-sm">vs AI</span>
+      </div>
       
       <div className="flex gap-8 mb-4 text-white">
         <div className="text-center">
-          <div className="text-2xl font-bold text-blue-400">X</div>
+          <div className="text-2xl font-bold text-blue-400">You (X)</div>
           <div className="text-xl">{scores.X}</div>
         </div>
         <div className="text-center">
@@ -82,7 +163,9 @@ export function TicTacToeGame() {
           <div className="text-xl">{scores.ties}</div>
         </div>
         <div className="text-center">
-          <div className="text-2xl font-bold text-pink-400">O</div>
+          <div className="text-2xl font-bold text-pink-400 flex items-center gap-1">
+            AI (O) <Bot className="w-4 h-4" />
+          </div>
           <div className="text-xl">{scores.O}</div>
         </div>
       </div>
@@ -90,16 +173,14 @@ export function TicTacToeGame() {
       <div className="mb-4 h-8 text-xl font-semibold text-white">
         {winner ? (
           <span className={winner === "X" ? "text-blue-400" : "text-pink-400"}>
-            {winner} Wins!
+            {winner === "X" ? "You Win!" : "AI Wins!"}
           </span>
         ) : isDraw ? (
           <span className="text-gray-400">It's a Draw!</span>
+        ) : isThinking ? (
+          <span className="text-pink-400 animate-pulse">AI is thinking...</span>
         ) : (
-          <span>
-            <span className={isXNext ? "text-blue-400" : "text-pink-400"}>
-              {isXNext ? "X" : "O"}
-            </span>'s Turn
-          </span>
+          <span className="text-blue-400">Your Turn</span>
         )}
       </div>
 
@@ -115,7 +196,7 @@ export function TicTacToeGame() {
             } ${
               cell === "X" ? "text-blue-400" : cell === "O" ? "text-pink-400" : ""
             }`}
-            disabled={!!cell || !!winner}
+            disabled={!!cell || !!winner || !isXNext || isThinking}
             data-testid={`cell-${index}`}
           >
             {cell}
