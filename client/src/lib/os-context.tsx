@@ -39,6 +39,18 @@ const defaultApps: App[] = [
   { id: "paint", name: "Paint", icon: "paintbrush", color: "bg-rose-500", defaultWidth: 900, defaultHeight: 650 },
   { id: "camera", name: "Camera", icon: "camera", color: "bg-gray-700", defaultWidth: 700, defaultHeight: 550 },
   { id: "email", name: "Email", icon: "mail", color: "bg-blue-600", defaultWidth: 900, defaultHeight: 600 },
+  { id: "tictactoe", name: "Tic-Tac-Toe", icon: "grid-3x3", color: "bg-indigo-500", defaultWidth: 450, defaultHeight: 550 },
+  { id: "flappybird", name: "Flappy Bird", icon: "bird", color: "bg-sky-400", defaultWidth: 450, defaultHeight: 650 },
+  { id: "memorymatch", name: "Memory Match", icon: "brain", color: "bg-slate-600", defaultWidth: 500, defaultHeight: 550 },
+  { id: "pong", name: "Pong", icon: "gamepad-2", color: "bg-gray-800", defaultWidth: 650, defaultHeight: 550 },
+  { id: "sudoku", name: "Sudoku", icon: "grid-3x3", color: "bg-blue-800", defaultWidth: 500, defaultHeight: 650 },
+  { id: "chess", name: "Chess", icon: "crown", color: "bg-amber-800", defaultWidth: 550, defaultHeight: 650 },
+  { id: "clock", name: "Clock", icon: "clock", color: "bg-slate-700", defaultWidth: 500, defaultHeight: 550 },
+  { id: "stopwatch", name: "Stopwatch", icon: "timer", color: "bg-gray-900", defaultWidth: 450, defaultHeight: 550 },
+  { id: "timer", name: "Timer", icon: "alarm-clock", color: "bg-indigo-600", defaultWidth: 450, defaultHeight: 550 },
+  { id: "qrcode", name: "QR Code", icon: "qr-code", color: "bg-gray-600", defaultWidth: 550, defaultHeight: 500 },
+  { id: "voicerecorder", name: "Voice Recorder", icon: "mic", color: "bg-red-600", defaultWidth: 450, defaultHeight: 500 },
+  { id: "gifmaker", name: "GIF Maker", icon: "film", color: "bg-purple-600", defaultWidth: 700, defaultHeight: 550 },
 ];
 
 const defaultFiles: FileItem[] = [

@@ -15,11 +15,33 @@ A fully functional web-based operating system simulation built with React and Ty
 3. **File Explorer** - Navigate virtual file system with grid/list view
 4. **Calculator** - Fully functional calculator with standard operations
 5. **Notes** - Create, edit, and delete notes with search
-6. **Weather** - Weather app with mock data for multiple cities
+6. **Weather** - Weather app with mock data for multiple cities (temperatures in Fahrenheit)
 7. **Music Player** - Music player with playlist, controls, and playback simulation
 8. **Snake** - Classic snake game with high score tracking
 9. **Minesweeper** - Classic minesweeper game
-10. **Terminal** - Command-line interface with common commands (help, ls, cat, neofetch, etc.)
+10. **Terminal** - Command-line interface with common commands (help, ls, cat, neofetch, figlet, shutdown, etc.)
+11. **Chat** - Real-time chat with profanity filtering and emoji support
+12. **Updates** - Admin-only app for viewing system updates
+13. **App Store** - Browse and install apps (admins can add custom apps)
+14. **Bug Report** - Submit bugs (admins view, owner resolves)
+15. **Tetris** - Classic Tetris game with high score tracking
+16. **2048** - Number puzzle game
+17. **Solitaire** - Classic card game
+18. **Paint** - Drawing application with brush tools
+19. **Camera** - Webcam capture (requires new tab for permissions)
+20. **Email** - Email client (Username@nexusos.com format)
+21. **Tic-Tac-Toe** - Two-player tic-tac-toe with score tracking
+22. **Flappy Bird** - Classic flappy bird clone with high score
+23. **Memory Match** - Card matching game with best score tracking
+24. **Pong** - Classic Pong vs AI (first to 5 wins)
+25. **Sudoku** - Number puzzle with hints and validation
+26. **Chess** - Two-player chess with valid move highlighting
+27. **Clock** - World clock with multiple timezones
+28. **Stopwatch** - Stopwatch with lap times and best/worst lap indicators
+29. **Timer** - Countdown timer with presets and alarm
+30. **QR Code** - Generate QR codes for any text/URL
+31. **Voice Recorder** - Record audio (requires new tab for permissions)
+32. **GIF Maker** - Create animated GIFs frame-by-frame
 
 ## Tech Stack
 - **Frontend**: React, TypeScript, TailwindCSS, Shadcn UI

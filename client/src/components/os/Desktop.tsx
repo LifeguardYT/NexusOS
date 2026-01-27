@@ -26,6 +26,18 @@ import { SolitaireGame } from "@/components/apps/SolitaireGame";
 import { PaintApp } from "@/components/apps/PaintApp";
 import { CameraApp } from "@/components/apps/CameraApp";
 import { EmailApp } from "@/components/apps/EmailApp";
+import { TicTacToeGame } from "@/components/apps/TicTacToeGame";
+import { FlappyBirdGame } from "@/components/apps/FlappyBirdGame";
+import { MemoryMatchGame } from "@/components/apps/MemoryMatchGame";
+import { PongGame } from "@/components/apps/PongGame";
+import { SudokuGame } from "@/components/apps/SudokuGame";
+import { ChessGame } from "@/components/apps/ChessGame";
+import { ClockApp } from "@/components/apps/ClockApp";
+import { StopwatchApp } from "@/components/apps/StopwatchApp";
+import { TimerApp } from "@/components/apps/TimerApp";
+import { QRCodeApp } from "@/components/apps/QRCodeApp";
+import { VoiceRecorderApp } from "@/components/apps/VoiceRecorderApp";
+import { GifMakerApp } from "@/components/apps/GifMakerApp";
 import { Power, Lock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
@@ -60,6 +72,18 @@ const appComponents: Record<string, React.ComponentType> = {
   paint: PaintApp,
   camera: CameraApp,
   email: EmailApp,
+  tictactoe: TicTacToeGame,
+  flappybird: FlappyBirdGame,
+  memorymatch: MemoryMatchGame,
+  pong: PongGame,
+  sudoku: SudokuGame,
+  chess: ChessGame,
+  clock: ClockApp,
+  stopwatch: StopwatchApp,
+  timer: TimerApp,
+  qrcode: QRCodeApp,
+  voicerecorder: VoiceRecorderApp,
+  gifmaker: GifMakerApp,
 };
 
 export function Desktop() {
