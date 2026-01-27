@@ -22,6 +22,38 @@ let shutdownState = {
 // WebSocket clients for real-time updates
 const wsClients = new Set<WebSocket>();
 
+// Meeting rooms for video call chat
+interface MeetingClient {
+  ws: WebSocket;
+  meetingId: string;
+  userName: string;
+  oderId: string;
+}
+const meetingClients = new Map<WebSocket, MeetingClient>();
+
+function broadcastToMeeting(meetingId: string, message: object, excludeWs?: WebSocket) {
+  const messageStr = JSON.stringify(message);
+  meetingClients.forEach((client, ws) => {
+    if (client.meetingId === meetingId && ws !== excludeWs && ws.readyState === WebSocket.OPEN) {
+      try {
+        ws.send(messageStr);
+      } catch (err) {
+        console.error("Error sending to meeting client:", err);
+      }
+    }
+  });
+}
+
+function getMeetingParticipants(meetingId: string): string[] {
+  const participants: string[] = [];
+  meetingClients.forEach((client) => {
+    if (client.meetingId === meetingId) {
+      participants.push(client.userName);
+    }
+  });
+  return participants;
+}
+
 function broadcastShutdownStatus() {
   const message = JSON.stringify({
     type: "shutdown_status",
@@ -994,8 +1026,95 @@ export async function registerRoutes(
       ...shutdownState,
     }));
 
+    ws.on("message", (data) => {
+      try {
+        const message = JSON.parse(data.toString());
+        
+        switch (message.type) {
+          case "join_meeting": {
+            const { meetingId, userName } = message;
+            if (!meetingId || !userName) return;
+            
+            // Remove from any previous meeting
+            const existingClient = meetingClients.get(ws);
+            if (existingClient) {
+              broadcastToMeeting(existingClient.meetingId, {
+                type: "participant_left",
+                userName: existingClient.userName,
+                participants: getMeetingParticipants(existingClient.meetingId).filter(n => n !== existingClient.userName),
+              }, ws);
+            }
+            
+            // Join new meeting
+            meetingClients.set(ws, { ws, meetingId, userName, oderId: Date.now().toString() });
+            
+            const participants = getMeetingParticipants(meetingId);
+            
+            // Notify others that someone joined
+            broadcastToMeeting(meetingId, {
+              type: "participant_joined",
+              userName,
+              participants,
+            }, ws);
+            
+            // Send participant list to the new joiner
+            ws.send(JSON.stringify({
+              type: "meeting_joined",
+              meetingId,
+              participants,
+            }));
+            break;
+          }
+          
+          case "leave_meeting": {
+            const client = meetingClients.get(ws);
+            if (client) {
+              meetingClients.delete(ws);
+              broadcastToMeeting(client.meetingId, {
+                type: "participant_left",
+                userName: client.userName,
+                participants: getMeetingParticipants(client.meetingId),
+              });
+            }
+            break;
+          }
+          
+          case "chat_message": {
+            const client = meetingClients.get(ws);
+            if (!client) return;
+            
+            const { text } = message;
+            if (!text || typeof text !== "string") return;
+            
+            // Broadcast to all participants including sender
+            broadcastToMeeting(client.meetingId, {
+              type: "chat_message",
+              id: Date.now().toString(),
+              sender: client.userName,
+              text: text.substring(0, 500), // Limit message length
+              timestamp: new Date().toISOString(),
+            });
+            break;
+          }
+        }
+      } catch (err) {
+        console.error("WebSocket message error:", err);
+      }
+    });
+
     ws.on("close", () => {
       wsClients.delete(ws);
+      
+      // Handle meeting cleanup
+      const client = meetingClients.get(ws);
+      if (client) {
+        meetingClients.delete(ws);
+        broadcastToMeeting(client.meetingId, {
+          type: "participant_left",
+          userName: client.userName,
+          participants: getMeetingParticipants(client.meetingId),
+        });
+      }
     });
   });
 

@@ -1,23 +1,32 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { 
   Video, VideoOff, Mic, MicOff, PhoneOff, 
-  MessageSquare, ScreenShare, X, Send, RefreshCw, ExternalLink
+  MessageSquare, ScreenShare, X, Send, RefreshCw, ExternalLink, Users
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useQuery } from "@tanstack/react-query";
 
 interface ChatMessage {
   id: string;
   sender: string;
-  message: string;
-  timestamp: Date;
+  text: string;
+  timestamp: string;
+}
+
+interface User {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
 }
 
 export function VideoCallApp() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
   const [isInCall, setIsInCall] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -28,8 +37,22 @@ export function VideoCallApp() {
   const [isLoading, setIsLoading] = useState(false);
   const [isInIframe, setIsInIframe] = useState(false);
   const [meetingId, setMeetingId] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
+  const [participants, setParticipants] = useState<string[]>([]);
+  const [wsConnected, setWsConnected] = useState(false);
+
+  const { data: user } = useQuery<User>({
+    queryKey: ["/api/auth/user"],
+  });
+
+  useEffect(() => {
+    if (user && !displayName) {
+      const name = user.firstName || user.email.split("@")[0] || "Guest";
+      setDisplayName(name);
+    }
+  }, [user, displayName]);
 
   const checkIfInIframe = useCallback(() => {
     try {
@@ -37,6 +60,93 @@ export function VideoCallApp() {
     } catch (e) {
       return true;
     }
+  }, []);
+
+  const connectWebSocket = useCallback((meetingId: string, userName: string) => {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const ws = new WebSocket(`${protocol}//${window.location.host}/ws`);
+    
+    ws.onopen = () => {
+      setWsConnected(true);
+      ws.send(JSON.stringify({
+        type: "join_meeting",
+        meetingId,
+        userName,
+      }));
+    };
+    
+    ws.onmessage = (event) => {
+      try {
+        const message = JSON.parse(event.data);
+        
+        switch (message.type) {
+          case "meeting_joined":
+            setParticipants(message.participants || []);
+            setChatMessages(prev => [...prev, {
+              id: Date.now().toString(),
+              sender: "System",
+              text: "You joined the meeting",
+              timestamp: new Date().toISOString(),
+            }]);
+            break;
+            
+          case "participant_joined":
+            setParticipants(message.participants || []);
+            if (message.userName !== userName) {
+              setChatMessages(prev => [...prev, {
+                id: Date.now().toString(),
+                sender: "System",
+                text: `${message.userName} joined the meeting`,
+                timestamp: new Date().toISOString(),
+              }]);
+            }
+            break;
+            
+          case "participant_left":
+            setParticipants(message.participants || []);
+            setChatMessages(prev => [...prev, {
+              id: Date.now().toString(),
+              sender: "System",
+              text: `${message.userName} left the meeting`,
+              timestamp: new Date().toISOString(),
+            }]);
+            break;
+            
+          case "chat_message":
+            setChatMessages(prev => [...prev, {
+              id: message.id,
+              sender: message.sender,
+              text: message.text,
+              timestamp: message.timestamp,
+            }]);
+            break;
+        }
+      } catch (err) {
+        console.error("WebSocket message error:", err);
+      }
+    };
+    
+    ws.onclose = () => {
+      setWsConnected(false);
+    };
+    
+    ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      setWsConnected(false);
+    };
+    
+    wsRef.current = ws;
+  }, []);
+
+  const disconnectWebSocket = useCallback(() => {
+    if (wsRef.current) {
+      if (wsRef.current.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({ type: "leave_meeting" }));
+      }
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    setWsConnected(false);
   }, []);
 
   const startCamera = useCallback(async (): Promise<boolean> => {
@@ -114,6 +224,10 @@ export function VideoCallApp() {
         screenStreamRef.current.getTracks().forEach(track => track.stop());
         screenStreamRef.current = null;
       }
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
     };
   }, []);
 
@@ -122,21 +236,30 @@ export function VideoCallApp() {
   };
 
   const handleJoinCall = async () => {
+    if (!displayName.trim()) {
+      setError("Please enter your display name");
+      return;
+    }
+    
+    const actualMeetingId = meetingId || generateMeetingIdValue();
+    setMeetingId(actualMeetingId);
+    
     const success = await startCamera();
     if (!success) return;
+    
+    connectWebSocket(actualMeetingId, displayName);
     setIsInCall(true);
-    setChatMessages([
-      { id: "1", sender: "System", message: "You joined the meeting", timestamp: new Date() },
-    ]);
   };
 
   const handleLeaveCall = () => {
+    disconnectWebSocket();
     stopAllMedia();
     setIsInCall(false);
     setIsMuted(false);
     setIsVideoOff(false);
     setIsScreenSharing(false);
     setChatMessages([]);
+    setParticipants([]);
   };
 
   const toggleMute = () => {
@@ -204,19 +327,22 @@ export function VideoCallApp() {
   };
 
   const sendChatMessage = () => {
-    if (!chatInput.trim()) return;
-    setChatMessages(prev => [...prev, {
-      id: Date.now().toString(),
-      sender: "You",
-      message: chatInput,
-      timestamp: new Date(),
-    }]);
+    if (!chatInput.trim() || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+    
+    wsRef.current.send(JSON.stringify({
+      type: "chat_message",
+      text: chatInput.trim(),
+    }));
+    
     setChatInput("");
   };
 
+  const generateMeetingIdValue = () => {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+  };
+
   const generateMeetingId = () => {
-    const id = Math.random().toString(36).substring(2, 8).toUpperCase();
-    setMeetingId(id);
+    setMeetingId(generateMeetingIdValue());
   };
 
   if (!isInCall) {
@@ -230,6 +356,17 @@ export function VideoCallApp() {
 
         <div className="w-full max-w-md space-y-4">
           <div className="bg-gray-800 rounded-lg p-6 space-y-4">
+            <div>
+              <label className="text-sm text-gray-400 mb-2 block">Your Name</label>
+              <Input
+                value={displayName}
+                onChange={e => setDisplayName(e.target.value)}
+                placeholder="Enter your name"
+                className="bg-gray-700 border-gray-600 text-white"
+                data-testid="input-display-name"
+              />
+            </div>
+            
             <div>
               <label className="text-sm text-gray-400 mb-2 block">Meeting ID</label>
               <div className="flex gap-2">
@@ -250,7 +387,7 @@ export function VideoCallApp() {
               onClick={handleJoinCall} 
               className="w-full bg-blue-600"
               size="lg"
-              disabled={isLoading}
+              disabled={isLoading || !displayName.trim()}
               data-testid="button-join-call"
             >
               {isLoading ? (
@@ -280,7 +417,7 @@ export function VideoCallApp() {
           )}
           
           <p className="text-gray-500 text-xs text-center">
-            Camera and microphone access requires browser permissions.
+            Share the Meeting ID with others to let them join your call.
           </p>
         </div>
       </div>
@@ -291,8 +428,14 @@ export function VideoCallApp() {
     <div className="flex flex-col h-full bg-gray-900" data-testid="video-call-app">
       <div className="flex items-center justify-between p-2 bg-gray-800 border-b border-gray-700">
         <div className="flex items-center gap-2">
-          <span className="text-white font-medium">Meeting: {meetingId || "New Meeting"}</span>
-          <span className="text-gray-400 text-sm">(You)</span>
+          <span className="text-white font-medium">Meeting: {meetingId}</span>
+          <span className="text-gray-400 text-sm flex items-center gap-1">
+            <Users className="w-3 h-3" />
+            {participants.length} {participants.length === 1 ? "participant" : "participants"}
+          </span>
+          {!wsConnected && (
+            <span className="text-yellow-400 text-xs">(Reconnecting...)</span>
+          )}
         </div>
         <div className="flex gap-2">
           <Button
@@ -313,7 +456,9 @@ export function VideoCallApp() {
             {isVideoOff ? (
               <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
                 <Avatar className="w-32 h-32">
-                  <AvatarFallback className="text-4xl bg-blue-600">You</AvatarFallback>
+                  <AvatarFallback className="text-4xl bg-blue-600">
+                    {displayName.substring(0, 2).toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
               </div>
             ) : (
@@ -328,7 +473,7 @@ export function VideoCallApp() {
               />
             )}
             <div className="absolute bottom-2 left-2 bg-black/50 px-2 py-1 rounded text-white text-sm flex items-center gap-2">
-              <span>You {isScreenSharing ? "(Screen)" : ""}</span>
+              <span>{displayName} {isScreenSharing ? "(Screen)" : "(You)"}</span>
               {isMuted && <MicOff className="w-3 h-3 text-red-500" />}
             </div>
             {error && (
@@ -349,15 +494,15 @@ export function VideoCallApp() {
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
               {chatMessages.map(msg => (
-                <div key={msg.id} className={`${msg.sender === "You" ? "text-right" : ""}`}>
+                <div key={msg.id} className={`${msg.sender === displayName ? "text-right" : ""}`}>
                   <div className={`inline-block max-w-[80%] rounded-lg px-3 py-2 ${
-                    msg.sender === "You" ? "bg-blue-600 text-white" : 
+                    msg.sender === displayName ? "bg-blue-600 text-white" : 
                     msg.sender === "System" ? "bg-gray-700 text-gray-400 text-xs" : "bg-gray-700 text-white"
                   }`}>
-                    {msg.sender !== "You" && msg.sender !== "System" && (
+                    {msg.sender !== displayName && msg.sender !== "System" && (
                       <div className="text-xs text-gray-400 mb-1">{msg.sender}</div>
                     )}
-                    <p className="text-sm">{msg.message}</p>
+                    <p className="text-sm">{msg.text}</p>
                   </div>
                 </div>
               ))}
@@ -371,7 +516,7 @@ export function VideoCallApp() {
                 className="bg-gray-700 border-gray-600 text-white"
                 data-testid="input-chat"
               />
-              <Button size="icon" onClick={sendChatMessage} data-testid="button-send-chat">
+              <Button size="icon" onClick={sendChatMessage} disabled={!wsConnected} data-testid="button-send-chat">
                 <Send className="w-4 h-4" />
               </Button>
             </div>
