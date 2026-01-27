@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Inbox, Send, FileText, Trash2, Star, Archive, Mail, 
-  Pencil, X, Search, RefreshCw, MoreVertical, Reply, Forward
+  Pencil, X, Search, RefreshCw, Reply, Forward
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { useQuery } from "@tanstack/react-query";
 
 interface Email {
   id: string;
@@ -21,54 +22,89 @@ interface Email {
   folder: "inbox" | "sent" | "drafts" | "trash" | "archive";
 }
 
+interface User {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+}
+
 type Folder = "inbox" | "sent" | "drafts" | "trash" | "archive" | "starred";
 
-const MOCK_EMAILS: Email[] = [
-  {
-    id: "1",
-    from: "John Smith",
-    fromEmail: "john.smith@example.com",
-    to: "me@nexusos.com",
-    subject: "Welcome to NexusOS!",
-    body: "Hello!\n\nWelcome to NexusOS Mail. This is your first email in the system.\n\nWe hope you enjoy using NexusOS and all its features. If you have any questions, feel free to reach out.\n\nBest regards,\nThe NexusOS Team",
-    timestamp: new Date(Date.now() - 3600000),
-    isRead: false,
-    isStarred: false,
-    folder: "inbox",
-  },
-  {
-    id: "2",
-    from: "System Notification",
-    fromEmail: "no-reply@nexusos.com",
-    to: "me@nexusos.com",
-    subject: "Your account is set up",
-    body: "Your NexusOS account has been successfully configured.\n\nYou can now access all features of the operating system including:\n- File Management\n- Applications\n- Settings\n- And much more!\n\nEnjoy your experience!",
-    timestamp: new Date(Date.now() - 7200000),
-    isRead: true,
-    isStarred: true,
-    folder: "inbox",
-  },
-  {
-    id: "3",
-    from: "Newsletter",
-    fromEmail: "newsletter@updates.com",
-    to: "me@nexusos.com",
-    subject: "Weekly Tech Digest",
-    body: "Here's your weekly roundup of the latest in technology:\n\n1. New breakthroughs in AI\n2. Latest software updates\n3. Upcoming tech events\n4. Industry insights\n\nRead more on our website!",
-    timestamp: new Date(Date.now() - 86400000),
-    isRead: false,
-    isStarred: false,
-    folder: "inbox",
-  },
-];
+function createMockEmails(userEmail: string): Email[] {
+  return [
+    {
+      id: "1",
+      from: "John Smith",
+      fromEmail: "JohnSmith@nexusos.com",
+      to: userEmail,
+      subject: "Welcome to NexusOS!",
+      body: "Hello!\n\nWelcome to NexusOS Mail. This is your first email in the system.\n\nWe hope you enjoy using NexusOS and all its features. If you have any questions, feel free to reach out.\n\nBest regards,\nThe NexusOS Team",
+      timestamp: new Date(Date.now() - 3600000),
+      isRead: false,
+      isStarred: false,
+      folder: "inbox",
+    },
+    {
+      id: "2",
+      from: "System",
+      fromEmail: "System@nexusos.com",
+      to: userEmail,
+      subject: "Your account is set up",
+      body: "Your NexusOS account has been successfully configured.\n\nYou can now access all features of the operating system including:\n- File Management\n- Applications\n- Settings\n- And much more!\n\nEnjoy your experience!",
+      timestamp: new Date(Date.now() - 7200000),
+      isRead: true,
+      isStarred: true,
+      folder: "inbox",
+    },
+    {
+      id: "3",
+      from: "Newsletter",
+      fromEmail: "Newsletter@nexusos.com",
+      to: userEmail,
+      subject: "Weekly Tech Digest",
+      body: "Here's your weekly roundup of the latest in technology:\n\n1. New breakthroughs in AI\n2. Latest software updates\n3. Upcoming tech events\n4. Industry insights\n\nRead more on our website!",
+      timestamp: new Date(Date.now() - 86400000),
+      isRead: false,
+      isStarred: false,
+      folder: "inbox",
+    },
+  ];
+}
 
 export function EmailApp() {
-  const [emails, setEmails] = useState<Email[]>(MOCK_EMAILS);
+  const { data: user } = useQuery<User>({
+    queryKey: ["/api/auth/user"],
+  });
+
+  const getUserNexusEmail = (): string => {
+    if (user?.firstName) {
+      return `${user.firstName}@nexusos.com`;
+    }
+    if (user?.email) {
+      const username = user.email.split("@")[0];
+      return `${username}@nexusos.com`;
+    }
+    return "Guest@nexusos.com";
+  };
+
+  const userEmail = getUserNexusEmail();
+  const userName = user?.firstName || user?.email?.split("@")[0] || "Guest";
+
+  const [emails, setEmails] = useState<Email[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<Folder>("inbox");
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [isComposing, setIsComposing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [composeData, setComposeData] = useState({ to: "", subject: "", body: "" });
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    if (user && !initialized) {
+      setEmails(createMockEmails(getUserNexusEmail()));
+      setInitialized(true);
+    }
+  }, [user, initialized]);
 
   const folders = [
     { id: "inbox" as Folder, label: "Inbox", icon: Inbox },
@@ -140,8 +176,8 @@ export function EmailApp() {
     
     const newEmail: Email = {
       id: Date.now().toString(),
-      from: "Me",
-      fromEmail: "me@nexusos.com",
+      from: userName,
+      fromEmail: userEmail,
       to: composeData.to,
       subject: composeData.subject,
       body: composeData.body,
@@ -202,6 +238,10 @@ export function EmailApp() {
             </button>
           ))}
         </nav>
+        
+        <div className="p-2 border-t text-xs text-muted-foreground truncate">
+          {userEmail}
+        </div>
       </div>
 
       <div className="w-72 border-r flex flex-col">
@@ -319,6 +359,7 @@ export function EmailApp() {
         <div className="absolute inset-4 bg-background border rounded-lg shadow-xl flex flex-col z-50" data-testid="compose-modal">
           <div className="flex items-center justify-between p-3 border-b">
             <h3 className="font-medium">New Message</h3>
+            <div className="text-sm text-muted-foreground">From: {userEmail}</div>
             <Button variant="ghost" size="icon" onClick={() => setIsComposing(false)}>
               <X className="w-4 h-4" />
             </Button>
@@ -327,7 +368,7 @@ export function EmailApp() {
             <Input
               value={composeData.to}
               onChange={e => setComposeData(prev => ({ ...prev, to: e.target.value }))}
-              placeholder="To"
+              placeholder="To (e.g. Username@nexusos.com)"
               data-testid="input-to"
             />
             <Input
