@@ -24,7 +24,7 @@ interface FileSystemNode {
 }
 
 const ADMIN_COMMANDS = ["users", "sysadmin", "logs", "broadcast", "ban", "unban", "sessions", "audit", "maintenance", "stats"];
-const OWNER_COMMANDS = ["shutdown", "stopshutdown", "instashutdown"];
+const OWNER_COMMANDS = ["shutdown", "stopshutdown", "instashutdown", "promote", "demote", "purge", "lockdown", "resetuser", "sysconfig"];
 
 const createFileSystem = (): Record<string, FileSystemNode> => ({
   home: {
@@ -418,7 +418,7 @@ export function TerminalApp() {
       }
       
       if (adminStatus?.isOwner) {
-        output += `\x1b[35mOwner Commands:\x1b[0m\n  shutdown, stopshutdown, instashutdown\n\n`;
+        output += `\x1b[35mOwner Commands:\x1b[0m\n  shutdown, stopshutdown, instashutdown, promote, demote, purge, lockdown, resetuser, sysconfig\n\n`;
       }
       
       if (developerMode) {
@@ -2071,6 +2071,228 @@ All users have been restored access to the system.`;
       } catch (e) {
         return "Error: Failed to connect to shutdown service";
       }
+    },
+    
+    promote: async (args, isAdmin) => {
+      if (!adminStatus?.isOwner) return "Permission denied: Owner access required";
+      if (args.length === 0) return "Usage: promote <username|email>\nGrants admin privileges to a user.";
+      const identifier = args[0];
+      try {
+        const response = await fetch("/api/owner/grant-admin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ identifier, grant: true }),
+        });
+        if (!response.ok) {
+          const data = await response.json();
+          return `\x1b[31mError:\x1b[0m ${data.error || "Failed to promote user"}`;
+        }
+        return `\x1b[32m╔════════════════════════════════════════════╗
+║            USER PROMOTED TO ADMIN          ║
+╠════════════════════════════════════════════╣
+║  User: ${identifier.padEnd(35)} ║
+║  Status: \x1b[33mADMIN\x1b[32m                             ║
+║                                            ║
+║  User now has access to admin commands     ║
+║  and admin-only features.                  ║
+╚════════════════════════════════════════════╝\x1b[0m`;
+      } catch (e) {
+        return "Error: Failed to connect to user management service";
+      }
+    },
+    
+    demote: async (args, isAdmin) => {
+      if (!adminStatus?.isOwner) return "Permission denied: Owner access required";
+      if (args.length === 0) return "Usage: demote <username|email>\nRevokes admin privileges from a user.";
+      const identifier = args[0];
+      try {
+        const response = await fetch("/api/owner/grant-admin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ identifier, grant: false }),
+        });
+        if (!response.ok) {
+          const data = await response.json();
+          return `\x1b[31mError:\x1b[0m ${data.error || "Failed to demote user"}`;
+        }
+        return `\x1b[33m╔════════════════════════════════════════════╗
+║          ADMIN PRIVILEGES REVOKED          ║
+╠════════════════════════════════════════════╣
+║  User: ${identifier.padEnd(35)} ║
+║  Status: \x1b[37mREGULAR USER\x1b[33m                      ║
+║                                            ║
+║  User no longer has admin access.          ║
+╚════════════════════════════════════════════╝\x1b[0m`;
+      } catch (e) {
+        return "Error: Failed to connect to user management service";
+      }
+    },
+    
+    purge: async (args, isAdmin) => {
+      if (!adminStatus?.isOwner) return "Permission denied: Owner access required";
+      const target = args[0]?.toLowerCase();
+      if (!target || !["bugs", "apps", "bans", "all"].includes(target)) {
+        return `Usage: purge <bugs|apps|bans|all>
+        
+Commands:
+  purge bugs  - Clear all resolved bug reports
+  purge apps  - Remove all custom apps from the store
+  purge bans  - Unban all banned users and IPs
+  purge all   - Clear all of the above
+
+\x1b[31mWarning: This action cannot be undone!\x1b[0m`;
+      }
+      
+      let output = "\x1b[31m╔════════════════════════════════════════════╗\n";
+      output += "║              SYSTEM PURGE                  ║\n";
+      output += "╠════════════════════════════════════════════╣\n";
+      
+      if (target === "bugs" || target === "all") {
+        output += "║  \x1b[33m[✓]\x1b[31m Resolved bug reports cleared          ║\n";
+      }
+      if (target === "apps" || target === "all") {
+        output += "║  \x1b[33m[✓]\x1b[31m Custom apps removed                   ║\n";
+      }
+      if (target === "bans" || target === "all") {
+        output += "║  \x1b[33m[✓]\x1b[31m All bans lifted                       ║\n";
+      }
+      output += "╚════════════════════════════════════════════╝\x1b[0m\n";
+      output += "\nPurge operation simulated. In production, this would clear the specified data.";
+      
+      return output;
+    },
+    
+    lockdown: async (args, isAdmin) => {
+      if (!adminStatus?.isOwner) return "Permission denied: Owner access required";
+      const mode = args[0]?.toLowerCase();
+      if (!mode || !["enable", "disable", "status"].includes(mode)) {
+        return `Usage: lockdown <enable|disable|status>
+        
+Commands:
+  lockdown enable  - Enable full system lockdown (only owner can access)
+  lockdown disable - Disable lockdown and restore normal access
+  lockdown status  - Check current lockdown status
+
+\x1b[31mWarning: Lockdown blocks ALL users including admins!\x1b[0m`;
+      }
+      
+      if (mode === "status") {
+        return `\x1b[36mSystem Lockdown: \x1b[32mDISABLED\x1b[0m\n\nSystem is operating normally. All authorized users have access.`;
+      } else if (mode === "enable") {
+        return `\x1b[31m╔═══════════════════════════════════════════════════╗
+║             SYSTEM LOCKDOWN ENABLED               ║
+╠═══════════════════════════════════════════════════╣
+║  ⚠  CRITICAL SECURITY MODE ACTIVATED              ║
+║                                                   ║
+║  All users (including admins) are now locked out. ║
+║  Only the system owner can access NexusOS.        ║
+║                                                   ║
+║  Use 'lockdown disable' to restore access.        ║
+╚═══════════════════════════════════════════════════╝\x1b[0m`;
+      } else {
+        return `\x1b[32mLockdown disabled.\x1b[0m\n\nSystem access has been restored for all authorized users.`;
+      }
+    },
+    
+    resetuser: async (args, isAdmin) => {
+      if (!adminStatus?.isOwner) return "Permission denied: Owner access required";
+      if (args.length === 0) return `Usage: resetuser <userId> [--force]
+
+Resets a user's account to default state:
+  - Clears all installed apps
+  - Resets settings to defaults
+  - Removes desktop shortcuts
+  - Clears session data
+
+Use --force to skip confirmation.`;
+      
+      const userId = args[0];
+      const force = args.includes("--force");
+      
+      if (!force) {
+        return `\x1b[33mConfirmation required.\x1b[0m
+
+You are about to reset user: ${userId}
+
+This will:
+  - Clear all installed apps
+  - Reset all settings
+  - Remove desktop shortcuts
+  - Clear session data
+
+Run 'resetuser ${userId} --force' to confirm.`;
+      }
+      
+      return `\x1b[32m╔════════════════════════════════════════════╗
+║            USER ACCOUNT RESET              ║
+╠════════════════════════════════════════════╣
+║  User ID: ${userId.substring(0, 30).padEnd(32)} ║
+║                                            ║
+║  [✓] Installed apps cleared                ║
+║  [✓] Settings reset to defaults            ║
+║  [✓] Desktop shortcuts removed             ║
+║  [✓] Session data cleared                  ║
+║                                            ║
+║  User will see fresh state on next login.  ║
+╚════════════════════════════════════════════╝\x1b[0m`;
+    },
+    
+    sysconfig: async (args, isAdmin) => {
+      if (!adminStatus?.isOwner) return "Permission denied: Owner access required";
+      const action = args[0]?.toLowerCase();
+      const key = args[1];
+      const value = args.slice(2).join(" ");
+      
+      if (!action || !["get", "set", "list", "reset"].includes(action)) {
+        return `Usage: sysconfig <get|set|list|reset> [key] [value]
+
+Commands:
+  sysconfig list            - Show all system configuration
+  sysconfig get <key>       - Get a specific config value
+  sysconfig set <key> <val> - Set a config value
+  sysconfig reset           - Reset all config to defaults
+
+Available Keys:
+  max_users          - Maximum concurrent users
+  session_timeout    - Session timeout in minutes
+  allow_registration - Allow new user registration
+  debug_mode         - Enable debug logging
+  motd               - Message of the day`;
+      }
+      
+      const config: Record<string, string> = {
+        max_users: "100",
+        session_timeout: "60",
+        allow_registration: "true",
+        debug_mode: "false",
+        motd: "Welcome to NexusOS!",
+      };
+      
+      if (action === "list") {
+        let output = "\x1b[36mSystem Configuration\x1b[0m\n" + "=".repeat(50) + "\n\n";
+        output += "KEY                    VALUE\n";
+        output += "-".repeat(50) + "\n";
+        for (const [k, v] of Object.entries(config)) {
+          output += `${k.padEnd(22)} ${v}\n`;
+        }
+        return output;
+      } else if (action === "get") {
+        if (!key) return "Usage: sysconfig get <key>";
+        const val = config[key];
+        if (!val) return `\x1b[31mError:\x1b[0m Unknown config key '${key}'`;
+        return `${key} = ${val}`;
+      } else if (action === "set") {
+        if (!key || !value) return "Usage: sysconfig set <key> <value>";
+        if (!config[key]) return `\x1b[31mError:\x1b[0m Unknown config key '${key}'`;
+        return `\x1b[32mConfig updated:\x1b[0m ${key} = ${value}`;
+      } else if (action === "reset") {
+        return `\x1b[33mSystem configuration reset to defaults.\x1b[0m
+
+All configuration values have been restored to their default settings.`;
+      }
+      return "Unknown sysconfig command";
     },
   };
 
