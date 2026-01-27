@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, Bot } from "lucide-react";
 
@@ -47,55 +47,56 @@ export function TicTacToeGame() {
     return empty;
   };
 
-  const minimax = useCallback((squares: Player[], isAI: boolean): number => {
-    const winner = checkWinner(squares);
+  const findWinningMove = (squares: Player[], player: Player): number | null => {
+    const lines = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8],
+      [0, 3, 6], [1, 4, 7], [2, 5, 8],
+      [0, 4, 8], [2, 4, 6],
+    ];
     
-    if (winner === "O") return 10;
-    if (winner === "X") return -10;
-    
-    const emptyCells = getEmptyCells(squares);
-    if (emptyCells.length === 0) return 0;
-
-    if (isAI) {
-      let bestScore = -Infinity;
-      for (const i of emptyCells) {
-        const newSquares = [...squares];
-        newSquares[i] = "O";
-        const score = minimax(newSquares, false);
-        bestScore = Math.max(score, bestScore);
+    for (const [a, b, c] of lines) {
+      const cells = [squares[a], squares[b], squares[c]];
+      const playerCount = cells.filter(c => c === player).length;
+      const emptyCount = cells.filter(c => c === null).length;
+      
+      if (playerCount === 2 && emptyCount === 1) {
+        if (squares[a] === null) return a;
+        if (squares[b] === null) return b;
+        if (squares[c] === null) return c;
       }
-      return bestScore;
-    } else {
-      let bestScore = Infinity;
-      for (const i of emptyCells) {
-        const newSquares = [...squares];
-        newSquares[i] = "X";
-        const score = minimax(newSquares, true);
-        bestScore = Math.min(score, bestScore);
-      }
-      return bestScore;
     }
-  }, []);
+    return null;
+  };
 
-  const getBestMove = useCallback((squares: Player[]): number => {
+  const getAIMove = (squares: Player[]): number => {
     const emptyCells = getEmptyCells(squares);
     if (emptyCells.length === 0) return -1;
-    
-    let bestScore = -Infinity;
-    let bestMove = emptyCells[0];
 
-    for (const i of emptyCells) {
-      const newSquares = [...squares];
-      newSquares[i] = "O";
-      const score = minimax(newSquares, false);
-      if (score > bestScore) {
-        bestScore = score;
-        bestMove = i;
+    // 70% chance to play smart, 30% chance to make a random move
+    const playsSmart = Math.random() < 0.7;
+
+    if (playsSmart) {
+      // Try to win
+      const winMove = findWinningMove(squares, "O");
+      if (winMove !== null) return winMove;
+
+      // Block player from winning
+      const blockMove = findWinningMove(squares, "X");
+      if (blockMove !== null) return blockMove;
+
+      // Take center if available
+      if (squares[4] === null) return 4;
+
+      // Take a corner
+      const corners = [0, 2, 6, 8].filter(i => squares[i] === null);
+      if (corners.length > 0) {
+        return corners[Math.floor(Math.random() * corners.length)];
       }
     }
 
-    return bestMove;
-  }, [minimax]);
+    // Random move from available cells
+    return emptyCells[Math.floor(Math.random() * emptyCells.length)];
+  };
 
   const winner = checkWinner(board);
   const winningLine = getWinningLine(board);
@@ -105,10 +106,10 @@ export function TicTacToeGame() {
     if (!isXNext && !winner && !isDraw && !isThinking) {
       setIsThinking(true);
       const timer = setTimeout(() => {
-        const bestMove = getBestMove(board);
-        if (bestMove !== -1) {
+        const aiMove = getAIMove(board);
+        if (aiMove !== -1) {
           const newBoard = [...board];
-          newBoard[bestMove] = "O";
+          newBoard[aiMove] = "O";
           setBoard(newBoard);
           setIsXNext(true);
 
@@ -124,7 +125,7 @@ export function TicTacToeGame() {
 
       return () => clearTimeout(timer);
     }
-  }, [isXNext, winner, isDraw, board, getBestMove, isThinking]);
+  }, [isXNext, winner, isDraw, board, isThinking]);
 
   const handleClick = (index: number) => {
     if (board[index] || winner || !isXNext || isThinking) return;
