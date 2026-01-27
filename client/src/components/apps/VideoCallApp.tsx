@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { 
   Video, VideoOff, Mic, MicOff, PhoneOff, 
-  MessageSquare, ScreenShare, X, Send
+  MessageSquare, ScreenShare, X, Send, RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,13 +18,14 @@ export function VideoCallApp() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const screenStreamRef = useRef<MediaStream | null>(null);
-  const [hasStream, setHasStream] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [isInCall, setIsInCall] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [meetingId, setMeetingId] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
@@ -32,19 +33,44 @@ export function VideoCallApp() {
   const startCamera = useCallback(async (): Promise<boolean> => {
     try {
       setError(null);
+      setIsLoading(true);
+      
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Camera API not supported in this browser");
+      }
+
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true,
       });
+      
       streamRef.current = mediaStream;
-      setHasStream(true);
+      
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().catch(console.error);
+          setIsStreaming(true);
+          setIsLoading(false);
+        };
+      } else {
+        setIsStreaming(true);
+        setIsLoading(false);
       }
+      
       return true;
-    } catch (err) {
+    } catch (err: any) {
       console.error("Media access error:", err);
-      setError("Unable to access camera/microphone. Please check permissions.");
+      setIsLoading(false);
+      if (err.name === "NotAllowedError") {
+        setError("Camera/microphone access denied. Please allow permissions in your browser.");
+      } else if (err.name === "NotFoundError") {
+        setError("No camera or microphone found.");
+      } else if (err.name === "NotReadableError") {
+        setError("Camera/microphone is already in use by another application.");
+      } else {
+        setError(err.message || "Unable to access camera/microphone.");
+      }
       return false;
     }
   }, []);
@@ -58,7 +84,10 @@ export function VideoCallApp() {
       screenStreamRef.current.getTracks().forEach(track => track.stop());
       screenStreamRef.current = null;
     }
-    setHasStream(false);
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsStreaming(false);
   }, []);
 
   useEffect(() => {
@@ -124,6 +153,11 @@ export function VideoCallApp() {
       setIsScreenSharing(false);
     } else {
       try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+          setError("Screen sharing not supported in this browser");
+          return;
+        }
+        
         const screenStream = await navigator.mediaDevices.getDisplayMedia({ 
           video: true,
           audio: false 
@@ -142,9 +176,11 @@ export function VideoCallApp() {
           screenStreamRef.current = null;
           setIsScreenSharing(false);
         };
-      } catch (err) {
+      } catch (err: any) {
         console.error("Screen share error:", err);
-        setError("Unable to share screen. Please try again.");
+        if (err.name !== "AbortError") {
+          setError("Unable to share screen.");
+        }
       }
     }
   };
@@ -196,10 +232,20 @@ export function VideoCallApp() {
               onClick={handleJoinCall} 
               className="w-full bg-blue-600"
               size="lg"
+              disabled={isLoading}
               data-testid="button-join-call"
             >
-              <Video className="w-5 h-5 mr-2" />
-              {meetingId ? "Join Meeting" : "Start New Meeting"}
+              {isLoading ? (
+                <>
+                  <RefreshCw className="w-5 h-5 mr-2 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <Video className="w-5 h-5 mr-2" />
+                  {meetingId ? "Join Meeting" : "Start New Meeting"}
+                </>
+              )}
             </Button>
           </div>
 
@@ -208,6 +254,10 @@ export function VideoCallApp() {
               {error}
             </div>
           )}
+          
+          <p className="text-gray-500 text-xs text-center">
+            Note: Camera and microphone access requires browser permissions.
+          </p>
         </div>
       </div>
     );
@@ -218,7 +268,7 @@ export function VideoCallApp() {
       <div className="flex items-center justify-between p-2 bg-gray-800 border-b border-gray-700">
         <div className="flex items-center gap-2">
           <span className="text-white font-medium">Meeting: {meetingId || "New Meeting"}</span>
-          <span className="text-gray-400 text-sm">(1 participant)</span>
+          <span className="text-gray-400 text-sm">(You)</span>
         </div>
         <div className="flex gap-2">
           <Button
@@ -257,6 +307,11 @@ export function VideoCallApp() {
               <span>You {isScreenSharing ? "(Screen)" : ""}</span>
               {isMuted && <MicOff className="w-3 h-3 text-red-500" />}
             </div>
+            {error && (
+              <div className="absolute top-2 left-2 right-2 bg-red-500/80 px-2 py-1 rounded text-white text-sm">
+                {error}
+              </div>
+            )}
           </div>
         </div>
 

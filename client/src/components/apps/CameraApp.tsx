@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Camera, Video, Download, Trash2, FlipHorizontal, Settings, X, Image } from "lucide-react";
+import { Camera, Download, Trash2, FlipHorizontal, X, Image, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Photo {
@@ -12,30 +12,63 @@ export function CameraApp() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isMirrored, setIsMirrored] = useState(true);
   const [countdown, setCountdown] = useState<number | null>(null);
   const [showGallery, setShowGallery] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const startCamera = useCallback(async () => {
     try {
       setError(null);
+      setIsLoading(true);
+      
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("Camera API not supported in this browser");
+      }
+
       const mediaStream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
+      
       streamRef.current = mediaStream;
-      setStream(mediaStream);
+      
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
+        videoRef.current.onloadedmetadata = () => {
+          videoRef.current?.play().catch(console.error);
+          setIsStreaming(true);
+          setIsLoading(false);
+        };
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Camera access error:", err);
-      setError("Unable to access camera. Please ensure camera permissions are granted.");
+      setIsLoading(false);
+      if (err.name === "NotAllowedError") {
+        setError("Camera access denied. Please allow camera permissions in your browser settings.");
+      } else if (err.name === "NotFoundError") {
+        setError("No camera found. Please connect a camera and try again.");
+      } else if (err.name === "NotReadableError") {
+        setError("Camera is already in use by another application.");
+      } else {
+        setError(err.message || "Unable to access camera. Please check permissions.");
+      }
     }
+  }, []);
+
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+    setIsStreaming(false);
   }, []);
 
   useEffect(() => {
@@ -51,13 +84,13 @@ export function CameraApp() {
   const takePhoto = () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
-    if (!video || !canvas) return;
+    if (!video || !canvas || !isStreaming) return;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
 
     ctx.save();
     if (isMirrored) {
@@ -79,6 +112,7 @@ export function CameraApp() {
   };
 
   const takePhotoWithCountdown = () => {
+    if (!isStreaming) return;
     setCountdown(3);
     let count = 3;
     const interval = setInterval(() => {
@@ -140,11 +174,17 @@ export function CameraApp() {
 
       <div className="flex-1 flex overflow-hidden">
         <div className="flex-1 relative flex items-center justify-center bg-black">
-          {error ? (
+          {isLoading ? (
+            <div className="text-center p-8">
+              <RefreshCw className="w-16 h-16 text-gray-500 mx-auto mb-4 animate-spin" />
+              <p className="text-gray-400">Starting camera...</p>
+            </div>
+          ) : error ? (
             <div className="text-center p-8">
               <Camera className="w-16 h-16 text-gray-500 mx-auto mb-4" />
               <p className="text-gray-400 mb-4">{error}</p>
               <Button onClick={startCamera} data-testid="button-retry">
+                <RefreshCw className="w-4 h-4 mr-2" />
                 Try Again
               </Button>
             </div>
@@ -173,7 +213,7 @@ export function CameraApp() {
           <div className="w-64 bg-gray-800 border-l border-gray-700 flex flex-col">
             <div className="p-2 border-b border-gray-700 flex justify-between items-center">
               <span className="text-white text-sm font-medium">Gallery ({photos.length})</span>
-              <Button variant="ghost" size="icon" onClick={() => setShowGallery(false)} className="text-gray-400 h-6 w-6">
+              <Button variant="ghost" size="icon" onClick={() => setShowGallery(false)} className="text-gray-400">
                 <X className="w-4 h-4" />
               </Button>
             </div>
@@ -198,7 +238,7 @@ export function CameraApp() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6 text-white"
+                          className="text-white"
                           onClick={e => { e.stopPropagation(); downloadPhoto(photo); }}
                         >
                           <Download className="w-3 h-3" />
@@ -206,7 +246,7 @@ export function CameraApp() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6 text-white hover:text-red-400"
+                          className="text-white"
                           onClick={e => { e.stopPropagation(); deletePhoto(photo.id); }}
                         >
                           <Trash2 className="w-3 h-3" />
@@ -226,7 +266,7 @@ export function CameraApp() {
           size="icon"
           variant="secondary"
           onClick={takePhoto}
-          disabled={!stream || countdown !== null}
+          disabled={!isStreaming || countdown !== null}
           className="rounded-full"
           data-testid="button-capture"
         >
@@ -235,7 +275,7 @@ export function CameraApp() {
         <Button
           variant="outline"
           onClick={takePhotoWithCountdown}
-          disabled={!stream || countdown !== null}
+          disabled={!isStreaming || countdown !== null}
           data-testid="button-timer"
         >
           3s Timer
@@ -252,7 +292,7 @@ export function CameraApp() {
               <Button variant="ghost" size="icon" onClick={() => downloadPhoto(selectedPhoto)} className="text-white">
                 <Download className="w-4 h-4" />
               </Button>
-              <Button variant="ghost" size="icon" onClick={() => deletePhoto(selectedPhoto.id)} className="text-white hover:text-red-400">
+              <Button variant="ghost" size="icon" onClick={() => deletePhoto(selectedPhoto.id)} className="text-white">
                 <Trash2 className="w-4 h-4" />
               </Button>
               <Button variant="ghost" size="icon" onClick={() => setSelectedPhoto(null)} className="text-white">
