@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Camera, Download, Trash2, FlipHorizontal, X, Image, RefreshCw } from "lucide-react";
+import { Camera, Download, Trash2, FlipHorizontal, X, Image, RefreshCw, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Photo {
@@ -20,6 +20,15 @@ export function CameraApp() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [showGallery, setShowGallery] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isInIframe, setIsInIframe] = useState(false);
+
+  const checkIfInIframe = useCallback(() => {
+    try {
+      return window.self !== window.top;
+    } catch (e) {
+      return true;
+    }
+  }, []);
 
   const startCamera = useCallback(async () => {
     try {
@@ -48,7 +57,11 @@ export function CameraApp() {
     } catch (err: any) {
       console.error("Camera access error:", err);
       setIsLoading(false);
-      if (err.name === "NotAllowedError") {
+      
+      if (checkIfInIframe()) {
+        setIsInIframe(true);
+        setError("Camera access is blocked in this preview. Please open in a new tab.");
+      } else if (err.name === "NotAllowedError") {
         setError("Camera access denied. Please allow camera permissions in your browser settings.");
       } else if (err.name === "NotFoundError") {
         setError("No camera found. Please connect a camera and try again.");
@@ -58,7 +71,7 @@ export function CameraApp() {
         setError(err.message || "Unable to access camera. Please check permissions.");
       }
     }
-  }, []);
+  }, [checkIfInIframe]);
 
   const stopCamera = useCallback(() => {
     if (streamRef.current) {
@@ -80,6 +93,10 @@ export function CameraApp() {
       }
     };
   }, [startCamera]);
+
+  const openInNewTab = () => {
+    window.open(window.location.href, '_blank');
+  };
 
   const takePhoto = () => {
     const video = videoRef.current;
@@ -183,10 +200,17 @@ export function CameraApp() {
             <div className="text-center p-8">
               <Camera className="w-16 h-16 text-gray-500 mx-auto mb-4" />
               <p className="text-gray-400 mb-4">{error}</p>
-              <Button onClick={startCamera} data-testid="button-retry">
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Try Again
-              </Button>
+              {isInIframe ? (
+                <Button onClick={openInNewTab} data-testid="button-open-new-tab">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Open in New Tab
+                </Button>
+              ) : (
+                <Button onClick={startCamera} data-testid="button-retry">
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Try Again
+                </Button>
+              )}
             </div>
           ) : (
             <>

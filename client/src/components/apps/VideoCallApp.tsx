@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { 
   Video, VideoOff, Mic, MicOff, PhoneOff, 
-  MessageSquare, ScreenShare, X, Send, RefreshCw
+  MessageSquare, ScreenShare, X, Send, RefreshCw, ExternalLink
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,14 +26,24 @@ export function VideoCallApp() {
   const [showChat, setShowChat] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isInIframe, setIsInIframe] = useState(false);
   const [meetingId, setMeetingId] = useState("");
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
+
+  const checkIfInIframe = useCallback(() => {
+    try {
+      return window.self !== window.top;
+    } catch (e) {
+      return true;
+    }
+  }, []);
 
   const startCamera = useCallback(async (): Promise<boolean> => {
     try {
       setError(null);
       setIsLoading(true);
+      setIsInIframe(false);
       
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error("Camera API not supported in this browser");
@@ -62,7 +72,11 @@ export function VideoCallApp() {
     } catch (err: any) {
       console.error("Media access error:", err);
       setIsLoading(false);
-      if (err.name === "NotAllowedError") {
+      
+      if (checkIfInIframe()) {
+        setIsInIframe(true);
+        setError("Camera/microphone access is blocked in this preview. Please open in a new tab.");
+      } else if (err.name === "NotAllowedError") {
         setError("Camera/microphone access denied. Please allow permissions in your browser.");
       } else if (err.name === "NotFoundError") {
         setError("No camera or microphone found.");
@@ -73,7 +87,7 @@ export function VideoCallApp() {
       }
       return false;
     }
-  }, []);
+  }, [checkIfInIframe]);
 
   const stopAllMedia = useCallback(() => {
     if (streamRef.current) {
@@ -102,6 +116,10 @@ export function VideoCallApp() {
       }
     };
   }, []);
+
+  const openInNewTab = () => {
+    window.open(window.location.href, '_blank');
+  };
 
   const handleJoinCall = async () => {
     const success = await startCamera();
@@ -250,13 +268,19 @@ export function VideoCallApp() {
           </div>
 
           {error && (
-            <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 text-red-400 text-sm">
-              {error}
+            <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 text-center">
+              <p className="text-red-400 text-sm mb-3">{error}</p>
+              {isInIframe && (
+                <Button onClick={openInNewTab} variant="outline" size="sm">
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Open in New Tab
+                </Button>
+              )}
             </div>
           )}
           
           <p className="text-gray-500 text-xs text-center">
-            Note: Camera and microphone access requires browser permissions.
+            Camera and microphone access requires browser permissions.
           </p>
         </div>
       </div>
