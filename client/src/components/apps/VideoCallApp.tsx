@@ -1,18 +1,11 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { 
-  Video, VideoOff, Mic, MicOff, Phone, PhoneOff, 
-  Users, Settings, MessageSquare, ScreenShare, X, Send, Maximize2
+  Video, VideoOff, Mic, MicOff, PhoneOff, 
+  MessageSquare, ScreenShare, X, Send
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-
-interface Participant {
-  id: string;
-  name: string;
-  isMuted: boolean;
-  isVideoOff: boolean;
-}
 
 interface ChatMessage {
   id: string;
@@ -24,7 +17,8 @@ interface ChatMessage {
 export function VideoCallApp() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
-  const [stream, setStream] = useState<MediaStream | null>(null);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+  const [hasStream, setHasStream] = useState(false);
   const [isInCall, setIsInCall] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
@@ -35,11 +29,6 @@ export function VideoCallApp() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
 
-  const mockParticipants: Participant[] = [
-    { id: "2", name: "John Doe", isMuted: false, isVideoOff: true },
-    { id: "3", name: "Jane Smith", isMuted: true, isVideoOff: false },
-  ];
-
   const startCamera = useCallback(async (): Promise<boolean> => {
     try {
       setError(null);
@@ -48,7 +37,7 @@ export function VideoCallApp() {
         audio: true,
       });
       streamRef.current = mediaStream;
-      setStream(mediaStream);
+      setHasStream(true);
       if (videoRef.current) {
         videoRef.current.srcObject = mediaStream;
       }
@@ -60,12 +49,16 @@ export function VideoCallApp() {
     }
   }, []);
 
-  const stopMedia = useCallback(() => {
+  const stopAllMedia = useCallback(() => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
       streamRef.current = null;
-      setStream(null);
     }
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach(track => track.stop());
+      screenStreamRef.current = null;
+    }
+    setHasStream(false);
   }, []);
 
   useEffect(() => {
@@ -73,6 +66,10 @@ export function VideoCallApp() {
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
         streamRef.current = null;
+      }
+      if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach(track => track.stop());
+        screenStreamRef.current = null;
       }
     };
   }, []);
@@ -87,7 +84,7 @@ export function VideoCallApp() {
   };
 
   const handleLeaveCall = () => {
-    stopMedia();
+    stopAllMedia();
     setIsInCall(false);
     setIsMuted(false);
     setIsVideoOff(false);
@@ -96,8 +93,9 @@ export function VideoCallApp() {
   };
 
   const toggleMute = () => {
-    if (stream) {
-      stream.getAudioTracks().forEach(track => {
+    if (streamRef.current) {
+      const audioTracks = streamRef.current.getAudioTracks();
+      audioTracks.forEach(track => {
         track.enabled = isMuted;
       });
     }
@@ -105,8 +103,9 @@ export function VideoCallApp() {
   };
 
   const toggleVideo = () => {
-    if (stream) {
-      stream.getVideoTracks().forEach(track => {
+    if (streamRef.current) {
+      const videoTracks = streamRef.current.getVideoTracks();
+      videoTracks.forEach(track => {
         track.enabled = isVideoOff;
       });
     }
@@ -115,29 +114,37 @@ export function VideoCallApp() {
 
   const toggleScreenShare = async () => {
     if (isScreenSharing) {
-      if (stream) {
-        const videoTrack = stream.getVideoTracks()[0];
-        if (videoTrack) {
-          videoTrack.stop();
-        }
+      if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach(track => track.stop());
+        screenStreamRef.current = null;
       }
-      await startCamera();
+      if (videoRef.current && streamRef.current) {
+        videoRef.current.srcObject = streamRef.current;
+      }
       setIsScreenSharing(false);
     } else {
       try {
-        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({ 
+          video: true,
+          audio: false 
+        });
+        screenStreamRef.current = screenStream;
+        
         if (videoRef.current) {
           videoRef.current.srcObject = screenStream;
         }
-        setStream(screenStream);
         setIsScreenSharing(true);
         
         screenStream.getVideoTracks()[0].onended = () => {
-          startCamera();
+          if (videoRef.current && streamRef.current) {
+            videoRef.current.srcObject = streamRef.current;
+          }
+          screenStreamRef.current = null;
           setIsScreenSharing(false);
         };
       } catch (err) {
         console.error("Screen share error:", err);
+        setError("Unable to share screen. Please try again.");
       }
     }
   };
@@ -187,7 +194,7 @@ export function VideoCallApp() {
 
             <Button 
               onClick={handleJoinCall} 
-              className="w-full bg-blue-600 hover:bg-blue-700"
+              className="w-full bg-blue-600"
               size="lg"
               data-testid="button-join-call"
             >
@@ -211,7 +218,7 @@ export function VideoCallApp() {
       <div className="flex items-center justify-between p-2 bg-gray-800 border-b border-gray-700">
         <div className="flex items-center gap-2">
           <span className="text-white font-medium">Meeting: {meetingId || "New Meeting"}</span>
-          <span className="text-gray-400 text-sm">({mockParticipants.length + 1} participants)</span>
+          <span className="text-gray-400 text-sm">(1 participant)</span>
         </div>
         <div className="flex gap-2">
           <Button
@@ -227,12 +234,12 @@ export function VideoCallApp() {
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        <div className="flex-1 p-4 grid grid-cols-2 gap-4 overflow-auto">
-          <div className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video">
+        <div className="flex-1 p-4 flex items-center justify-center">
+          <div className="relative bg-gray-800 rounded-lg overflow-hidden w-full max-w-3xl aspect-video">
             {isVideoOff ? (
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Avatar className="w-24 h-24">
-                  <AvatarFallback className="text-3xl bg-blue-600">You</AvatarFallback>
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-800">
+                <Avatar className="w-32 h-32">
+                  <AvatarFallback className="text-4xl bg-blue-600">You</AvatarFallback>
                 </Avatar>
               </div>
             ) : (
@@ -251,39 +258,13 @@ export function VideoCallApp() {
               {isMuted && <MicOff className="w-3 h-3 text-red-500" />}
             </div>
           </div>
-
-          {mockParticipants.map(participant => (
-            <div key={participant.id} className="relative bg-gray-800 rounded-lg overflow-hidden aspect-video">
-              {participant.isVideoOff ? (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Avatar className="w-24 h-24">
-                    <AvatarFallback className="text-3xl bg-purple-600">
-                      {participant.name.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-purple-600 to-blue-600">
-                  <Avatar className="w-24 h-24">
-                    <AvatarFallback className="text-3xl">
-                      {participant.name.charAt(0)}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-              )}
-              <div className="absolute bottom-2 left-2 bg-black/50 px-2 py-1 rounded text-white text-sm flex items-center gap-2">
-                <span>{participant.name}</span>
-                {participant.isMuted && <MicOff className="w-3 h-3 text-red-500" />}
-              </div>
-            </div>
-          ))}
         </div>
 
         {showChat && (
           <div className="w-72 bg-gray-800 border-l border-gray-700 flex flex-col">
             <div className="p-3 border-b border-gray-700 flex justify-between items-center">
               <span className="text-white font-medium">Chat</span>
-              <Button variant="ghost" size="icon" onClick={() => setShowChat(false)} className="h-6 w-6 text-gray-400">
+              <Button variant="ghost" size="icon" onClick={() => setShowChat(false)} className="text-gray-400">
                 <X className="w-4 h-4" />
               </Button>
             </div>
