@@ -39,7 +39,6 @@ const defaultApps: App[] = [
   { id: "paint", name: "Paint", icon: "paintbrush", color: "bg-rose-500", defaultWidth: 900, defaultHeight: 650 },
   { id: "camera", name: "Camera", icon: "camera", color: "bg-gray-700", defaultWidth: 700, defaultHeight: 550 },
   { id: "email", name: "Email", icon: "mail", color: "bg-blue-600", defaultWidth: 900, defaultHeight: 600 },
-  { id: "videocall", name: "Video Call", icon: "video", color: "bg-teal-500", defaultWidth: 900, defaultHeight: 650 },
 ];
 
 const defaultFiles: FileItem[] = [

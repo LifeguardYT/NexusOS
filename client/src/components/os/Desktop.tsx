@@ -26,7 +26,6 @@ import { SolitaireGame } from "@/components/apps/SolitaireGame";
 import { PaintApp } from "@/components/apps/PaintApp";
 import { CameraApp } from "@/components/apps/CameraApp";
 import { EmailApp } from "@/components/apps/EmailApp";
-import { VideoCallApp } from "@/components/apps/VideoCallApp";
 import { Power, Lock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
@@ -61,7 +60,6 @@ const appComponents: Record<string, React.ComponentType> = {
   paint: PaintApp,
   camera: CameraApp,
   email: EmailApp,
-  videocall: VideoCallApp,
 };
 
 export function Desktop() {
