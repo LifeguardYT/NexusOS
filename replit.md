@@ -42,6 +42,54 @@ A fully functional web-based operating system simulation built with React and Ty
 30. **QR Code** - Generate QR codes for any text/URL
 31. **Voice Recorder** - Record audio (requires new tab for permissions)
 32. **GIF Maker** - Create animated GIFs frame-by-frame
+33. **Friends** - Social app for managing friends, sending/accepting friend requests, and viewing online users
+
+## New Features
+
+### Widget System
+- Draggable desktop widgets with 4 types: Clock, Weather, Notes, and System Stats
+- Right-click desktop to open widget picker
+- Widgets can be moved and removed
+- Widget positions persist in localStorage
+
+### Notification Center
+- Accessible from taskbar bell icon
+- Shows notification history with unread count badge
+- Supports 4 notification types: info, success, warning, error
+- Mark individual notifications as read or dismiss them
+- Clear all notifications at once
+
+### Theme Profiles
+- Save current theme settings (wallpaper, accent color, etc.) as named profiles
+- Load saved profiles to apply theme instantly
+- Delete unwanted profiles
+- Export themes as shareable code (base64 encoded)
+- Import themes from shared code
+
+### Onboarding Tutorial
+- 6-step interactive tutorial for new users
+- Explains Start Menu, Desktop, Settings, and Apps
+- Skip option available anytime
+- Only shows once (persisted in localStorage)
+
+### Sound Effects System
+- Toggle system sounds on/off in Settings > Sound
+- Volume control for sound effects
+- Sound types: click, notify, error, success, window open/close, startup, shutdown
+- Uses Web Audio API for lightweight audio generation
+
+### User Presence System
+- Tracks user online status (online, away, busy)
+- Optional activity status message
+- Real-time presence updates via API
+- View online users in Friends app
+
+### Friend System
+- Send friend requests by user ID
+- Accept or decline pending requests
+- View friend list with status
+- Remove friends
+- Database-backed with PostgreSQL
 
 ## Tech Stack
 - **Frontend**: React, TypeScript, TailwindCSS, Shadcn UI
@@ -150,6 +198,13 @@ When a user is banned, their IP address is also blocked:
 - Shows "Access Denied" screen with reason for IP bans
 
 ## Recent Changes
+- Added Friends app for managing social connections with friend requests and online user tracking
+- Added User Presence system with online/away/busy status and activity messages
+- Added Sound Effects system with toggleable system sounds and volume control
+- Added Onboarding Tutorial with 6-step interactive walkthrough for new users
+- Added Theme Profiles to save/load/export/import complete theme configurations
+- Added Notification Center in taskbar with notification history and management
+- Added Widget System with draggable Clock, Weather, Notes, and System Stats widgets
 - Custom apps from App Store now open inside NexusOS as web apps (in browser window) instead of opening externally
 - Added IP banning system - banned users' IPs are blocked even if they log out
 - Added Bug Report system app on desktop for users to report bugs, admins to view, and owner to resolve

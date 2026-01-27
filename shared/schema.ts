@@ -149,3 +149,29 @@ export const bannedIps = pgTable("banned_ips", {
 export const insertBannedIpSchema = createInsertSchema(bannedIps).omit({ id: true, createdAt: true });
 export type InsertBannedIp = z.infer<typeof insertBannedIpSchema>;
 export type BannedIp = typeof bannedIps.$inferSelect;
+
+// User Presence table
+export const userPresence = pgTable("user_presence", {
+  userId: text("user_id").primaryKey(),
+  userName: text("user_name").notNull(),
+  status: text("status").notNull().default("online"),
+  lastSeen: text("last_seen").notNull().default(sql`now()`),
+  activity: text("activity"),
+});
+
+export const insertUserPresenceSchema = createInsertSchema(userPresence);
+export type InsertUserPresence = z.infer<typeof insertUserPresenceSchema>;
+export type UserPresence = typeof userPresence.$inferSelect;
+
+// Friends table
+export const friends = pgTable("friends", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  friendId: text("friend_id").notNull(),
+  status: text("status").notNull().default("pending"),
+  createdAt: text("created_at").notNull().default(sql`now()`),
+});
+
+export const insertFriendSchema = createInsertSchema(friends).omit({ id: true, createdAt: true });
+export type InsertFriend = z.infer<typeof insertFriendSchema>;
+export type Friend = typeof friends.$inferSelect;

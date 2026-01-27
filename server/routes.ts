@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { settingsSchema, insertUpdateSchema, insertMessageSchema, insertCustomAppSchema, insertBugReportSchema, users, messages, customApps, bugReports, bannedIps } from "@shared/schema";
+import { settingsSchema, insertUpdateSchema, insertMessageSchema, insertCustomAppSchema, insertBugReportSchema, users, messages, customApps, bugReports, bannedIps, userPresence, friends } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { updates } from "@shared/schema";
@@ -1011,6 +1011,165 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Failed to delete bug report:", error);
       res.status(500).json({ error: "Failed to delete bug report" });
+    }
+  });
+
+  // User Presence endpoints
+  
+  // Update user presence
+  app.post("/api/presence", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const userName = req.user?.claims?.first_name || "User";
+      const { status, activity } = req.body;
+      
+      const existingPresence = await db.select().from(userPresence).where(eq(userPresence.userId, userId)).limit(1);
+      
+      if (existingPresence.length > 0) {
+        await db.update(userPresence)
+          .set({ 
+            status: status || "online",
+            activity: activity || null,
+            lastSeen: new Date().toISOString(),
+          })
+          .where(eq(userPresence.userId, userId));
+      } else {
+        await db.insert(userPresence).values({
+          userId,
+          userName,
+          status: status || "online",
+          activity: activity || null,
+        });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to update presence:", error);
+      res.status(500).json({ error: "Failed to update presence" });
+    }
+  });
+  
+  // Get online users
+  app.get("/api/presence/online", isAuthenticated, async (req, res) => {
+    try {
+      const onlineUsers = await db.select().from(userPresence)
+        .where(eq(userPresence.status, "online"));
+      res.json(onlineUsers);
+    } catch (error) {
+      console.error("Failed to get online users:", error);
+      res.status(500).json({ error: "Failed to get online users" });
+    }
+  });
+  
+  // Friends endpoints
+  
+  // Get friend list
+  app.get("/api/friends", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      
+      const friendsList = await db.select().from(friends)
+        .where(or(
+          and(eq(friends.userId, userId), eq(friends.status, "accepted")),
+          and(eq(friends.friendId, userId), eq(friends.status, "accepted"))
+        ));
+      
+      res.json(friendsList);
+    } catch (error) {
+      console.error("Failed to get friends:", error);
+      res.status(500).json({ error: "Failed to get friends" });
+    }
+  });
+  
+  // Get friend requests (pending)
+  app.get("/api/friends/requests", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      
+      const requests = await db.select().from(friends)
+        .where(and(eq(friends.friendId, userId), eq(friends.status, "pending")));
+      
+      res.json(requests);
+    } catch (error) {
+      console.error("Failed to get friend requests:", error);
+      res.status(500).json({ error: "Failed to get friend requests" });
+    }
+  });
+  
+  // Send friend request
+  app.post("/api/friends/request", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const { friendId } = req.body;
+      
+      if (userId === friendId) {
+        return res.status(400).json({ error: "Cannot add yourself as a friend" });
+      }
+      
+      // Check if request already exists
+      const existing = await db.select().from(friends)
+        .where(or(
+          and(eq(friends.userId, userId), eq(friends.friendId, friendId)),
+          and(eq(friends.userId, friendId), eq(friends.friendId, userId))
+        ));
+      
+      if (existing.length > 0) {
+        return res.status(400).json({ error: "Friend request already exists" });
+      }
+      
+      await db.insert(friends).values({
+        userId,
+        friendId,
+        status: "pending",
+      });
+      
+      res.json({ success: true, message: "Friend request sent" });
+    } catch (error) {
+      console.error("Failed to send friend request:", error);
+      res.status(500).json({ error: "Failed to send friend request" });
+    }
+  });
+  
+  // Accept friend request
+  app.post("/api/friends/accept/:requestId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const { requestId } = req.params;
+      
+      const request = await db.select().from(friends)
+        .where(and(eq(friends.id, requestId), eq(friends.friendId, userId)));
+      
+      if (request.length === 0) {
+        return res.status(404).json({ error: "Friend request not found" });
+      }
+      
+      await db.update(friends)
+        .set({ status: "accepted" })
+        .where(eq(friends.id, requestId));
+      
+      res.json({ success: true, message: "Friend request accepted" });
+    } catch (error) {
+      console.error("Failed to accept friend request:", error);
+      res.status(500).json({ error: "Failed to accept friend request" });
+    }
+  });
+  
+  // Decline/remove friend
+  app.delete("/api/friends/:friendshipId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const { friendshipId } = req.params;
+      
+      await db.delete(friends)
+        .where(and(
+          eq(friends.id, friendshipId),
+          or(eq(friends.userId, userId), eq(friends.friendId, userId))
+        ));
+      
+      res.json({ success: true, message: "Friend removed" });
+    } catch (error) {
+      console.error("Failed to remove friend:", error);
+      res.status(500).json({ error: "Failed to remove friend" });
     }
   });
 

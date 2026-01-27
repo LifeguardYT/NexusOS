@@ -48,6 +48,7 @@ const defaultApps: App[] = [
   { id: "paint", name: "Paint", icon: "paintbrush", color: "bg-rose-500", defaultWidth: 900, defaultHeight: 650 },
   { id: "camera", name: "Camera", icon: "camera", color: "bg-gray-700", defaultWidth: 700, defaultHeight: 550 },
   { id: "email", name: "Email", icon: "mail", color: "bg-blue-600", defaultWidth: 900, defaultHeight: 600 },
+  { id: "friends", name: "Friends", icon: "users", color: "bg-purple-500", defaultWidth: 500, defaultHeight: 600 },
   { id: "tictactoe", name: "Tic-Tac-Toe", icon: "grid-3x3", color: "bg-indigo-500", defaultWidth: 450, defaultHeight: 550 },
   { id: "flappybird", name: "Flappy Bird", icon: "bird", color: "bg-sky-400", defaultWidth: 450, defaultHeight: 650 },
   { id: "memorymatch", name: "Memory Match", icon: "brain", color: "bg-slate-600", defaultWidth: 500, defaultHeight: 550, iconImage: memoryMatchIcon },
@@ -97,6 +98,32 @@ export interface DebugLogEntry {
   message: string;
 }
 
+export interface DesktopWidget {
+  id: string;
+  type: "clock" | "weather" | "notes" | "stats";
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface NotificationItem {
+  id: string;
+  title: string;
+  message: string;
+  timestamp: Date;
+  read: boolean;
+  type: "info" | "success" | "warning" | "error";
+  appId?: string;
+}
+
+export interface ThemeProfile {
+  id: string;
+  name: string;
+  settings: Settings;
+  createdAt: string;
+}
+
 interface OSContextType {
   settings: Settings;
   updateSettings: (updates: Partial<Settings>) => void;
@@ -143,6 +170,25 @@ interface OSContextType {
   debugLogs: DebugLogEntry[];
   addDebugLog: (type: DebugLogEntry["type"], category: string, message: string) => void;
   clearDebugLogs: () => void;
+  widgets: DesktopWidget[];
+  addWidget: (type: DesktopWidget["type"]) => void;
+  removeWidget: (id: string) => void;
+  updateWidgetPosition: (id: string, x: number, y: number) => void;
+  notifications: NotificationItem[];
+  addNotification: (title: string, message: string, type?: NotificationItem["type"], appId?: string) => void;
+  markNotificationRead: (id: string) => void;
+  clearNotifications: () => void;
+  dismissNotification: (id: string) => void;
+  themeProfiles: ThemeProfile[];
+  saveThemeProfile: (name: string) => void;
+  loadThemeProfile: (id: string) => void;
+  deleteThemeProfile: (id: string) => void;
+  exportThemeCode: () => string;
+  importThemeCode: (code: string) => boolean;
+  hasSeenOnboarding: boolean;
+  setHasSeenOnboarding: (seen: boolean) => void;
+  soundEnabled: boolean;
+  setSoundEnabled: (enabled: boolean) => void;
 }
 
 const OSContext = createContext<OSContextType | null>(null);
@@ -196,6 +242,143 @@ export function OSProvider({ children }: { children: ReactNode }) {
   });
 
   const [debugLogs, setDebugLogs] = useState<DebugLogEntry[]>([]);
+
+  const [widgets, setWidgets] = useState<DesktopWidget[]>(() => {
+    const saved = localStorage.getItem("os-widgets");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [notifications, setNotifications] = useState<NotificationItem[]>(() => {
+    const saved = localStorage.getItem("os-notifications");
+    return saved ? JSON.parse(saved).map((n: any) => ({ ...n, timestamp: new Date(n.timestamp) })) : [];
+  });
+
+  const addWidget = useCallback((type: DesktopWidget["type"]) => {
+    const widgetDefaults = {
+      clock: { width: 200, height: 120 },
+      weather: { width: 220, height: 180 },
+      notes: { width: 250, height: 200 },
+      stats: { width: 220, height: 150 },
+    };
+    const newWidget: DesktopWidget = {
+      id: `widget-${Date.now()}`,
+      type,
+      x: 50 + Math.random() * 100,
+      y: 50 + Math.random() * 100,
+      ...widgetDefaults[type],
+    };
+    setWidgets(prev => [...prev, newWidget]);
+  }, []);
+
+  const removeWidget = useCallback((id: string) => {
+    setWidgets(prev => prev.filter(w => w.id !== id));
+  }, []);
+
+  const updateWidgetPosition = useCallback((id: string, x: number, y: number) => {
+    setWidgets(prev => prev.map(w => w.id === id ? { ...w, x, y } : w));
+  }, []);
+
+  const addNotification = useCallback((title: string, message: string, type: NotificationItem["type"] = "info", appId?: string) => {
+    const notification: NotificationItem = {
+      id: `notif-${Date.now()}`,
+      title,
+      message,
+      timestamp: new Date(),
+      read: false,
+      type,
+      appId,
+    };
+    setNotifications(prev => [notification, ...prev].slice(0, 50));
+  }, []);
+
+  const markNotificationRead = useCallback((id: string) => {
+    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+  }, []);
+
+  const clearNotifications = useCallback(() => {
+    setNotifications([]);
+  }, []);
+
+  const dismissNotification = useCallback((id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("os-widgets", JSON.stringify(widgets));
+  }, [widgets]);
+
+  useEffect(() => {
+    localStorage.setItem("os-notifications", JSON.stringify(notifications));
+  }, [notifications]);
+
+  const [themeProfiles, setThemeProfiles] = useState<ThemeProfile[]>(() => {
+    const saved = localStorage.getItem("os-theme-profiles");
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [hasSeenOnboarding, setHasSeenOnboardingState] = useState(() => {
+    return localStorage.getItem("os-seen-onboarding") === "true";
+  });
+
+  const [soundEnabled, setSoundEnabledState] = useState(() => {
+    const saved = localStorage.getItem("os-sound-enabled");
+    return saved !== null ? JSON.parse(saved) : true;
+  });
+
+  const setHasSeenOnboarding = useCallback((seen: boolean) => {
+    setHasSeenOnboardingState(seen);
+    localStorage.setItem("os-seen-onboarding", String(seen));
+  }, []);
+
+  const setSoundEnabled = useCallback((enabled: boolean) => {
+    setSoundEnabledState(enabled);
+    localStorage.setItem("os-sound-enabled", JSON.stringify(enabled));
+  }, []);
+
+  const saveThemeProfile = useCallback((name: string) => {
+    const profile: ThemeProfile = {
+      id: `theme-${Date.now()}`,
+      name,
+      settings: { ...settings },
+      createdAt: new Date().toISOString(),
+    };
+    setThemeProfiles(prev => [...prev, profile]);
+  }, [settings]);
+
+  const loadThemeProfile = useCallback((id: string) => {
+    const profile = themeProfiles.find(p => p.id === id);
+    if (profile && profile.settings) {
+      setSettings(profile.settings);
+    }
+  }, [themeProfiles]);
+
+  const deleteThemeProfile = useCallback((id: string) => {
+    setThemeProfiles(prev => prev.filter(p => p.id !== id));
+  }, []);
+
+  const exportThemeCode = useCallback(() => {
+    return btoa(JSON.stringify(settings));
+  }, [settings]);
+
+  const importThemeCode = useCallback((code: string): boolean => {
+    try {
+      const themeData = JSON.parse(atob(code));
+      if (themeData.wallpaper && themeData.theme) {
+        setSettings(prev => ({
+          ...prev,
+          ...themeData,
+        }));
+        return true;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("os-theme-profiles", JSON.stringify(themeProfiles));
+  }, [themeProfiles]);
 
   const addDebugLog = useCallback((type: DebugLogEntry["type"], category: string, message: string) => {
     const entry: DebugLogEntry = {
@@ -528,6 +711,25 @@ export function OSProvider({ children }: { children: ReactNode }) {
       debugLogs,
       addDebugLog,
       clearDebugLogs,
+      widgets,
+      addWidget,
+      removeWidget,
+      updateWidgetPosition,
+      notifications,
+      addNotification,
+      markNotificationRead,
+      clearNotifications,
+      dismissNotification,
+      themeProfiles,
+      saveThemeProfile,
+      loadThemeProfile,
+      deleteThemeProfile,
+      exportThemeCode,
+      importThemeCode,
+      hasSeenOnboarding,
+      setHasSeenOnboarding,
+      soundEnabled,
+      setSoundEnabled,
     }}>
       {children}
     </OSContext.Provider>

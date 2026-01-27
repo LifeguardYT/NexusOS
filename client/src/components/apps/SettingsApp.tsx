@@ -116,8 +116,105 @@ interface AuthUser {
 
 type AccountSubSection = "main" | "profile" | "signin";
 
+function ThemeProfilesSection() {
+  const { themeProfiles, saveThemeProfile, loadThemeProfile, deleteThemeProfile, exportThemeCode, importThemeCode, addNotification } = useOS();
+  const [newProfileName, setNewProfileName] = useState("");
+  const [importCode, setImportCode] = useState("");
+  const [showExportCode, setShowExportCode] = useState(false);
+  
+  const handleSaveProfile = () => {
+    if (newProfileName.trim()) {
+      saveThemeProfile(newProfileName.trim());
+      setNewProfileName("");
+      addNotification("Theme Saved", `Profile "${newProfileName}" saved successfully`, "success");
+    }
+  };
+  
+  const handleImport = () => {
+    if (importThemeCode(importCode.trim())) {
+      setImportCode("");
+      addNotification("Theme Imported", "Theme applied successfully", "success");
+    } else {
+      addNotification("Import Failed", "Invalid theme code", "error");
+    }
+  };
+  
+  return (
+    <div className="border-t border-white/10 pt-4">
+      <h3 className="text-lg font-semibold mb-4">Theme Profiles</h3>
+      
+      <div className="space-y-3 mb-4">
+        {themeProfiles.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No saved profiles yet</p>
+        ) : (
+          themeProfiles.map(profile => (
+            <div key={profile.id} className="flex items-center justify-between p-3 rounded-lg bg-white/5">
+              <div>
+                <span className="font-medium">{profile.name}</span>
+                <span className="text-xs text-muted-foreground ml-2">
+                  {new Date(profile.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="ghost" onClick={() => loadThemeProfile(profile.id)} data-testid={`load-profile-${profile.id}`}>
+                  Apply
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => deleteThemeProfile(profile.id)} data-testid={`delete-profile-${profile.id}`}>
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+      
+      <div className="flex gap-2 mb-4">
+        <Input
+          placeholder="Profile name..."
+          value={newProfileName}
+          onChange={(e) => setNewProfileName(e.target.value)}
+          className="flex-1"
+          data-testid="input-profile-name"
+        />
+        <Button onClick={handleSaveProfile} disabled={!newProfileName.trim()} data-testid="btn-save-profile">
+          <Download className="w-4 h-4 mr-1" /> Save
+        </Button>
+      </div>
+      
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" onClick={() => setShowExportCode(!showExportCode)} data-testid="btn-export-theme">
+          <Upload className="w-4 h-4 mr-1" /> Export
+        </Button>
+      </div>
+      
+      {showExportCode && (
+        <div className="mt-3 p-3 rounded-lg bg-black/30">
+          <p className="text-xs text-muted-foreground mb-2">Share this code:</p>
+          <code className="text-xs break-all select-all">{exportThemeCode()}</code>
+        </div>
+      )}
+      
+      <div className="mt-4">
+        <p className="text-sm text-muted-foreground mb-2">Import theme code:</p>
+        <div className="flex gap-2">
+          <Input
+            placeholder="Paste theme code..."
+            value={importCode}
+            onChange={(e) => setImportCode(e.target.value)}
+            className="flex-1 text-xs"
+            data-testid="input-import-code"
+          />
+          <Button size="sm" onClick={handleImport} disabled={!importCode.trim()} data-testid="btn-import-theme">
+            Import
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SettingsApp() {
-  const { settings, updateSettings, security, updateSecurity, debugLogs, clearDebugLogs } = useOS();
+  const { settings, updateSettings, security, updateSecurity, debugLogs, clearDebugLogs, soundEnabled, setSoundEnabled } = useOS();
   const [activeSection, setActiveSection] = useState<SettingsSection>("appearance");
   const [accountSubSection, setAccountSubSection] = useState<AccountSubSection>("main");
   const [showPasswordSetup, setShowPasswordSetup] = useState(false);
@@ -427,6 +524,8 @@ export function SettingsApp() {
               </div>
             </div>
 
+            <ThemeProfilesSection />
+
             <div className="flex items-center justify-between py-3 border-t border-white/10">
               <div>
                 <h4 className="font-medium">Show Desktop Icons</h4>
@@ -483,6 +582,17 @@ export function SettingsApp() {
       case "sound":
         return (
           <div className="space-y-6">
+            <div className="flex items-center justify-between py-3 border-b border-white/10">
+              <div>
+                <h4 className="font-medium">System Sounds</h4>
+                <p className="text-sm text-muted-foreground">Play sounds for notifications and actions</p>
+              </div>
+              <Switch
+                checked={soundEnabled}
+                onCheckedChange={setSoundEnabled}
+                data-testid="switch-sound-enabled"
+              />
+            </div>
             <div>
               <h3 className="text-lg font-semibold mb-4">Volume</h3>
               <div className="flex items-center gap-4">

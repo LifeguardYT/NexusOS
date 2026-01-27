@@ -5,6 +5,8 @@ import { StartMenu } from "./StartMenu";
 import { DesktopIcons } from "./DesktopIcons";
 import { ContextMenu } from "./ContextMenu";
 import { ShutdownOverlay } from "./ShutdownOverlay";
+import { DesktopWidgets, WidgetPicker } from "./DesktopWidgets";
+import { OnboardingTutorial } from "./OnboardingTutorial";
 import { BrowserApp } from "@/components/apps/BrowserApp";
 import { SettingsApp } from "@/components/apps/SettingsApp";
 import { CalculatorApp } from "@/components/apps/CalculatorApp";
@@ -26,6 +28,7 @@ import { SolitaireGame } from "@/components/apps/SolitaireGame";
 import { PaintApp } from "@/components/apps/PaintApp";
 import { CameraApp } from "@/components/apps/CameraApp";
 import { EmailApp } from "@/components/apps/EmailApp";
+import { FriendsApp } from "@/components/apps/FriendsApp";
 import { TicTacToeGame } from "@/components/apps/TicTacToeGame";
 import { FlappyBirdGame } from "@/components/apps/FlappyBirdGame";
 import { MemoryMatchGame } from "@/components/apps/MemoryMatchGame";
@@ -72,6 +75,7 @@ const appComponents: Record<string, React.ComponentType> = {
   paint: PaintApp,
   camera: CameraApp,
   email: EmailApp,
+  friends: FriendsApp,
   tictactoe: TicTacToeGame,
   flappybird: FlappyBirdGame,
   memorymatch: MemoryMatchGame,
@@ -87,10 +91,11 @@ const appComponents: Record<string, React.ComponentType> = {
 };
 
 export function Desktop() {
-  const { settings, windows, showContextMenu, hideContextMenu, setStartMenuOpen, isPoweredOn, isShuttingDown, isStartingUp, isLocked, startup, unlock, security, openWindow } = useOS();
+  const { settings, windows, showContextMenu, hideContextMenu, setStartMenuOpen, isPoweredOn, isShuttingDown, isStartingUp, isLocked, startup, unlock, security, openWindow, addWidget } = useOS();
   const [lockInput, setLockInput] = useState("");
   const [lockError, setLockError] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showWidgetPicker, setShowWidgetPicker] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/status")
@@ -107,6 +112,10 @@ export function Desktop() {
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     showContextMenu(e.clientX, e.clientY, [
+      { label: "Add Widget", action: () => {
+        setShowWidgetPicker(true);
+        hideContextMenu();
+      }},
       { label: "Refresh", action: () => window.location.reload() },
       { label: "Display Settings", action: () => {
         openWindow("settings");
@@ -265,6 +274,14 @@ export function Desktop() {
       {/* Desktop Icons */}
       <DesktopIcons />
 
+      {/* Desktop Widgets */}
+      <DesktopWidgets />
+
+      {/* Widget Picker Modal */}
+      {showWidgetPicker && (
+        <WidgetPicker onClose={() => setShowWidgetPicker(false)} />
+      )}
+
       {/* Windows */}
       <AnimatePresence>
         {windows.filter(win => !win.isMinimized).map(win => {
@@ -299,6 +316,9 @@ export function Desktop() {
 
     {/* Shutdown Overlay - shows warning during countdown and blocks non-admin users after shutdown */}
     <ShutdownOverlay isAdmin={isAdmin} />
+    
+    {/* Onboarding Tutorial */}
+    <OnboardingTutorial />
     </>
   );
 }

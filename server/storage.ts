@@ -1,10 +1,10 @@
-import { type User, type InsertUser, type Settings, settingsSchema } from "@shared/schema";
+import { type User, type UpsertUser, type Settings, settingsSchema } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: UpsertUser): Promise<User>;
   getSettings(userId: string): Promise<Settings>;
   updateSettings(userId: string, settings: Partial<Settings>): Promise<Settings>;
 }
@@ -22,6 +22,8 @@ const defaultSettings: Settings = {
   wifi: true,
   bluetooth: false,
   developerMode: false,
+  syncEnabled: false,
+  displayName: "",
 };
 
 export class MemStorage implements IStorage {
@@ -37,15 +39,27 @@ export class MemStorage implements IStorage {
     return this.users.get(id);
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
+  async getUserByEmail(email: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
-      (user) => user.username === username,
+      (user) => user.email === email,
     );
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
+  async createUser(insertUser: UpsertUser): Promise<User> {
+    const id = insertUser.id || randomUUID();
+    const user: User = { 
+      id, 
+      email: insertUser.email || null,
+      firstName: insertUser.firstName || null,
+      lastName: insertUser.lastName || null,
+      profileImageUrl: insertUser.profileImageUrl || null,
+      banned: false,
+      banReason: null,
+      isAdmin: false,
+      lastIp: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
     this.users.set(id, user);
     return user;
   }

@@ -1,5 +1,6 @@
 import { useOS } from "@/lib/os-context";
 import { useAuth } from "@/hooks/use-auth";
+import { NotificationCenter } from "./NotificationCenter";
 import { 
   Globe, Settings, Folder, Calculator, FileText, CloudSun, Music, 
   Gamepad2, Bomb, Terminal, Wifi, WifiOff, Volume2, VolumeX, 
@@ -101,6 +102,9 @@ export function Taskbar() {
 
       {/* Right - System Tray */}
       <div className="flex items-center gap-3">
+        {/* Notification Center */}
+        <NotificationCenter />
+        
         {/* User/Login Button */}
         {isLoading ? null : isAuthenticated ? (
           <button
