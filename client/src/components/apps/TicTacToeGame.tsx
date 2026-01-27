@@ -10,7 +10,7 @@ export function TicTacToeGame() {
   const [scores, setScores] = useState({ X: 0, O: 0, ties: 0 });
   const [isThinking, setIsThinking] = useState(false);
 
-  const calculateWinner = useCallback((squares: Player[]): Player => {
+  const checkWinner = (squares: Player[]): Player => {
     const lines = [
       [0, 1, 2], [3, 4, 5], [6, 7, 8],
       [0, 3, 6], [1, 4, 7], [2, 5, 8],
@@ -22,7 +22,7 @@ export function TicTacToeGame() {
       }
     }
     return null;
-  }, []);
+  };
 
   const getWinningLine = (squares: Player[]): number[] | null => {
     const lines = [
@@ -39,57 +39,65 @@ export function TicTacToeGame() {
     return null;
   };
 
-  const minimax = useCallback((squares: Player[], isMaximizing: boolean, depth: number): number => {
-    const winner = calculateWinner(squares);
-    if (winner === "O") return 10 - depth;
-    if (winner === "X") return depth - 10;
-    if (squares.every(cell => cell !== null)) return 0;
+  const getEmptyCells = (squares: Player[]): number[] => {
+    const empty: number[] = [];
+    for (let i = 0; i < 9; i++) {
+      if (squares[i] === null) empty.push(i);
+    }
+    return empty;
+  };
 
-    if (isMaximizing) {
+  const minimax = useCallback((squares: Player[], isAI: boolean): number => {
+    const winner = checkWinner(squares);
+    
+    if (winner === "O") return 10;
+    if (winner === "X") return -10;
+    
+    const emptyCells = getEmptyCells(squares);
+    if (emptyCells.length === 0) return 0;
+
+    if (isAI) {
       let bestScore = -Infinity;
-      for (let i = 0; i < 9; i++) {
-        if (squares[i] === null) {
-          squares[i] = "O";
-          const score = minimax(squares, false, depth + 1);
-          squares[i] = null;
-          bestScore = Math.max(score, bestScore);
-        }
+      for (const i of emptyCells) {
+        const newSquares = [...squares];
+        newSquares[i] = "O";
+        const score = minimax(newSquares, false);
+        bestScore = Math.max(score, bestScore);
       }
       return bestScore;
     } else {
       let bestScore = Infinity;
-      for (let i = 0; i < 9; i++) {
-        if (squares[i] === null) {
-          squares[i] = "X";
-          const score = minimax(squares, true, depth + 1);
-          squares[i] = null;
-          bestScore = Math.min(score, bestScore);
-        }
+      for (const i of emptyCells) {
+        const newSquares = [...squares];
+        newSquares[i] = "X";
+        const score = minimax(newSquares, true);
+        bestScore = Math.min(score, bestScore);
       }
       return bestScore;
     }
-  }, [calculateWinner]);
+  }, []);
 
   const getBestMove = useCallback((squares: Player[]): number => {
+    const emptyCells = getEmptyCells(squares);
+    if (emptyCells.length === 0) return -1;
+    
     let bestScore = -Infinity;
-    let bestMove = -1;
+    let bestMove = emptyCells[0];
 
-    for (let i = 0; i < 9; i++) {
-      if (squares[i] === null) {
-        squares[i] = "O";
-        const score = minimax(squares, false, 0);
-        squares[i] = null;
-        if (score > bestScore) {
-          bestScore = score;
-          bestMove = i;
-        }
+    for (const i of emptyCells) {
+      const newSquares = [...squares];
+      newSquares[i] = "O";
+      const score = minimax(newSquares, false);
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = i;
       }
     }
 
     return bestMove;
   }, [minimax]);
 
-  const winner = calculateWinner(board);
+  const winner = checkWinner(board);
   const winningLine = getWinningLine(board);
   const isDraw = !winner && board.every(cell => cell !== null);
 
@@ -97,14 +105,14 @@ export function TicTacToeGame() {
     if (!isXNext && !winner && !isDraw && !isThinking) {
       setIsThinking(true);
       const timer = setTimeout(() => {
-        const bestMove = getBestMove([...board]);
+        const bestMove = getBestMove(board);
         if (bestMove !== -1) {
           const newBoard = [...board];
           newBoard[bestMove] = "O";
           setBoard(newBoard);
           setIsXNext(true);
 
-          const newWinner = calculateWinner(newBoard);
+          const newWinner = checkWinner(newBoard);
           if (newWinner) {
             setScores(prev => ({ ...prev, [newWinner]: prev[newWinner] + 1 }));
           } else if (newBoard.every(cell => cell !== null)) {
@@ -112,11 +120,11 @@ export function TicTacToeGame() {
           }
         }
         setIsThinking(false);
-      }, 500);
+      }, 400);
 
       return () => clearTimeout(timer);
     }
-  }, [isXNext, winner, isDraw, board, getBestMove, calculateWinner, isThinking]);
+  }, [isXNext, winner, isDraw, board, getBestMove, isThinking]);
 
   const handleClick = (index: number) => {
     if (board[index] || winner || !isXNext || isThinking) return;
@@ -126,7 +134,7 @@ export function TicTacToeGame() {
     setBoard(newBoard);
     setIsXNext(false);
 
-    const newWinner = calculateWinner(newBoard);
+    const newWinner = checkWinner(newBoard);
     if (newWinner) {
       setScores(prev => ({ ...prev, [newWinner]: prev[newWinner] + 1 }));
     } else if (newBoard.every(cell => cell !== null)) {
