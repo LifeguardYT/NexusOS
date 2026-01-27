@@ -51,6 +51,7 @@ export const appSchema = z.object({
   color: z.string(),
   defaultWidth: z.number(),
   defaultHeight: z.number(),
+  iconImage: z.string().optional(),
 });
 
 export type App = z.infer<typeof appSchema>;

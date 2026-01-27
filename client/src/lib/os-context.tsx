@@ -1,6 +1,15 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from "react";
 import type { Settings, WindowState, App, FileItem, Note } from "@shared/schema";
 
+import memoryMatchIcon from "../assets/icons/memory-match-icon.png";
+import chessIcon from "../assets/icons/chess-icon.png";
+import clockIcon from "../assets/icons/clock-icon.png";
+import stopwatchIcon from "../assets/icons/stopwatch-icon.png";
+import timerIcon from "../assets/icons/timer-icon.png";
+import qrcodeIcon from "../assets/icons/qrcode-icon.png";
+import voiceRecorderIcon from "../assets/icons/voice-recorder-icon.png";
+import gifMakerIcon from "../assets/icons/gif-maker-icon.png";
+
 const defaultSettings: Settings = {
   wallpaper: "gradient-1",
   theme: "dark",
@@ -41,16 +50,16 @@ const defaultApps: App[] = [
   { id: "email", name: "Email", icon: "mail", color: "bg-blue-600", defaultWidth: 900, defaultHeight: 600 },
   { id: "tictactoe", name: "Tic-Tac-Toe", icon: "grid-3x3", color: "bg-indigo-500", defaultWidth: 450, defaultHeight: 550 },
   { id: "flappybird", name: "Flappy Bird", icon: "bird", color: "bg-sky-400", defaultWidth: 450, defaultHeight: 650 },
-  { id: "memorymatch", name: "Memory Match", icon: "brain", color: "bg-slate-600", defaultWidth: 500, defaultHeight: 550 },
+  { id: "memorymatch", name: "Memory Match", icon: "brain", color: "bg-slate-600", defaultWidth: 500, defaultHeight: 550, iconImage: memoryMatchIcon },
   { id: "pong", name: "Pong", icon: "gamepad-2", color: "bg-gray-800", defaultWidth: 650, defaultHeight: 550 },
   { id: "sudoku", name: "Sudoku", icon: "grid-3x3", color: "bg-blue-800", defaultWidth: 500, defaultHeight: 650 },
-  { id: "chess", name: "Chess", icon: "crown", color: "bg-amber-800", defaultWidth: 550, defaultHeight: 650 },
-  { id: "clock", name: "Clock", icon: "clock", color: "bg-slate-700", defaultWidth: 500, defaultHeight: 550 },
-  { id: "stopwatch", name: "Stopwatch", icon: "timer", color: "bg-gray-900", defaultWidth: 450, defaultHeight: 550 },
-  { id: "timer", name: "Timer", icon: "alarm-clock", color: "bg-indigo-600", defaultWidth: 450, defaultHeight: 550 },
-  { id: "qrcode", name: "QR Code", icon: "qr-code", color: "bg-gray-600", defaultWidth: 550, defaultHeight: 500 },
-  { id: "voicerecorder", name: "Voice Recorder", icon: "mic", color: "bg-red-600", defaultWidth: 450, defaultHeight: 500 },
-  { id: "gifmaker", name: "GIF Maker", icon: "film", color: "bg-purple-600", defaultWidth: 700, defaultHeight: 550 },
+  { id: "chess", name: "Chess", icon: "crown", color: "bg-amber-800", defaultWidth: 550, defaultHeight: 650, iconImage: chessIcon },
+  { id: "clock", name: "Clock", icon: "clock", color: "bg-slate-700", defaultWidth: 500, defaultHeight: 550, iconImage: clockIcon },
+  { id: "stopwatch", name: "Stopwatch", icon: "timer", color: "bg-gray-900", defaultWidth: 450, defaultHeight: 550, iconImage: stopwatchIcon },
+  { id: "timer", name: "Timer", icon: "alarm-clock", color: "bg-indigo-600", defaultWidth: 450, defaultHeight: 550, iconImage: timerIcon },
+  { id: "qrcode", name: "QR Code", icon: "qr-code", color: "bg-gray-600", defaultWidth: 550, defaultHeight: 500, iconImage: qrcodeIcon },
+  { id: "voicerecorder", name: "Voice Recorder", icon: "mic", color: "bg-red-600", defaultWidth: 450, defaultHeight: 500, iconImage: voiceRecorderIcon },
+  { id: "gifmaker", name: "GIF Maker", icon: "film", color: "bg-purple-600", defaultWidth: 700, defaultHeight: 550, iconImage: gifMakerIcon },
 ];
 
 const defaultFiles: FileItem[] = [

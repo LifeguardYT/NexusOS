@@ -70,8 +70,12 @@ export function DesktopIcons() {
             className="w-20 flex flex-col items-center gap-1 p-2 rounded-lg hover:bg-white/10 transition-colors group"
             data-testid={`desktop-icon-${app.id}`}
           >
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${app.color} shadow-lg group-hover:scale-105 transition-transform`}>
-              <Icon className="w-6 h-6 text-white" />
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${app.iconImage ? '' : app.color} shadow-lg group-hover:scale-105 transition-transform overflow-hidden`}>
+              {app.iconImage ? (
+                <img src={app.iconImage} alt={app.name} className="w-full h-full object-cover" />
+              ) : (
+                <Icon className="w-6 h-6 text-white" />
+              )}
             </div>
             <span className="text-[11px] text-white text-center leading-tight drop-shadow-lg truncate w-full">
               {app.name}

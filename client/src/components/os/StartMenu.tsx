@@ -296,8 +296,10 @@ export function StartMenu() {
                 className="flex flex-col items-center gap-2 p-3 rounded-lg hover:bg-white/10 transition-colors group relative"
                 data-testid={`start-app-${app.id}`}
               >
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${app.color} shadow-lg group-hover:scale-105 transition-transform`}>
-                  {IconComponent ? (
+                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${('iconImage' in app && app.iconImage) ? '' : app.color} shadow-lg group-hover:scale-105 transition-transform overflow-hidden`}>
+                  {'iconImage' in app && app.iconImage ? (
+                    <img src={app.iconImage as string} alt={app.name} className="w-full h-full object-cover" />
+                  ) : IconComponent ? (
                     <IconComponent className="w-6 h-6 text-white" />
                   ) : (
                     app.icon

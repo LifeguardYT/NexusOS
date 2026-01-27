@@ -79,8 +79,12 @@ export function Taskbar() {
               }`}
               data-testid={`taskbar-app-${app.id}`}
             >
-              <div className={`w-9 h-9 rounded-md flex items-center justify-center ${app.color}`}>
-                <Icon className="w-5 h-5 text-white" />
+              <div className={`w-9 h-9 rounded-md flex items-center justify-center ${app.iconImage ? '' : app.color} overflow-hidden`}>
+                {app.iconImage ? (
+                  <img src={app.iconImage} alt={app.name} className="w-full h-full object-cover" />
+                ) : (
+                  <Icon className="w-5 h-5 text-white" />
+                )}
               </div>
               {/* Active indicator */}
               <div className={`absolute bottom-0.5 h-0.5 rounded-full transition-all ${
