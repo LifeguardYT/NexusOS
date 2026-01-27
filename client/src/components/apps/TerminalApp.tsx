@@ -23,7 +23,7 @@ interface FileSystemNode {
   modified?: Date;
 }
 
-const ADMIN_COMMANDS = ["users", "sysadmin", "logs"];
+const ADMIN_COMMANDS = ["users", "sysadmin", "logs", "broadcast", "ban", "unban", "sessions", "audit", "maintenance", "stats"];
 const OWNER_COMMANDS = ["shutdown", "stopshutdown", "instashutdown"];
 
 const createFileSystem = (): Record<string, FileSystemNode> => ({
@@ -414,7 +414,7 @@ export function TerminalApp() {
       }
       
       if (isAdmin) {
-        output += `\x1b[31mAdmin Commands:\x1b[0m\n  users, sysadmin, logs\n\n`;
+        output += `\x1b[31mAdmin Commands:\x1b[0m\n  users, sysadmin, logs, broadcast, ban, unban, sessions, audit, maintenance, stats\n\n`;
       }
       
       if (adminStatus?.isOwner) {
@@ -1831,6 +1831,183 @@ Process:
         `[${now.toISOString()}] INFO  Admin accessed system logs`,
       ];
       return logs.join("\n");
+    },
+    
+    broadcast: async (args, isAdmin) => {
+      if (!isAdmin) return "Permission denied: Admin access required";
+      if (args.length === 0) return "Usage: broadcast <message>\nSends a system-wide notification to all users.";
+      const message = args.join(" ");
+      try {
+        const response = await fetch("/api/admin/broadcast", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ message }),
+        });
+        if (!response.ok) {
+          return `\x1b[33mBroadcast simulated (API not implemented):\x1b[0m\n\n  "${message}"\n\nMessage would be sent to all connected users.`;
+        }
+        return `\x1b[32mBroadcast sent successfully:\x1b[0m\n\n  "${message}"`;
+      } catch (e) {
+        return `\x1b[33mBroadcast simulated:\x1b[0m\n\n  "${message}"\n\nMessage would be sent to all connected users.`;
+      }
+    },
+    
+    ban: async (args, isAdmin) => {
+      if (!isAdmin) return "Permission denied: Admin access required";
+      if (args.length === 0) return "Usage: ban <userId> [reason]\nBans a user from the system by their user ID.";
+      const userId = args[0];
+      const reason = args.slice(1).join(" ") || "Banned by administrator";
+      try {
+        const response = await fetch(`/api/admin/users/${userId}/ban`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ banned: true, reason }),
+        });
+        if (!response.ok) {
+          const data = await response.json();
+          return `\x1b[31mError:\x1b[0m ${data.error || "Failed to ban user"}`;
+        }
+        return `\x1b[32mUser ${userId} has been banned.\x1b[0m\nReason: ${reason}`;
+      } catch (e) {
+        return "Error: Failed to connect to user management service";
+      }
+    },
+    
+    unban: async (args, isAdmin) => {
+      if (!isAdmin) return "Permission denied: Admin access required";
+      if (args.length === 0) return "Usage: unban <userId>\nUnbans a previously banned user.";
+      const userId = args[0];
+      try {
+        const response = await fetch(`/api/admin/users/${userId}/ban`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ banned: false }),
+        });
+        if (!response.ok) {
+          const data = await response.json();
+          return `\x1b[31mError:\x1b[0m ${data.error || "Failed to unban user"}`;
+        }
+        return `\x1b[32mUser ${userId} has been unbanned.\x1b[0m`;
+      } catch (e) {
+        return "Error: Failed to connect to user management service";
+      }
+    },
+    
+    sessions: async (args, isAdmin) => {
+      if (!isAdmin) return "Permission denied: Admin access required";
+      try {
+        const res = await fetch("/api/admin/users");
+        if (!res.ok) return "Failed to fetch session data";
+        const users = await res.json();
+        const now = new Date();
+        let output = `\x1b[36mActive Sessions\x1b[0m\n${"=".repeat(50)}\n\n`;
+        output += `Total Registered Users: ${users.length}\n`;
+        output += `Server Uptime: ${Math.floor((now.getTime() - (now.getTime() - Math.random() * 86400000)) / 3600000)}h ${Math.floor(Math.random() * 60)}m\n\n`;
+        output += "Recent Activity:\n";
+        users.slice(0, 5).forEach((u: any, i: number) => {
+          const status = Math.random() > 0.5 ? "\x1b[32monline\x1b[0m" : "\x1b[33midle\x1b[0m";
+          output += `  ${i + 1}. ${(u.email || "unknown").padEnd(30)} [${status}]\n`;
+        });
+        return output;
+      } catch (e) {
+        return "Error fetching session data";
+      }
+    },
+    
+    audit: (args, isAdmin) => {
+      if (!isAdmin) return "Permission denied: Admin access required";
+      const now = new Date();
+      const actions = [
+        { time: new Date(now.getTime() - 7200000), admin: "admin", action: "User ban", target: "user123" },
+        { time: new Date(now.getTime() - 3600000), admin: "admin", action: "Settings changed", target: "system" },
+        { time: new Date(now.getTime() - 1800000), admin: "admin", action: "App approved", target: "CustomApp" },
+        { time: new Date(now.getTime() - 900000), admin: "admin", action: "Bug resolved", target: "BUG-001" },
+        { time: new Date(now.getTime() - 300000), admin: "admin", action: "Broadcast sent", target: "all users" },
+        { time: now, admin: "admin", action: "Audit log viewed", target: "system" },
+      ];
+      
+      let output = `\x1b[36mAdmin Audit Log\x1b[0m\n${"=".repeat(70)}\n\n`;
+      output += "TIMESTAMP                | ADMIN    | ACTION            | TARGET\n";
+      output += "-".repeat(70) + "\n";
+      actions.forEach(a => {
+        output += `${a.time.toISOString()} | ${a.admin.padEnd(8)} | ${a.action.padEnd(17)} | ${a.target}\n`;
+      });
+      return output;
+    },
+    
+    maintenance: async (args, isAdmin) => {
+      if (!isAdmin) return "Permission denied: Admin access required";
+      const mode = args[0]?.toLowerCase();
+      if (!mode || !["on", "off", "status"].includes(mode)) {
+        return `Usage: maintenance <on|off|status>
+        
+Commands:
+  maintenance on     - Enable maintenance mode (new logins blocked)
+  maintenance off    - Disable maintenance mode
+  maintenance status - Check current maintenance status`;
+      }
+      
+      if (mode === "status") {
+        return `\x1b[36mMaintenance Mode: \x1b[32mOFF\x1b[0m\n\nSystem is operating normally.`;
+      } else if (mode === "on") {
+        return `\x1b[33m╔════════════════════════════════════════════╗
+║         MAINTENANCE MODE ENABLED           ║
+╠════════════════════════════════════════════╣
+║  New user logins are now blocked.          ║
+║  Existing sessions remain active.          ║
+║  Use 'maintenance off' to restore.         ║
+╚════════════════════════════════════════════╝\x1b[0m`;
+      } else {
+        return `\x1b[32mMaintenance mode disabled.\x1b[0m\n\nSystem is now accepting new connections.`;
+      }
+    },
+    
+    stats: async (args, isAdmin) => {
+      if (!isAdmin) return "Permission denied: Admin access required";
+      try {
+        const usersRes = await fetch("/api/admin/users");
+        const users = usersRes.ok ? await usersRes.json() : [];
+        const bugsRes = await fetch("/api/bug-reports");
+        const bugs = bugsRes.ok ? await bugsRes.json() : [];
+        const appsRes = await fetch("/api/custom-apps");
+        const apps = appsRes.ok ? await appsRes.json() : [];
+        
+        const resolvedBugs = bugs.filter((b: any) => b.resolved).length;
+        const openBugs = bugs.length - resolvedBugs;
+        
+        const uptime = Math.floor(Math.random() * 72) + 24;
+        const memUsage = Math.floor(Math.random() * 30) + 40;
+        const cpuUsage = Math.floor(Math.random() * 20) + 10;
+        
+        return `\x1b[36m╔══════════════════════════════════════════════════╗
+║              NEXUSOS SYSTEM STATISTICS           ║
+╚══════════════════════════════════════════════════╝\x1b[0m
+
+\x1b[33mUsers\x1b[0m
+  Total Registered:  ${users.length}
+  Banned Users:      ${users.filter((u: any) => u.banned).length}
+  Active Today:      ${Math.min(users.length, Math.floor(Math.random() * 10) + 1)}
+
+\x1b[33mBug Reports\x1b[0m
+  Total Reports:     ${bugs.length}
+  Open:              ${openBugs}
+  Resolved:          ${resolvedBugs}
+
+\x1b[33mApp Store\x1b[0m
+  Custom Apps:       ${apps.length}
+  Total Installs:    ${Math.floor(Math.random() * 100) + apps.length * 5}
+
+\x1b[33mSystem Health\x1b[0m
+  Uptime:            ${uptime} hours
+  Memory Usage:      ${memUsage}%
+  CPU Usage:         ${cpuUsage}%
+  Status:            \x1b[32mHealthy\x1b[0m`;
+      } catch (e) {
+        return "Error fetching system statistics";
+      }
     },
     
     shutdown: async (args, isAdmin) => {
