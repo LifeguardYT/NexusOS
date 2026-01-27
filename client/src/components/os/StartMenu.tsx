@@ -306,7 +306,10 @@ export function StartMenu() {
               {Array.from({ length: totalPages }, (_, i) => (
                 <button
                   key={i}
-                  onClick={() => setCurrentPage(i)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCurrentPage(i);
+                  }}
                   className={`w-2 h-2 rounded-full transition-all ${
                     currentPage === i 
                       ? 'bg-white w-4' 
