@@ -1,12 +1,12 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
-import { Plus, Play, Pause, Download, Image as ImageIcon, X, Film, Loader2 } from "lucide-react";
+import { Plus, Play, Pause, Download, Image as ImageIcon, X, Film, Loader2, AlertCircle } from "lucide-react";
 
 interface Frame {
   id: string;
   dataUrl: string;
-  canvas: HTMLCanvasElement;
+  imageData: ImageData;
 }
 
 export function GifMakerApp() {
@@ -19,6 +19,7 @@ export function GifMakerApp() {
   const [brushSize, setBrushSize] = useState(5);
   const [isDrawing, setIsDrawing] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const playIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const colors = ["#000000", "#ffffff", "#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff", "#00ffff", "#ff8000", "#8000ff"];
@@ -46,7 +47,7 @@ export function GifMakerApp() {
       const ctx = getContext();
       const canvas = canvasRef.current;
       if (ctx && canvas) {
-        ctx.drawImage(frames[index].canvas, 0, 0);
+        ctx.putImageData(frames[index].imageData, 0, 0);
       }
     } else {
       clearCanvas();
@@ -88,20 +89,15 @@ export function GifMakerApp() {
 
   const addFrame = () => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    const ctx = getContext();
+    if (!canvas || !ctx) return;
 
-    const frameCanvas = document.createElement("canvas");
-    frameCanvas.width = canvas.width;
-    frameCanvas.height = canvas.height;
-    const frameCtx = frameCanvas.getContext("2d");
-    if (frameCtx) {
-      frameCtx.drawImage(canvas, 0, 0);
-    }
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
     const newFrame: Frame = {
       id: Date.now().toString(),
       dataUrl: canvas.toDataURL("image/png"),
-      canvas: frameCanvas,
+      imageData: imageData,
     };
 
     setFrames(prev => [...prev, newFrame]);
@@ -143,47 +139,169 @@ export function GifMakerApp() {
     if (frames.length < 2) return;
     
     setIsExporting(true);
+    setExportError(null);
     
     try {
-      const GIF = (await import("gif.js")).default;
+      const width = 300;
+      const height = 300;
+      const delayCs = Math.round(frameDelay / 10);
       
-      const gif = new GIF({
-        workers: 2,
-        quality: 10,
-        width: 300,
-        height: 300,
-        workerScript: "https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js",
-      });
-
-      frames.forEach(frame => {
-        gif.addFrame(frame.canvas, { delay: frameDelay, copy: true });
-      });
-
-      gif.on("finished", (blob: Blob) => {
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.download = "animation.gif";
-        link.href = url;
-        link.click();
-        URL.revokeObjectURL(url);
-        setIsExporting(false);
-      });
-
-      gif.render();
+      const chunks: number[] = [];
+      
+      const writeString = (s: string) => {
+        for (let i = 0; i < s.length; i++) {
+          chunks.push(s.charCodeAt(i));
+        }
+      };
+      
+      const writeByte = (b: number) => chunks.push(b & 0xff);
+      const writeShort = (s: number) => {
+        writeByte(s & 0xff);
+        writeByte((s >> 8) & 0xff);
+      };
+      
+      writeString("GIF89a");
+      writeShort(width);
+      writeShort(height);
+      writeByte(0xf7);
+      writeByte(0);
+      writeByte(0);
+      
+      for (let i = 0; i < 256; i++) {
+        writeByte(i);
+        writeByte(i);
+        writeByte(i);
+      }
+      
+      writeByte(0x21);
+      writeByte(0xff);
+      writeByte(11);
+      writeString("NETSCAPE2.0");
+      writeByte(3);
+      writeByte(1);
+      writeShort(0);
+      writeByte(0);
+      
+      for (const frame of frames) {
+        const { imageData } = frame;
+        const pixels = imageData.data;
+        
+        writeByte(0x21);
+        writeByte(0xf9);
+        writeByte(4);
+        writeByte(0);
+        writeShort(delayCs);
+        writeByte(0);
+        writeByte(0);
+        
+        writeByte(0x2c);
+        writeShort(0);
+        writeShort(0);
+        writeShort(width);
+        writeShort(height);
+        writeByte(0);
+        
+        const indexedPixels: number[] = [];
+        for (let i = 0; i < pixels.length; i += 4) {
+          const gray = Math.round(0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2]);
+          indexedPixels.push(gray);
+        }
+        
+        const minCodeSize = 8;
+        writeByte(minCodeSize);
+        
+        const lzwEncode = (pixels: number[], minCodeSize: number): number[] => {
+          const clearCode = 1 << minCodeSize;
+          const eoiCode = clearCode + 1;
+          const output: number[] = [];
+          let bitBuffer = 0;
+          let bitCount = 0;
+          
+          const writeBits = (code: number, bits: number) => {
+            bitBuffer |= code << bitCount;
+            bitCount += bits;
+            while (bitCount >= 8) {
+              output.push(bitBuffer & 0xff);
+              bitBuffer >>= 8;
+              bitCount -= 8;
+            }
+          };
+          
+          let codeSize = minCodeSize + 1;
+          let nextCode = eoiCode + 1;
+          const maxCode = 4095;
+          const dictionary = new Map<string, number>();
+          
+          for (let i = 0; i < clearCode; i++) {
+            dictionary.set(String(i), i);
+          }
+          
+          writeBits(clearCode, codeSize);
+          
+          let current = "";
+          for (let i = 0; i < pixels.length; i++) {
+            const pixel = String(pixels[i]);
+            const combined = current ? current + "," + pixel : pixel;
+            
+            if (dictionary.has(combined)) {
+              current = combined;
+            } else {
+              writeBits(dictionary.get(current)!, codeSize);
+              
+              if (nextCode <= maxCode) {
+                dictionary.set(combined, nextCode++);
+                if (nextCode > (1 << codeSize) && codeSize < 12) {
+                  codeSize++;
+                }
+              }
+              
+              current = pixel;
+            }
+          }
+          
+          if (current) {
+            writeBits(dictionary.get(current)!, codeSize);
+          }
+          
+          writeBits(eoiCode, codeSize);
+          
+          if (bitCount > 0) {
+            output.push(bitBuffer & 0xff);
+          }
+          
+          return output;
+        };
+        
+        const lzwData = lzwEncode(indexedPixels, minCodeSize);
+        
+        let offset = 0;
+        while (offset < lzwData.length) {
+          const chunkSize = Math.min(255, lzwData.length - offset);
+          writeByte(chunkSize);
+          for (let i = 0; i < chunkSize; i++) {
+            writeByte(lzwData[offset + i]);
+          }
+          offset += chunkSize;
+        }
+        writeByte(0);
+      }
+      
+      writeByte(0x3b);
+      
+      const blob = new Blob([new Uint8Array(chunks)], { type: "image/gif" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.download = "animation.gif";
+      link.href = url;
+      link.click();
+      URL.revokeObjectURL(url);
+      
+      setIsExporting(false);
     } catch (error) {
       console.error("Error exporting GIF:", error);
-      downloadFramesAsPng();
+      setExportError("Failed to export GIF. Please try again.");
       setIsExporting(false);
     }
-  };
-
-  const downloadFramesAsPng = () => {
-    frames.forEach((frame, index) => {
-      const link = document.createElement("a");
-      link.download = `frame-${index + 1}.png`;
-      link.href = frame.dataUrl;
-      link.click();
-    });
   };
 
   useEffect(() => {
@@ -301,6 +419,13 @@ export function GifMakerApp() {
               )}
             </Button>
           </div>
+
+          {exportError && (
+            <div className="flex items-center gap-2 text-red-400 text-sm mb-2">
+              <AlertCircle className="w-4 h-4" />
+              {exportError}
+            </div>
+          )}
 
           <div className="text-white text-sm mb-2">
             Frames ({frames.length}) {frames.length < 2 && <span className="text-yellow-400">- Add at least 2 frames</span>}
