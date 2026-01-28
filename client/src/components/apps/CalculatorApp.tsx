@@ -6,6 +6,8 @@ export function CalculatorApp() {
   const [previousValue, setPreviousValue] = useState<number | null>(null);
   const [operator, setOperator] = useState<string | null>(null);
   const [waitingForOperand, setWaitingForOperand] = useState(false);
+  const [percentCount, setPercentCount] = useState(0);
+  const [easterEggTriggered, setEasterEggTriggered] = useState(false);
 
   const inputDigit = (digit: string) => {
     if (waitingForOperand) {
@@ -32,6 +34,8 @@ export function CalculatorApp() {
     setPreviousValue(null);
     setOperator(null);
     setWaitingForOperand(false);
+    setPercentCount(0);
+    setEasterEggTriggered(false);
   };
 
   const toggleSign = () => {
@@ -39,6 +43,12 @@ export function CalculatorApp() {
   };
 
   const percentage = () => {
+    if (display === "111111" && percentCount === 0) {
+      setPercentCount(1);
+      setEasterEggTriggered(true);
+    } else if (easterEggTriggered && percentCount === 1) {
+      setPercentCount(2);
+    }
     setDisplay(String(parseFloat(display) / 100));
   };
 
@@ -68,6 +78,16 @@ export function CalculatorApp() {
   };
 
   const equals = () => {
+    if (easterEggTriggered && percentCount === 2) {
+      setDisplay(":3");
+      setPercentCount(0);
+      setEasterEggTriggered(false);
+      setPreviousValue(null);
+      setOperator(null);
+      setWaitingForOperand(true);
+      return;
+    }
+    
     if (previousValue === null || operator === null) return;
 
     const inputValue = parseFloat(display);
