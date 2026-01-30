@@ -1,8 +1,86 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { RotateCcw, Bot } from "lucide-react";
 
 type Player = "X" | "O" | null;
+
+const LINES = [
+  [0, 1, 2], [3, 4, 5], [6, 7, 8],
+  [0, 3, 6], [1, 4, 7], [2, 5, 8],
+  [0, 4, 8], [2, 4, 6],
+];
+
+function checkWinner(squares: Player[]): Player {
+  for (const [a, b, c] of LINES) {
+    if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
+      return squares[a];
+    }
+  }
+  return null;
+}
+
+function getWinningLine(squares: Player[]): number[] | null {
+  for (const line of LINES) {
+    const [a, b, c] = line;
+    if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
+      return line;
+    }
+  }
+  return null;
+}
+
+function getEmptyCells(squares: Player[]): number[] {
+  const empty: number[] = [];
+  for (let i = 0; i < 9; i++) {
+    if (squares[i] === null) empty.push(i);
+  }
+  return empty;
+}
+
+function findWinningMove(squares: Player[], player: Player): number | null {
+  for (const [a, b, c] of LINES) {
+    const cells = [squares[a], squares[b], squares[c]];
+    const playerCount = cells.filter(cell => cell === player).length;
+    const emptyCount = cells.filter(cell => cell === null).length;
+    
+    if (playerCount === 2 && emptyCount === 1) {
+      if (squares[a] === null) return a;
+      if (squares[b] === null) return b;
+      if (squares[c] === null) return c;
+    }
+  }
+  return null;
+}
+
+function getAIMove(squares: Player[]): number {
+  const emptyCells = getEmptyCells(squares);
+  if (emptyCells.length === 0) return -1;
+
+  // 85% chance to play smart
+  const playsSmart = Math.random() < 0.85;
+
+  if (playsSmart) {
+    // Try to win
+    const winMove = findWinningMove(squares, "O");
+    if (winMove !== null) return winMove;
+
+    // Block player from winning
+    const blockMove = findWinningMove(squares, "X");
+    if (blockMove !== null) return blockMove;
+
+    // Take center if available
+    if (squares[4] === null) return 4;
+
+    // Take a corner
+    const corners = [0, 2, 6, 8].filter(i => squares[i] === null);
+    if (corners.length > 0) {
+      return corners[Math.floor(Math.random() * corners.length)];
+    }
+  }
+
+  // Random move from available cells
+  return emptyCells[Math.floor(Math.random() * emptyCells.length)];
+}
 
 export function TicTacToeGame() {
   const [board, setBoard] = useState<Player[]>(Array(9).fill(null));
@@ -10,122 +88,35 @@ export function TicTacToeGame() {
   const [scores, setScores] = useState({ X: 0, O: 0, ties: 0 });
   const [isThinking, setIsThinking] = useState(false);
 
-  const checkWinner = (squares: Player[]): Player => {
-    const lines = [
-      [0, 1, 2], [3, 4, 5], [6, 7, 8],
-      [0, 3, 6], [1, 4, 7], [2, 5, 8],
-      [0, 4, 8], [2, 4, 6],
-    ];
-    for (const [a, b, c] of lines) {
-      if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-        return squares[a];
-      }
-    }
-    return null;
-  };
-
-  const getWinningLine = (squares: Player[]): number[] | null => {
-    const lines = [
-      [0, 1, 2], [3, 4, 5], [6, 7, 8],
-      [0, 3, 6], [1, 4, 7], [2, 5, 8],
-      [0, 4, 8], [2, 4, 6],
-    ];
-    for (const line of lines) {
-      const [a, b, c] = line;
-      if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-        return line;
-      }
-    }
-    return null;
-  };
-
-  const getEmptyCells = (squares: Player[]): number[] => {
-    const empty: number[] = [];
-    for (let i = 0; i < 9; i++) {
-      if (squares[i] === null) empty.push(i);
-    }
-    return empty;
-  };
-
-  const findWinningMove = (squares: Player[], player: Player): number | null => {
-    const lines = [
-      [0, 1, 2], [3, 4, 5], [6, 7, 8],
-      [0, 3, 6], [1, 4, 7], [2, 5, 8],
-      [0, 4, 8], [2, 4, 6],
-    ];
-    
-    for (const [a, b, c] of lines) {
-      const cells = [squares[a], squares[b], squares[c]];
-      const playerCount = cells.filter(c => c === player).length;
-      const emptyCount = cells.filter(c => c === null).length;
-      
-      if (playerCount === 2 && emptyCount === 1) {
-        if (squares[a] === null) return a;
-        if (squares[b] === null) return b;
-        if (squares[c] === null) return c;
-      }
-    }
-    return null;
-  };
-
-  const getAIMove = (squares: Player[]): number => {
-    const emptyCells = getEmptyCells(squares);
-    if (emptyCells.length === 0) return -1;
-
-    // 70% chance to play smart, 30% chance to make a random move
-    const playsSmart = Math.random() < 0.7;
-
-    if (playsSmart) {
-      // Try to win
-      const winMove = findWinningMove(squares, "O");
-      if (winMove !== null) return winMove;
-
-      // Block player from winning
-      const blockMove = findWinningMove(squares, "X");
-      if (blockMove !== null) return blockMove;
-
-      // Take center if available
-      if (squares[4] === null) return 4;
-
-      // Take a corner
-      const corners = [0, 2, 6, 8].filter(i => squares[i] === null);
-      if (corners.length > 0) {
-        return corners[Math.floor(Math.random() * corners.length)];
-      }
-    }
-
-    // Random move from available cells
-    return emptyCells[Math.floor(Math.random() * emptyCells.length)];
-  };
-
   const winner = checkWinner(board);
   const winningLine = getWinningLine(board);
   const isDraw = !winner && board.every(cell => cell !== null);
 
+  const makeAIMove = useCallback(() => {
+    const aiMove = getAIMove(board);
+    if (aiMove !== -1) {
+      const newBoard = [...board];
+      newBoard[aiMove] = "O";
+      setBoard(newBoard);
+      setIsXNext(true);
+
+      const newWinner = checkWinner(newBoard);
+      if (newWinner) {
+        setScores(prev => ({ ...prev, [newWinner]: prev[newWinner] + 1 }));
+      } else if (newBoard.every(cell => cell !== null)) {
+        setScores(prev => ({ ...prev, ties: prev.ties + 1 }));
+      }
+    }
+    setIsThinking(false);
+  }, [board]);
+
   useEffect(() => {
     if (!isXNext && !winner && !isDraw && !isThinking) {
       setIsThinking(true);
-      const timer = setTimeout(() => {
-        const aiMove = getAIMove(board);
-        if (aiMove !== -1) {
-          const newBoard = [...board];
-          newBoard[aiMove] = "O";
-          setBoard(newBoard);
-          setIsXNext(true);
-
-          const newWinner = checkWinner(newBoard);
-          if (newWinner) {
-            setScores(prev => ({ ...prev, [newWinner]: prev[newWinner] + 1 }));
-          } else if (newBoard.every(cell => cell !== null)) {
-            setScores(prev => ({ ...prev, ties: prev.ties + 1 }));
-          }
-        }
-        setIsThinking(false);
-      }, 400);
-
+      const timer = setTimeout(makeAIMove, 500);
       return () => clearTimeout(timer);
     }
-  }, [isXNext, winner, isDraw, board, isThinking]);
+  }, [isXNext, winner, isDraw, isThinking, makeAIMove]);
 
   const handleClick = (index: number) => {
     if (board[index] || winner || !isXNext || isThinking) return;

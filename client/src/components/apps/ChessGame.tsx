@@ -351,15 +351,15 @@ export function ChessGame() {
         {gameOver ? (
           gameOver
         ) : isThinking ? (
-          <span className="animate-pulse">AI is thinking...</span>
+          <span className="animate-pulse text-amber-300">AI (Black) is thinking...</span>
         ) : (
-          "Your turn (White)"
+          <span>Your turn <span className="text-amber-200">(White pieces)</span></span>
         )}
       </div>
 
       <div className="flex gap-4 mb-2">
         <div className="flex items-center gap-1 text-white text-sm">
-          <span>You captured:</span>
+          <span>You captured (from AI):</span>
           {capturedPieces.white.map((p, i) => (
             <span key={i} className="text-xl">{PIECE_SYMBOLS[`${p.type}-${p.color}`]}</span>
           ))}
@@ -398,7 +398,7 @@ export function ChessGame() {
 
       <div className="flex gap-4 mt-2">
         <div className="flex items-center gap-1 text-white text-sm">
-          <span>AI captured:</span>
+          <span>AI (Black) captured:</span>
           {capturedPieces.black.map((p, i) => (
             <span key={i} className="text-xl">{PIECE_SYMBOLS[`${p.type}-${p.color}`]}</span>
           ))}
