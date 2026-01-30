@@ -136,20 +136,6 @@ export const insertBugReportSchema = createInsertSchema(bugReports).omit({ id: t
 export type InsertBugReport = z.infer<typeof insertBugReportSchema>;
 export type BugReport = typeof bugReports.$inferSelect;
 
-// Banned IPs table
-export const bannedIps = pgTable("banned_ips", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  ipAddress: text("ip_address").notNull(),
-  reason: text("reason").notNull(),
-  bannedUserId: text("banned_user_id").notNull(),
-  bannedUserName: text("banned_user_name").notNull(),
-  createdAt: text("created_at").notNull().default(sql`now()`),
-});
-
-export const insertBannedIpSchema = createInsertSchema(bannedIps).omit({ id: true, createdAt: true });
-export type InsertBannedIp = z.infer<typeof insertBannedIpSchema>;
-export type BannedIp = typeof bannedIps.$inferSelect;
-
 // User Presence table
 export const userPresence = pgTable("user_presence", {
   userId: text("user_id").primaryKey(),

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { settingsSchema, insertUpdateSchema, insertMessageSchema, insertCustomAppSchema, insertBugReportSchema, users, messages, customApps, bugReports, bannedIps, userPresence, friends } from "@shared/schema";
+import { settingsSchema, insertUpdateSchema, insertMessageSchema, insertCustomAppSchema, insertBugReportSchema, users, messages, customApps, bugReports, userPresence, friends } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { updates } from "@shared/schema";
@@ -104,54 +104,7 @@ export async function registerRoutes(
 ): Promise<Server> {
   const DEFAULT_USER_ID = "default-user";
 
-  // Check if IP is banned (public endpoint, no auth required) - MUST BE FIRST
-  app.get("/api/ip-ban-status", async (req: any, res) => {
-    try {
-      const clientIp = getClientIp(req);
-      const [bannedIp] = await db.select().from(bannedIps).where(eq(bannedIps.ipAddress, clientIp));
-      
-      if (bannedIp) {
-        return res.json({ 
-          banned: true, 
-          reason: bannedIp.reason,
-          bannedUserName: bannedIp.bannedUserName
-        });
-      }
-      
-      res.json({ banned: false, reason: null });
-    } catch (error) {
-      console.error("Failed to check IP ban status:", error);
-      res.json({ banned: false, reason: null });
-    }
-  });
-
-  // Middleware to block banned IPs from accessing ALL API endpoints - MUST BE BEFORE AUTH
-  app.use("/api", async (req: any, res, next) => {
-    // Allow the IP ban status check endpoint to pass through
-    if (req.path === "/ip-ban-status") {
-      return next();
-    }
-    
-    try {
-      const clientIp = getClientIp(req);
-      const [bannedIp] = await db.select().from(bannedIps).where(eq(bannedIps.ipAddress, clientIp));
-      
-      if (bannedIp) {
-        return res.status(403).json({ 
-          error: "Access denied", 
-          reason: bannedIp.reason,
-          ipBanned: true
-        });
-      }
-      next();
-    } catch (error) {
-      console.error("Failed to check IP ban in middleware:", error);
-      // Fail-closed for security - deny access if we can't verify IP status
-      return res.status(500).json({ error: "Service temporarily unavailable" });
-    }
-  });
-
-  // Setup authentication - AFTER IP ban middleware
+  // Setup authentication
   await setupAuth(app);
   registerAuthRoutes(app);
 
@@ -164,26 +117,6 @@ export async function registerRoutes(
         // Check if this user is banned
         const [user] = await db.select().from(users).where(eq(users.id, userId));
         if (user?.banned) {
-          const clientIp = getClientIp(req);
-          
-          // Update user's lastIp
-          await db.update(users)
-            .set({ lastIp: clientIp })
-            .where(eq(users.id, userId));
-          
-          // Add their IP to banned list if not already there
-          if (clientIp && clientIp !== 'unknown') {
-            const [existingBan] = await db.select().from(bannedIps).where(eq(bannedIps.ipAddress, clientIp));
-            if (!existingBan) {
-              await db.insert(bannedIps).values({
-                ipAddress: clientIp,
-                reason: user.banReason || "Account banned",
-                bannedUserId: userId,
-                bannedUserName: user.firstName || user.email || "Unknown user"
-              });
-            }
-          }
-          
           // Log them out and block access
           req.logout(() => {});
           return res.status(403).json({ 
@@ -457,12 +390,6 @@ export async function registerRoutes(
         return res.status(400).json({ error: "A ban reason is required" });
       }
       
-      // Get the user first to get their last known IP
-      const [targetUser] = await db.select().from(users).where(eq(users.id, userId));
-      if (!targetUser) {
-        return res.status(404).json({ error: "User not found" });
-      }
-      
       const [updatedUser] = await db.update(users)
         .set({ 
           banned: banned === true, 
@@ -472,27 +399,8 @@ export async function registerRoutes(
         .where(eq(users.id, userId))
         .returning();
       
-      // Handle IP banning
-      if (banned === true) {
-        // If user has a known IP, add it to banned IPs
-        if (targetUser.lastIp && targetUser.lastIp !== 'unknown') {
-          // Check if IP is already banned
-          const [existingBan] = await db.select().from(bannedIps).where(eq(bannedIps.ipAddress, targetUser.lastIp));
-          if (!existingBan) {
-            const userName = `${targetUser.firstName || ''} ${targetUser.lastName || ''}`.trim() || targetUser.email || 'Unknown User';
-            await db.insert(bannedIps).values({
-              ipAddress: targetUser.lastIp,
-              reason: reason.trim(),
-              bannedUserId: userId,
-              bannedUserName: userName,
-            });
-          }
-        }
-      } else {
-        // Unbanning - remove the IP from banned IPs if it exists
-        if (targetUser.lastIp) {
-          await db.delete(bannedIps).where(eq(bannedIps.ipAddress, targetUser.lastIp));
-        }
+      if (!updatedUser) {
+        return res.status(404).json({ error: "User not found" });
       }
       
       res.json({ success: true, user: updatedUser });

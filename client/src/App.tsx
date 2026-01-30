@@ -11,29 +11,12 @@ interface BanStatus {
   reason: string | null;
 }
 
-interface IpBanStatus {
-  banned: boolean;
-  reason: string | null;
-  bannedUserName?: string;
-}
-
 function AppContent() {
-  // Check IP ban status first (works without authentication)
-  const { data: ipBanStatus } = useQuery<IpBanStatus>({
-    queryKey: ["/api/ip-ban-status"],
-    refetchInterval: 30000,
-  });
-
   // Check user ban status (requires authentication)
   const { data: banStatus } = useQuery<BanStatus>({
     queryKey: ["/api/auth/ban-status"],
     refetchInterval: 30000,
   });
-
-  // If IP is banned, show banned screen
-  if (ipBanStatus?.banned) {
-    return <BannedScreen reason={ipBanStatus.reason} isIpBan={true} />;
-  }
 
   // If user is banned, show banned screen
   if (banStatus?.banned) {
