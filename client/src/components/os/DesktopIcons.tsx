@@ -39,6 +39,8 @@ export function DesktopIcons() {
 
   const updatesApp = apps.find(app => app.id === "updates");
   const chatApp = apps.find(app => app.id === "chat");
+  const appStoreApp = apps.find(app => app.id === "appstore");
+  const bugReportApp = apps.find(app => app.id === "bugreport");
   const cameraApp = apps.find(app => app.id === "camera");
   const emailApp = apps.find(app => app.id === "email");
   const friendsApp = apps.find(app => app.id === "friends");
