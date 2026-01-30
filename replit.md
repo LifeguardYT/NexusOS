@@ -29,7 +29,7 @@ A fully functional web-based operating system simulation built with React and Ty
 17. **Solitaire** - Classic card game
 18. **Paint** - Drawing application with brush tools
 19. **Camera** - Webcam capture (requires new tab for permissions)
-20. **Email** - Email client (Username@nexusos.com format)
+20. **Email** - Real email system between NexusOS users (Username@nexusos.com format)
 21. **Tic-Tac-Toe** - Two-player tic-tac-toe with score tracking
 22. **Flappy Bird** - Classic flappy bird clone with high score
 23. **Memory Match** - Card matching game with best score tracking

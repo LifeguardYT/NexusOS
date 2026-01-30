@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { settingsSchema, insertUpdateSchema, insertMessageSchema, insertCustomAppSchema, insertBugReportSchema, users, messages, customApps, bugReports, userPresence, friends } from "@shared/schema";
+import { settingsSchema, insertUpdateSchema, insertMessageSchema, insertCustomAppSchema, insertBugReportSchema, users, messages, customApps, bugReports, userPresence, friends, emails, insertEmailSchema } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { updates } from "@shared/schema";
@@ -1119,6 +1119,166 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Failed to remove friend:", error);
       res.status(500).json({ error: "Failed to remove friend" });
+    }
+  });
+
+  // ============= EMAIL ROUTES =============
+
+  // Get user's emails (inbox and sent)
+  app.get("/api/emails", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      
+      const inbox = await db.select().from(emails)
+        .where(eq(emails.toUserId, userId))
+        .orderBy(desc(emails.createdAt));
+      
+      const sent = await db.select().from(emails)
+        .where(eq(emails.fromUserId, userId))
+        .orderBy(desc(emails.createdAt));
+      
+      res.json({ inbox, sent });
+    } catch (error) {
+      console.error("Failed to get emails:", error);
+      res.status(500).json({ error: "Failed to get emails" });
+    }
+  });
+
+  // Send an email
+  app.post("/api/emails", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const [sender] = await db.select().from(users).where(eq(users.id, userId));
+      
+      if (!sender) {
+        return res.status(401).json({ error: "User not found" });
+      }
+
+      const { toEmail, subject, body } = req.body;
+      
+      if (!toEmail || !subject) {
+        return res.status(400).json({ error: "Recipient email and subject are required" });
+      }
+
+      // Parse the nexusos email to find the user
+      // Format is username@nexusos.com or firstname@nexusos.com
+      const recipientUsername = toEmail.split("@")[0].toLowerCase();
+      
+      // Find recipient by firstName or email prefix
+      const recipients = await db.select().from(users)
+        .where(or(
+          ilike(users.firstName, recipientUsername),
+          sql`LOWER(SPLIT_PART(${users.email}, '@', 1)) = ${recipientUsername}`
+        ));
+      
+      if (recipients.length === 0) {
+        return res.status(404).json({ error: "Recipient not found. Make sure they have a NexusOS account." });
+      }
+
+      const recipient = recipients[0];
+      
+      // Create sender's email address
+      const senderEmailAddress = sender.firstName 
+        ? `${sender.firstName}@nexusos.com`
+        : `${sender.email?.split("@")[0]}@nexusos.com`;
+      
+      const senderName = sender.firstName || sender.email?.split("@")[0] || "Unknown";
+
+      // Insert email for recipient (inbox)
+      await db.insert(emails).values({
+        fromUserId: userId,
+        fromName: senderName,
+        fromEmail: senderEmailAddress,
+        toUserId: recipient.id,
+        toEmail: toEmail,
+        subject,
+        body: body || "",
+        folder: "inbox",
+      });
+
+      res.json({ success: true, message: "Email sent successfully" });
+    } catch (error) {
+      console.error("Failed to send email:", error);
+      res.status(500).json({ error: "Failed to send email" });
+    }
+  });
+
+  // Mark email as read/unread
+  app.patch("/api/emails/:emailId/read", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const { emailId } = req.params;
+      const { isRead } = req.body;
+
+      await db.update(emails)
+        .set({ isRead })
+        .where(and(eq(emails.id, emailId), eq(emails.toUserId, userId)));
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to update email:", error);
+      res.status(500).json({ error: "Failed to update email" });
+    }
+  });
+
+  // Toggle star on email
+  app.patch("/api/emails/:emailId/star", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const { emailId } = req.params;
+      const { isStarred } = req.body;
+
+      await db.update(emails)
+        .set({ isStarred })
+        .where(and(
+          eq(emails.id, emailId),
+          or(eq(emails.toUserId, userId), eq(emails.fromUserId, userId))
+        ));
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to star email:", error);
+      res.status(500).json({ error: "Failed to star email" });
+    }
+  });
+
+  // Move email to folder (trash, archive)
+  app.patch("/api/emails/:emailId/folder", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const { emailId } = req.params;
+      const { folder } = req.body;
+
+      await db.update(emails)
+        .set({ folder })
+        .where(and(
+          eq(emails.id, emailId),
+          or(eq(emails.toUserId, userId), eq(emails.fromUserId, userId))
+        ));
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to move email:", error);
+      res.status(500).json({ error: "Failed to move email" });
+    }
+  });
+
+  // Delete email permanently
+  app.delete("/api/emails/:emailId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const { emailId } = req.params;
+
+      await db.delete(emails)
+        .where(and(
+          eq(emails.id, emailId),
+          or(eq(emails.toUserId, userId), eq(emails.fromUserId, userId))
+        ));
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to delete email:", error);
+      res.status(500).json({ error: "Failed to delete email" });
     }
   });
 

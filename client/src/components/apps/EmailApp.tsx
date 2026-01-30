@@ -1,25 +1,34 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { 
   Inbox, Send, FileText, Trash2, Star, Archive, Mail, 
-  Pencil, X, Search, RefreshCw, Reply, Forward
+  Pencil, X, Search, RefreshCw, Reply, Forward, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface Email {
   id: string;
-  from: string;
+  fromUserId: string;
+  fromName: string;
   fromEmail: string;
-  to: string;
+  toUserId: string;
+  toEmail: string;
   subject: string;
   body: string;
-  timestamp: Date;
   isRead: boolean;
   isStarred: boolean;
-  folder: "inbox" | "sent" | "drafts" | "trash" | "archive";
+  folder: string;
+  createdAt: string;
+}
+
+interface EmailsResponse {
+  inbox: Email[];
+  sent: Email[];
 }
 
 interface User {
@@ -31,38 +40,16 @@ interface User {
 
 type Folder = "inbox" | "sent" | "drafts" | "trash" | "archive" | "starred";
 
-function createMockEmails(userEmail: string): Email[] {
-  return [
-    {
-      id: "1",
-      from: "LifeguardYT",
-      fromEmail: "LifeguardYT@nexusos.com",
-      to: userEmail,
-      subject: "Welcome to NexusOS!",
-      body: "Hello!\n\nWelcome to NexusOS Mail. This is your first email in the system.\n\nWe hope you enjoy using NexusOS and all its features. If you have any questions, feel free to reach out.\n\nBest regards,\nThe NexusOS Team",
-      timestamp: new Date(Date.now() - 3600000),
-      isRead: false,
-      isStarred: false,
-      folder: "inbox",
-    },
-    {
-      id: "2",
-      from: "System",
-      fromEmail: "System@nexusos.com",
-      to: userEmail,
-      subject: "Your account is set up",
-      body: "Your NexusOS account has been successfully configured.\n\nYou can now access all features of the operating system including:\n- File Management\n- Applications\n- Settings\n- And much more!\n\nEnjoy your experience!",
-      timestamp: new Date(Date.now() - 7200000),
-      isRead: true,
-      isStarred: true,
-      folder: "inbox",
-    },
-  ];
-}
-
 export function EmailApp() {
+  const { toast } = useToast();
+  
   const { data: user } = useQuery<User>({
     queryKey: ["/api/auth/user"],
+  });
+
+  const { data: emailsData, isLoading, refetch } = useQuery<EmailsResponse>({
+    queryKey: ["/api/emails"],
+    refetchInterval: 30000,
   });
 
   const getUserNexusEmail = (): string => {
@@ -77,22 +64,59 @@ export function EmailApp() {
   };
 
   const userEmail = getUserNexusEmail();
-  const userName = user?.firstName || user?.email?.split("@")[0] || "Guest";
 
-  const [emails, setEmails] = useState<Email[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<Folder>("inbox");
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null);
   const [isComposing, setIsComposing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [composeData, setComposeData] = useState({ to: "", subject: "", body: "" });
-  const [initialized, setInitialized] = useState(false);
 
-  useEffect(() => {
-    if (user && !initialized) {
-      setEmails(createMockEmails(getUserNexusEmail()));
-      setInitialized(true);
-    }
-  }, [user, initialized]);
+  const sendEmailMutation = useMutation({
+    mutationFn: async (data: { toEmail: string; subject: string; body: string }) => {
+      return apiRequest("POST", "/api/emails", data);
+    },
+    onSuccess: () => {
+      toast({ title: "Email sent successfully" });
+      setComposeData({ to: "", subject: "", body: "" });
+      setIsComposing(false);
+      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to send email", 
+        description: error.message || "Recipient not found",
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const markReadMutation = useMutation({
+    mutationFn: async ({ emailId, isRead }: { emailId: string; isRead: boolean }) => {
+      return apiRequest("PATCH", `/api/emails/${emailId}/read`, { isRead });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+    },
+  });
+
+  const starMutation = useMutation({
+    mutationFn: async ({ emailId, isStarred }: { emailId: string; isStarred: boolean }) => {
+      return apiRequest("PATCH", `/api/emails/${emailId}/star`, { isStarred });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+    },
+  });
+
+  const moveFolderMutation = useMutation({
+    mutationFn: async ({ emailId, folder }: { emailId: string; folder: string }) => {
+      return apiRequest("PATCH", `/api/emails/${emailId}/folder`, { folder });
+    },
+    onSuccess: () => {
+      setSelectedEmail(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/emails"] });
+    },
+  });
 
   const folders = [
     { id: "inbox" as Folder, label: "Inbox", icon: Inbox },
@@ -103,84 +127,81 @@ export function EmailApp() {
     { id: "trash" as Folder, label: "Trash", icon: Trash2 },
   ];
 
-  const getFilteredEmails = () => {
-    let filtered = emails;
+  const getAllEmails = (): Email[] => {
+    if (!emailsData) return [];
+    return [...emailsData.inbox, ...emailsData.sent];
+  };
+
+  const getFilteredEmails = (): Email[] => {
+    const allEmails = getAllEmails();
+    let filtered: Email[] = [];
     
     if (selectedFolder === "starred") {
-      filtered = emails.filter(e => e.isStarred && e.folder !== "trash");
+      filtered = allEmails.filter(e => e.isStarred && e.folder !== "trash");
+    } else if (selectedFolder === "sent") {
+      filtered = emailsData?.sent.filter(e => e.folder !== "trash") || [];
+    } else if (selectedFolder === "inbox") {
+      filtered = emailsData?.inbox.filter(e => e.folder === "inbox") || [];
     } else {
-      filtered = emails.filter(e => e.folder === selectedFolder);
+      filtered = allEmails.filter(e => e.folder === selectedFolder);
     }
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(e => 
         e.subject.toLowerCase().includes(query) ||
-        e.from.toLowerCase().includes(query) ||
+        e.fromName.toLowerCase().includes(query) ||
         e.body.toLowerCase().includes(query)
       );
     }
 
-    return filtered.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+    return filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   };
 
-  const getUnreadCount = (folder: Folder) => {
+  const getUnreadCount = (folder: Folder): number => {
+    if (!emailsData) return 0;
+    const allEmails = getAllEmails();
+    
     if (folder === "starred") {
-      return emails.filter(e => e.isStarred && !e.isRead && e.folder !== "trash").length;
+      return allEmails.filter(e => e.isStarred && !e.isRead && e.folder !== "trash").length;
     }
-    return emails.filter(e => e.folder === folder && !e.isRead).length;
+    if (folder === "inbox") {
+      return emailsData.inbox.filter(e => e.folder === "inbox" && !e.isRead).length;
+    }
+    return allEmails.filter(e => e.folder === folder && !e.isRead).length;
   };
 
   const handleSelectEmail = (email: Email) => {
     setSelectedEmail(email);
     if (!email.isRead) {
-      setEmails(prev => prev.map(e => e.id === email.id ? { ...e, isRead: true } : e));
+      markReadMutation.mutate({ emailId: email.id, isRead: true });
     }
   };
 
-  const handleToggleStar = (emailId: string, e: React.MouseEvent) => {
+  const handleToggleStar = (emailId: string, currentStarred: boolean, e: React.MouseEvent) => {
     e.stopPropagation();
-    setEmails(prev => prev.map(email => 
-      email.id === emailId ? { ...email, isStarred: !email.isStarred } : email
-    ));
+    starMutation.mutate({ emailId, isStarred: !currentStarred });
   };
 
   const handleDelete = (emailId: string) => {
-    setEmails(prev => prev.map(email => 
-      email.id === emailId ? { ...email, folder: "trash" } : email
-    ));
-    setSelectedEmail(null);
+    moveFolderMutation.mutate({ emailId, folder: "trash" });
   };
 
   const handleArchive = (emailId: string) => {
-    setEmails(prev => prev.map(email => 
-      email.id === emailId ? { ...email, folder: "archive" } : email
-    ));
-    setSelectedEmail(null);
+    moveFolderMutation.mutate({ emailId, folder: "archive" });
   };
 
   const handleSendEmail = () => {
     if (!composeData.to || !composeData.subject) return;
-    
-    const newEmail: Email = {
-      id: Date.now().toString(),
-      from: userName,
-      fromEmail: userEmail,
-      to: composeData.to,
+    sendEmailMutation.mutate({
+      toEmail: composeData.to,
       subject: composeData.subject,
       body: composeData.body,
-      timestamp: new Date(),
-      isRead: true,
-      isStarred: false,
-      folder: "sent",
-    };
-    
-    setEmails(prev => [newEmail, ...prev]);
-    setComposeData({ to: "", subject: "", body: "" });
-    setIsComposing(false);
+    });
   };
 
-  const formatDate = (date: Date) => {
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     
@@ -189,6 +210,14 @@ export function EmailApp() {
     }
     return date.toLocaleDateString([], { month: "short", day: "numeric" });
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full bg-background" data-testid="email-app">
@@ -244,7 +273,7 @@ export function EmailApp() {
               data-testid="input-search"
             />
           </div>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => refetch()}>
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
@@ -267,7 +296,7 @@ export function EmailApp() {
               >
                 <div className="flex items-start gap-2">
                   <button
-                    onClick={e => handleToggleStar(email.id, e)}
+                    onClick={e => handleToggleStar(email.id, email.isStarred, e)}
                     className={`mt-0.5 ${email.isStarred ? "text-yellow-500" : "text-muted-foreground hover:text-yellow-500"}`}
                   >
                     <Star className="w-4 h-4" fill={email.isStarred ? "currentColor" : "none"} />
@@ -275,10 +304,10 @@ export function EmailApp() {
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-baseline">
                       <span className={`text-sm truncate ${!email.isRead ? "font-semibold" : ""}`}>
-                        {email.from}
+                        {email.fromName}
                       </span>
                       <span className="text-xs text-muted-foreground ml-2 shrink-0">
-                        {formatDate(email.timestamp)}
+                        {formatDate(email.createdAt)}
                       </span>
                     </div>
                     <p className={`text-sm truncate ${!email.isRead ? "font-medium" : ""}`}>
@@ -303,10 +332,36 @@ export function EmailApp() {
                 <X className="w-4 h-4" />
               </Button>
               <div className="flex-1" />
-              <Button variant="ghost" size="icon" title="Reply" data-testid="button-reply">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                title="Reply" 
+                data-testid="button-reply"
+                onClick={() => {
+                  setComposeData({
+                    to: selectedEmail.fromEmail,
+                    subject: `Re: ${selectedEmail.subject}`,
+                    body: `\n\n---\nOn ${new Date(selectedEmail.createdAt).toLocaleString()}, ${selectedEmail.fromName} wrote:\n${selectedEmail.body}`,
+                  });
+                  setIsComposing(true);
+                }}
+              >
                 <Reply className="w-4 h-4" />
               </Button>
-              <Button variant="ghost" size="icon" title="Forward" data-testid="button-forward">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                title="Forward" 
+                data-testid="button-forward"
+                onClick={() => {
+                  setComposeData({
+                    to: "",
+                    subject: `Fwd: ${selectedEmail.subject}`,
+                    body: `\n\n---\nForwarded message from ${selectedEmail.fromName}:\n${selectedEmail.body}`,
+                  });
+                  setIsComposing(true);
+                }}
+              >
                 <Forward className="w-4 h-4" />
               </Button>
               <Button variant="ghost" size="icon" onClick={() => handleArchive(selectedEmail.id)} title="Archive" data-testid="button-archive">
@@ -320,13 +375,13 @@ export function EmailApp() {
               <h2 className="text-xl font-semibold mb-4">{selectedEmail.subject}</h2>
               <div className="flex items-start gap-3 mb-4">
                 <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-medium">
-                  {selectedEmail.from.charAt(0)}
+                  {selectedEmail.fromName.charAt(0)}
                 </div>
                 <div>
-                  <div className="font-medium">{selectedEmail.from}</div>
+                  <div className="font-medium">{selectedEmail.fromName}</div>
                   <div className="text-sm text-muted-foreground">{selectedEmail.fromEmail}</div>
                   <div className="text-xs text-muted-foreground">
-                    To: {selectedEmail.to} &bull; {selectedEmail.timestamp.toLocaleString()}
+                    To: {selectedEmail.toEmail} &bull; {new Date(selectedEmail.createdAt).toLocaleString()}
                   </div>
                 </div>
               </div>
@@ -374,8 +429,16 @@ export function EmailApp() {
             data-testid="input-body"
           />
           <div className="p-3 border-t flex justify-end">
-            <Button onClick={handleSendEmail} disabled={!composeData.to || !composeData.subject} data-testid="button-send">
-              <Send className="w-4 h-4 mr-2" />
+            <Button 
+              onClick={handleSendEmail} 
+              disabled={!composeData.to || !composeData.subject || sendEmailMutation.isPending} 
+              data-testid="button-send"
+            >
+              {sendEmailMutation.isPending ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-2" />
+              )}
               Send
             </Button>
           </div>

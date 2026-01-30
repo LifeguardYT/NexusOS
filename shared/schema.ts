@@ -161,3 +161,23 @@ export const friends = pgTable("friends", {
 export const insertFriendSchema = createInsertSchema(friends).omit({ id: true, createdAt: true });
 export type InsertFriend = z.infer<typeof insertFriendSchema>;
 export type Friend = typeof friends.$inferSelect;
+
+// Emails table
+export const emails = pgTable("emails", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  fromUserId: text("from_user_id").notNull(),
+  fromName: text("from_name").notNull(),
+  fromEmail: text("from_email").notNull(),
+  toUserId: text("to_user_id").notNull(),
+  toEmail: text("to_email").notNull(),
+  subject: text("subject").notNull(),
+  body: text("body").notNull(),
+  isRead: boolean("is_read").notNull().default(false),
+  isStarred: boolean("is_starred").notNull().default(false),
+  folder: text("folder").notNull().default("inbox"),
+  createdAt: text("created_at").notNull().default(sql`now()`),
+});
+
+export const insertEmailSchema = createInsertSchema(emails).omit({ id: true, createdAt: true });
+export type InsertEmail = z.infer<typeof insertEmailSchema>;
+export type Email = typeof emails.$inferSelect;
