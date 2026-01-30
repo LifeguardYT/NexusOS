@@ -187,7 +187,18 @@ The Bug Report app shows:
 - Admins/Owner: Expandable section to view all bug reports with status badges
 - Owner only: Resolve/Reopen buttons on each bug report
 
+### Ban System
+When a user is banned:
+- A persistent marker is stored in their browser's localStorage
+- Even when logged out, the site shows a "Site Not Found" error page
+- The banned user sees a fake DNS error (ERR_NAME_NOT_RESOLVED) making it appear the site doesn't exist
+- When unbanned, the system periodically checks and clears the marker, restoring access
+- Note: Users can clear their localStorage to bypass this, but will be blocked again upon login
+
 ## Recent Changes
+- Removed IP banning (caused issues with shared networks like schools)
+- Added persistent browser-based ban system with fake "site not found" page
+- Friend requests now use email or username instead of user ID
 - Added Friends app for managing social connections with friend requests and online user tracking
 - Added User Presence system with online/away/busy status and activity messages
 - Added Sound Effects system with toggleable system sounds and volume control

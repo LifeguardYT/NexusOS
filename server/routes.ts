@@ -506,6 +506,28 @@ export async function registerRoutes(
     }
   });
 
+  // Check if a previously banned user has been unbanned (public endpoint for banned users)
+  app.get("/api/auth/unban-check/:userId", async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+      
+      if (!userId) {
+        return res.json({ stillBanned: true });
+      }
+      
+      const [user] = await db.select().from(users).where(eq(users.id, userId));
+      
+      if (!user) {
+        return res.json({ stillBanned: true });
+      }
+      
+      res.json({ stillBanned: user.banned === true });
+    } catch (error) {
+      console.error("Failed to check unban status:", error);
+      res.json({ stillBanned: true });
+    }
+  });
+
   // ============= CHAT ROUTES =============
 
   // Get global chat messages
