@@ -280,6 +280,8 @@ export function OSProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const addNotification = useCallback((title: string, message: string, type: NotificationItem["type"] = "info", appId?: string) => {
+    if (!settings.notifications) return;
+    
     const notification: NotificationItem = {
       id: `notif-${Date.now()}`,
       title,
@@ -290,7 +292,7 @@ export function OSProvider({ children }: { children: ReactNode }) {
       appId,
     };
     setNotifications(prev => [notification, ...prev].slice(0, 50));
-  }, []);
+  }, [settings.notifications]);
 
   const markNotificationRead = useCallback((id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
