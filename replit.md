@@ -189,11 +189,12 @@ The Bug Report app shows:
 
 ### Ban System
 When a user is banned:
-- A persistent marker is stored in their browser's localStorage
-- Even when logged out, the site shows a "Site Not Found" error page
+- **Authentication required**: Users MUST log in to access NexusOS - no anonymous access
+- When a banned user logs in, they immediately see a "Site Not Found" error page
+- A persistent marker is stored in localStorage to block them even if logged out
 - The banned user sees a fake DNS error (ERR_NAME_NOT_RESOLVED) making it appear the site doesn't exist
 - When unbanned, the system periodically checks and clears the marker, restoring access
-- Note: Users can clear their localStorage to bypass this, but will be blocked again upon login
+- Note: Users can clear localStorage but will be blocked again upon login since authentication is required
 
 ## Recent Changes
 - Removed IP banning (caused issues with shared networks like schools)
