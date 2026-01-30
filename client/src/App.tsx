@@ -75,7 +75,7 @@ function LoginScreen() {
           Sign in with Replit
         </Button>
         <p className="text-gray-500 text-sm mt-6">
-          A web-based operating system experience
+          This is to prevent ban evasion
         </p>
       </div>
     </div>
