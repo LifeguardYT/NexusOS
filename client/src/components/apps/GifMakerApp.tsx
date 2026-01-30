@@ -160,32 +160,77 @@ export function GifMakerApp() {
         writeByte((s >> 8) & 0xff);
       };
       
+      // Build a 256-color palette with common colors
+      // Use a 6x6x6 color cube (216 colors) plus 40 grayscale shades
+      const palette: number[][] = [];
+      
+      // 6x6x6 color cube = 216 colors
+      for (let r = 0; r < 6; r++) {
+        for (let g = 0; g < 6; g++) {
+          for (let b = 0; b < 6; b++) {
+            palette.push([Math.round(r * 51), Math.round(g * 51), Math.round(b * 51)]);
+          }
+        }
+      }
+      
+      // Add 40 extra grayscale values for smoother gradients
+      for (let i = 0; i < 40; i++) {
+        const gray = Math.round((i / 39) * 255);
+        palette.push([gray, gray, gray]);
+      }
+      
+      // Find closest palette color for a given RGB
+      const findClosestColor = (r: number, g: number, b: number): number => {
+        let bestIndex = 0;
+        let bestDist = Infinity;
+        for (let i = 0; i < palette.length; i++) {
+          const pr = palette[i][0];
+          const pg = palette[i][1];
+          const pb = palette[i][2];
+          const dist = (r - pr) ** 2 + (g - pg) ** 2 + (b - pb) ** 2;
+          if (dist < bestDist) {
+            bestDist = dist;
+            bestIndex = i;
+          }
+        }
+        return bestIndex;
+      };
+      
       writeString("GIF89a");
       writeShort(width);
       writeShort(height);
-      writeByte(0xf7);
+      writeByte(0xf7); // Global color table flag, 256 colors
       writeByte(0);
       writeByte(0);
       
+      // Write color palette (256 RGB triplets)
       for (let i = 0; i < 256; i++) {
-        writeByte(i);
-        writeByte(i);
-        writeByte(i);
+        if (i < palette.length) {
+          writeByte(palette[i][0]);
+          writeByte(palette[i][1]);
+          writeByte(palette[i][2]);
+        } else {
+          writeByte(0);
+          writeByte(0);
+          writeByte(0);
+        }
       }
       
+      // NETSCAPE extension for looping
       writeByte(0x21);
       writeByte(0xff);
       writeByte(11);
       writeString("NETSCAPE2.0");
       writeByte(3);
       writeByte(1);
-      writeShort(0);
+      writeShort(0); // Loop forever
       writeByte(0);
       
       for (const frame of frames) {
         const { imageData } = frame;
         const pixels = imageData.data;
         
+        // Graphics Control Extension
         writeByte(0x21);
         writeByte(0xf9);
         writeByte(4);
@@ -194,17 +239,21 @@ export function GifMakerApp() {
         writeByte(0);
         writeByte(0);
         
+        // Image Descriptor
         writeByte(0x2c);
         writeShort(0);
         writeShort(0);
         writeShort(width);
         writeShort(height);
-        writeByte(0);
+        writeByte(0); // No local color table
         
+        // Convert pixels to palette indices with actual colors
         const indexedPixels: number[] = [];
         for (let i = 0; i < pixels.length; i += 4) {
-          const gray = Math.round(0.299 * pixels[i] + 0.587 * pixels[i + 1] + 0.114 * pixels[i + 2]);
-          indexedPixels.push(gray);
+          const r = pixels[i];
+          const g = pixels[i + 1];
+          const b = pixels[i + 2];
+          indexedPixels.push(findClosestColor(r, g, b));
         }
         
         const minCodeSize = 8;
@@ -286,7 +335,7 @@ export function GifMakerApp() {
         writeByte(0);
       }
       
-      writeByte(0x3b);
+      writeByte(0x3b); // GIF trailer
       
       const blob = new Blob([new Uint8Array(chunks)], { type: "image/gif" });
       const url = URL.createObjectURL(blob);
