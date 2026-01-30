@@ -24,7 +24,8 @@ interface OnlineUser {
 
 export function FriendsApp() {
   const [searchQuery, setSearchQuery] = useState("");
-  const [friendIdToAdd, setFriendIdToAdd] = useState("");
+  const [friendIdentifier, setFriendIdentifier] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   
   const { data: friends = [], isLoading: friendsLoading } = useQuery<Friend[]>({
     queryKey: ["/api/friends"],
@@ -40,12 +41,15 @@ export function FriendsApp() {
   });
   
   const sendRequestMutation = useMutation({
-    mutationFn: async (friendId: string) => {
-      return apiRequest("POST", "/api/friends/request", { friendId });
+    mutationFn: async (identifier: string) => {
+      const response = await apiRequest("POST", "/api/friends/request", { identifier });
+      return response.json();
     },
-    onSuccess: () => {
-      setFriendIdToAdd("");
+    onSuccess: (data) => {
+      setFriendIdentifier("");
+      setSuccessMessage(data.message || "Friend request sent!");
       queryClient.invalidateQueries({ queryKey: ["/api/friends"] });
+      setTimeout(() => setSuccessMessage(""), 3000);
     },
   });
   
@@ -247,19 +251,19 @@ export function FriendsApp() {
         <TabsContent value="add" className="flex-1 px-4 pb-4">
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Enter the user ID of the person you want to add as a friend.
+              Enter the email or username of the person you want to add as a friend.
             </p>
             <div className="flex gap-2">
               <Input
-                placeholder="User ID..."
-                value={friendIdToAdd}
-                onChange={(e) => setFriendIdToAdd(e.target.value)}
+                placeholder="Email or username..."
+                value={friendIdentifier}
+                onChange={(e) => setFriendIdentifier(e.target.value)}
                 className="bg-white/5 border-white/10"
-                data-testid="input-friend-id"
+                data-testid="input-friend-identifier"
               />
               <Button
-                onClick={() => sendRequestMutation.mutate(friendIdToAdd)}
-                disabled={!friendIdToAdd.trim() || sendRequestMutation.isPending}
+                onClick={() => sendRequestMutation.mutate(friendIdentifier)}
+                disabled={!friendIdentifier.trim() || sendRequestMutation.isPending}
                 data-testid="btn-send-request"
               >
                 {sendRequestMutation.isPending ? (
@@ -269,11 +273,13 @@ export function FriendsApp() {
                 )}
               </Button>
             </div>
-            {sendRequestMutation.isSuccess && (
-              <p className="text-sm text-green-400">Friend request sent!</p>
+            {successMessage && (
+              <p className="text-sm text-green-400">{successMessage}</p>
             )}
             {sendRequestMutation.isError && (
-              <p className="text-sm text-red-400">Failed to send request</p>
+              <p className="text-sm text-red-400">
+                {(sendRequestMutation.error as any)?.message || "User not found or request already sent"}
+              </p>
             )}
           </div>
         </TabsContent>

@@ -6,7 +6,7 @@ import { settingsSchema, insertUpdateSchema, insertMessageSchema, insertCustomAp
 import { z } from "zod";
 import { db } from "./db";
 import { updates } from "@shared/schema";
-import { desc, eq, or, and, ilike } from "drizzle-orm";
+import { desc, eq, or, and, ilike, sql } from "drizzle-orm";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import os from "os";
 
@@ -1096,11 +1096,30 @@ export async function registerRoutes(
     }
   });
   
-  // Send friend request
+  // Send friend request (by email or username)
   app.post("/api/friends/request", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.claims?.sub;
-      const { friendId } = req.body;
+      const { identifier } = req.body;
+      
+      if (!identifier || !identifier.trim()) {
+        return res.status(400).json({ error: "Please provide an email or username" });
+      }
+      
+      const searchTerm = identifier.trim().toLowerCase();
+      
+      // Look up user by email or username (firstName)
+      const foundUsers = await db.select().from(users)
+        .where(or(
+          eq(users.email, searchTerm),
+          sql`LOWER(${users.firstName}) = ${searchTerm}`
+        ));
+      
+      if (foundUsers.length === 0) {
+        return res.status(404).json({ error: "User not found. Check the email or username." });
+      }
+      
+      const friendId = foundUsers[0].id;
       
       if (userId === friendId) {
         return res.status(400).json({ error: "Cannot add yourself as a friend" });
@@ -1114,7 +1133,7 @@ export async function registerRoutes(
         ));
       
       if (existing.length > 0) {
-        return res.status(400).json({ error: "Friend request already exists" });
+        return res.status(400).json({ error: "Friend request already exists or you're already friends" });
       }
       
       await db.insert(friends).values({
@@ -1123,7 +1142,7 @@ export async function registerRoutes(
         status: "pending",
       });
       
-      res.json({ success: true, message: "Friend request sent" });
+      res.json({ success: true, message: `Friend request sent to ${foundUsers[0].firstName || foundUsers[0].email}` });
     } catch (error) {
       console.error("Failed to send friend request:", error);
       res.status(500).json({ error: "Failed to send friend request" });
