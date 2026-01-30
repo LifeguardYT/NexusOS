@@ -43,6 +43,7 @@ A fully functional web-based operating system simulation built with React and Ty
 31. **Voice Recorder** - Record audio (requires new tab for permissions)
 32. **GIF Maker** - Create animated GIFs frame-by-frame
 33. **Friends** - Social app for managing friends, sending/accepting friend requests, and viewing online users
+34. **Roblox** - Roblox-style game platform simulation with game browser, avatar, Robux, categories, and playable experiences
 
 ## New Features
 
