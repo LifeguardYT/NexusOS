@@ -2,7 +2,7 @@ import { useOS } from "@/lib/os-context";
 import { 
   Globe, Settings, Folder, Calculator, FileText, CloudSun, Music, 
   Gamepad2, Bomb, Terminal, Trash2, HardDrive, Bell, MessageCircle, Store, Bug,
-  Grid3X3, Spade, Paintbrush, Camera, Mail, Video
+  Grid3X3, Spade, Paintbrush, Camera, Mail, Video, Users, Clock, Timer, AlarmClock
 } from "lucide-react";
 
 const iconMap: Record<string, React.ComponentType<any>> = {
@@ -26,6 +26,10 @@ const iconMap: Record<string, React.ComponentType<any>> = {
   camera: Camera,
   mail: Mail,
   video: Video,
+  users: Users,
+  clock: Clock,
+  timer: Timer,
+  "alarm-clock": AlarmClock,
 };
 
 export function DesktopIcons() {
@@ -35,8 +39,12 @@ export function DesktopIcons() {
 
   const updatesApp = apps.find(app => app.id === "updates");
   const chatApp = apps.find(app => app.id === "chat");
-  const appStoreApp = apps.find(app => app.id === "appstore");
-  const bugReportApp = apps.find(app => app.id === "bugreport");
+  const cameraApp = apps.find(app => app.id === "camera");
+  const emailApp = apps.find(app => app.id === "email");
+  const friendsApp = apps.find(app => app.id === "friends");
+  const clockApp = apps.find(app => app.id === "clock");
+  const stopwatchApp = apps.find(app => app.id === "stopwatch");
+  const timerApp = apps.find(app => app.id === "timer");
   
   const customShortcutApps = desktopShortcuts
     .map(id => apps.find(app => app.id === id))
@@ -47,7 +55,23 @@ export function DesktopIcons() {
     ...(updatesApp ? [updatesApp] : []),
     { id: "trash", name: "Trash", icon: "trash", color: "bg-gray-500", defaultWidth: 600, defaultHeight: 400 },
     ...(chatApp ? [chatApp] : []),
-    ...customShortcutApps.filter(app => !apps.slice(0, 6).includes(app) && app.id !== "updates" && app.id !== "chat"),
+    ...(cameraApp ? [cameraApp] : []),
+    ...(emailApp ? [emailApp] : []),
+    ...(friendsApp ? [friendsApp] : []),
+    ...(clockApp ? [clockApp] : []),
+    ...(stopwatchApp ? [stopwatchApp] : []),
+    ...(timerApp ? [timerApp] : []),
+    ...customShortcutApps.filter(app => 
+      !apps.slice(0, 6).includes(app) && 
+      app.id !== "updates" && 
+      app.id !== "chat" &&
+      app.id !== "camera" &&
+      app.id !== "email" &&
+      app.id !== "friends" &&
+      app.id !== "clock" &&
+      app.id !== "stopwatch" &&
+      app.id !== "timer"
+    ),
   ];
 
   const handleContextMenu = (e: React.MouseEvent, appId: string) => {
