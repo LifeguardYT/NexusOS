@@ -28,7 +28,6 @@ import { SolitaireGame } from "@/components/apps/SolitaireGame";
 import { PaintApp } from "@/components/apps/PaintApp";
 import { CameraApp } from "@/components/apps/CameraApp";
 import { EmailApp } from "@/components/apps/EmailApp";
-import { RobloxApp } from "@/components/apps/RobloxApp";
 import { FriendsApp } from "@/components/apps/FriendsApp";
 import { TicTacToeGame } from "@/components/apps/TicTacToeGame";
 import { FlappyBirdGame } from "@/components/apps/FlappyBirdGame";
@@ -76,7 +75,6 @@ const appComponents: Record<string, React.ComponentType> = {
   paint: PaintApp,
   camera: CameraApp,
   email: EmailApp,
-  roblox: RobloxApp,
   friends: FriendsApp,
   tictactoe: TicTacToeGame,
   flappybird: FlappyBirdGame,

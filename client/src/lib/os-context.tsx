@@ -48,7 +48,6 @@ const defaultApps: App[] = [
   { id: "paint", name: "Paint", icon: "paintbrush", color: "bg-rose-500", defaultWidth: 900, defaultHeight: 650 },
   { id: "camera", name: "Camera", icon: "camera", color: "bg-gray-700", defaultWidth: 700, defaultHeight: 550 },
   { id: "email", name: "Email", icon: "mail", color: "bg-blue-600", defaultWidth: 900, defaultHeight: 600 },
-  { id: "roblox", name: "Roblox", icon: "gamepad-2", color: "bg-red-600", defaultWidth: 1000, defaultHeight: 700 },
   { id: "friends", name: "Friends", icon: "users", color: "bg-purple-500", defaultWidth: 500, defaultHeight: 600 },
   { id: "tictactoe", name: "Tic-Tac-Toe", icon: "grid-3x3", color: "bg-indigo-500", defaultWidth: 450, defaultHeight: 550 },
   { id: "flappybird", name: "Flappy Bird", icon: "bird", color: "bg-sky-400", defaultWidth: 450, defaultHeight: 650 },
