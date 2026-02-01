@@ -58,10 +58,13 @@ interface AuthUser {
 }
 
 function LoginScreen() {
-  const [showDesktopLogin, setShowDesktopLogin] = useState(false);
   const [loginCode, setLoginCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  
+  // Detect if running in Electron
+  const isElectron = typeof navigator !== 'undefined' && 
+    navigator.userAgent.toLowerCase().includes('electron');
 
   const handleDesktopLogin = async () => {
     if (!loginCode.trim()) return;
@@ -86,19 +89,20 @@ function LoginScreen() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
-      <div className="text-center max-w-md">
-        <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-2xl">
-          <span className="text-4xl font-bold text-white">N</span>
-        </div>
-        <h1 className="text-4xl font-bold text-white mb-2">NexusOS</h1>
-        <p className="text-gray-400 mb-8">Sign in to access your desktop</p>
-        
-        {showDesktopLogin ? (
+  // Desktop app login - code only
+  if (isElectron) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-2xl">
+            <span className="text-4xl font-bold text-white">N</span>
+          </div>
+          <h1 className="text-4xl font-bold text-white mb-2">NexusOS Desktop</h1>
+          <p className="text-gray-400 mb-8">Enter your login code to sign in</p>
+          
           <div className="space-y-4">
             <div className="text-left">
-              <label className="text-gray-300 text-sm block mb-2">Enter Login Code</label>
+              <label className="text-gray-300 text-sm block mb-2">Login Code</label>
               <input
                 type="text"
                 value={loginCode}
@@ -117,43 +121,47 @@ function LoginScreen() {
               disabled={isLoading || loginCode.length < 6}
               data-testid="button-verify-code"
             >
-              {isLoading ? "Verifying..." : "Verify Code"}
+              {isLoading ? "Verifying..." : "Sign In"}
             </Button>
-            <button
-              onClick={() => setShowDesktopLogin(false)}
-              className="text-gray-400 hover:text-white text-sm underline"
-              data-testid="button-back-to-login"
-            >
-              Back to regular login
-            </button>
-            <p className="text-gray-500 text-xs mt-4">
-              Get a code from Settings → Accounts → Desktop App Login on the website
-            </p>
-          </div>
-        ) : (
-          <>
-            <Button 
-              size="lg"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg"
-              onClick={() => window.location.href = "/api/login"}
-              data-testid="button-login"
-            >
-              Sign in with Replit
-            </Button>
-            <div className="mt-4">
-              <button
-                onClick={() => setShowDesktopLogin(true)}
-                className="text-blue-400 hover:text-blue-300 text-sm underline"
-                data-testid="button-desktop-login"
-              >
-                Using the Desktop App? Enter login code
-              </button>
+            <div className="mt-6 p-4 bg-white/5 rounded-lg border border-white/10">
+              <p className="text-gray-400 text-sm">
+                <strong className="text-white">How to get a code:</strong>
+              </p>
+              <ol className="text-gray-400 text-sm text-left mt-2 space-y-1 list-decimal list-inside">
+                <li>Go to <span className="text-blue-400">nexusos.live</span> in your browser</li>
+                <li>Sign in with Replit</li>
+                <li>Open Settings → Accounts</li>
+                <li>Click "Generate Login Code"</li>
+                <li>Enter the code here</li>
+              </ol>
             </div>
-            <p className="text-gray-500 text-sm mt-6">
-              This is to prevent ban evasion
-            </p>
-          </>
-        )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Regular web login
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+      <div className="text-center max-w-md">
+        <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-2xl">
+          <span className="text-4xl font-bold text-white">N</span>
+        </div>
+        <h1 className="text-4xl font-bold text-white mb-2">NexusOS</h1>
+        <p className="text-gray-400 mb-8">Sign in to access your desktop</p>
+        
+        <Button 
+          size="lg"
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg"
+          onClick={() => window.location.href = "/api/login"}
+          data-testid="button-login"
+        >
+          Sign in with Replit
+        </Button>
+        <p className="text-gray-500 text-sm mt-6">
+          This is to prevent ban evasion
+        </p>
       </div>
     </div>
   );
