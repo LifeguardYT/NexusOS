@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Download, Monitor, Terminal, CheckCircle, AlertCircle, Package, Loader2 } from "lucide-react";
+import { Download, Monitor, CheckCircle, AlertCircle, Package, Loader2, ExternalLink } from "lucide-react";
 
 const features = [
   "Full desktop experience in a native window",
@@ -10,12 +10,6 @@ const features = [
   "System tray integration",
   "No browser required",
   "Cross-platform support",
-];
-
-const requirements = [
-  { title: "Node.js", desc: "Version 18 or higher (download from nodejs.org)" },
-  { title: "Internet", desc: "Required to connect to NexusOS servers" },
-  { title: "Storage", desc: "~200MB for dependencies" },
 ];
 
 export function DownloadApp() {
@@ -55,7 +49,7 @@ export function DownloadApp() {
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">NexusOS Desktop</h1>
           <p className="text-gray-400">
-            Download NexusOS as a desktop application for your computer
+            Run NexusOS as a desktop app on your computer
           </p>
         </div>
 
@@ -65,9 +59,8 @@ export function DownloadApp() {
               <Package className="w-8 h-8 text-white" />
             </div>
             <div className="flex-1 text-center sm:text-left">
-              <h3 className="text-white font-semibold text-lg">Universal Package</h3>
-              <p className="text-gray-400 text-sm">Works on Windows, macOS, and Linux</p>
-              <p className="text-gray-500 text-xs mt-1">Requires Node.js to run</p>
+              <h3 className="text-white font-semibold text-lg">Download NexusOS Desktop</h3>
+              <p className="text-gray-400 text-sm">Works on Windows, Mac, and Linux</p>
             </div>
             <Button
               size="lg"
@@ -84,7 +77,7 @@ export function DownloadApp() {
               ) : (
                 <>
                   <Download className="w-5 h-5 mr-2" />
-                  Download
+                  Download ZIP
                 </>
               )}
             </Button>
@@ -92,20 +85,48 @@ export function DownloadApp() {
         </Card>
 
         {showInstructions && (
-          <Card className="p-4 mb-6 bg-green-500/10 border-green-500/30">
+          <Card className="p-5 mb-6 bg-green-500/10 border-green-500/30">
             <div className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-green-400 mt-0.5" />
-              <div>
-                <h4 className="text-green-400 font-medium">Download Complete!</h4>
-                <div className="text-gray-300 text-sm mt-2 space-y-2">
-                  <p>To run NexusOS Desktop:</p>
-                  <ol className="list-decimal list-inside space-y-1 ml-2">
-                    <li>Extract the ZIP file</li>
-                    <li>Open a terminal in the extracted folder</li>
-                    <li>Run: <code className="bg-black/30 px-2 py-0.5 rounded">npm install</code></li>
-                    <li>Run: <code className="bg-black/30 px-2 py-0.5 rounded">npm start</code></li>
-                  </ol>
-                  <p className="text-gray-400 mt-2">See the README file for more details.</p>
+              <CheckCircle className="w-6 h-6 text-green-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h4 className="text-green-400 font-semibold text-lg mb-3">Download Complete! Here's how to run it:</h4>
+                <div className="text-gray-200 space-y-4">
+                  <div className="bg-black/30 rounded-lg p-4">
+                    <p className="font-semibold text-white mb-2">Step 1: Install Node.js (if you don't have it)</p>
+                    <p className="text-gray-400 text-sm mb-2">Go to this website and download the installer:</p>
+                    <a 
+                      href="https://nodejs.org" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300"
+                    >
+                      https://nodejs.org <ExternalLink className="w-3 h-3" />
+                    </a>
+                    <p className="text-gray-500 text-xs mt-2">Download the "LTS" version and install it like any other program</p>
+                  </div>
+                  
+                  <div className="bg-black/30 rounded-lg p-4">
+                    <p className="font-semibold text-white mb-2">Step 2: Extract the ZIP file</p>
+                    <p className="text-gray-400 text-sm">Find the downloaded "NexusOS-Desktop.zip" file and extract it (right-click → Extract All on Windows, or double-click on Mac)</p>
+                  </div>
+                  
+                  <div className="bg-black/30 rounded-lg p-4">
+                    <p className="font-semibold text-white mb-2">Step 3: Open Command Prompt / Terminal</p>
+                    <p className="text-gray-400 text-sm mb-2"><strong>Windows:</strong> Open the extracted folder, click the address bar, type <code className="bg-black/50 px-1 rounded">cmd</code> and press Enter</p>
+                    <p className="text-gray-400 text-sm"><strong>Mac:</strong> Open Terminal, type <code className="bg-black/50 px-1 rounded">cd </code> (with a space), then drag the extracted folder into Terminal and press Enter</p>
+                  </div>
+                  
+                  <div className="bg-black/30 rounded-lg p-4">
+                    <p className="font-semibold text-white mb-2">Step 4: Install and Run</p>
+                    <p className="text-gray-400 text-sm mb-2">Type these commands one at a time and press Enter after each:</p>
+                    <div className="space-y-2 font-mono text-sm">
+                      <div className="bg-black/50 px-3 py-2 rounded text-green-400">npm install</div>
+                      <p className="text-gray-500 text-xs">Wait for it to finish (might take a minute)...</p>
+                      <div className="bg-black/50 px-3 py-2 rounded text-green-400">npm start</div>
+                    </div>
+                  </div>
+                  
+                  <p className="text-green-400 font-medium">NexusOS will open in its own window!</p>
                 </div>
               </div>
             </div>
@@ -127,30 +148,14 @@ export function DownloadApp() {
           </div>
         </Card>
 
-        <Card className="p-6 bg-white/5 border-white/10 mb-6">
-          <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
-            <Terminal className="w-5 h-5" />
-            Requirements
-          </h2>
-          <div className="space-y-3">
-            {requirements.map((req, i) => (
-              <div key={i}>
-                <h4 className="text-white font-medium">{req.title}</h4>
-                <p className="text-gray-400 text-sm">{req.desc}</p>
-              </div>
-            ))}
-          </div>
-        </Card>
-
         <Card className="p-4 bg-yellow-500/10 border-yellow-500/30">
           <div className="flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5" />
             <div>
-              <h4 className="text-yellow-400 font-medium">Note</h4>
+              <h4 className="text-yellow-400 font-medium">Important</h4>
               <p className="text-gray-300 text-sm mt-1">
-                This package requires Node.js installed on your computer. 
-                Download Node.js from <span className="text-blue-400">nodejs.org</span> if you don't have it.
-                The app needs an internet connection to work.
+                You need Node.js installed on your computer. It's free and safe to install from nodejs.org. 
+                The app also needs internet to connect to NexusOS.
               </p>
             </div>
           </div>
