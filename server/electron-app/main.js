@@ -1,8 +1,9 @@
 const { app, BrowserWindow, shell, Menu, Tray, nativeImage } = require('electron');
 const path = require('path');
 
-// NexusOS URL - change this to your deployed URL
-const NEXUSOS_URL = 'https://nexusos.replit.app';
+// NexusOS URL - This points to the live NexusOS web app
+// If you're self-hosting, change this to your own URL
+const NEXUSOS_URL = process.env.NEXUSOS_URL || 'https://nexusos.replit.app';
 
 let mainWindow;
 let tray;
