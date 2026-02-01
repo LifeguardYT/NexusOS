@@ -12,10 +12,6 @@ import os from "os";
 import archiver from "archiver";
 import path from "path";
 import fs from "fs";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Global shutdown state
 let shutdownState = {
@@ -1379,7 +1375,7 @@ export async function registerRoutes(
   // Download NexusOS Desktop app
   app.get("/api/download/nexusos-desktop", (req, res) => {
     try {
-      const electronAppPath = path.join(__dirname, "electron-app");
+      const electronAppPath = path.join(process.cwd(), "server", "electron-app");
       
       // Check if the directory exists
       if (!fs.existsSync(electronAppPath)) {
