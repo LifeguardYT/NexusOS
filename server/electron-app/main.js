@@ -8,6 +8,9 @@ let mainWindow;
 let authWindow;
 let tray;
 
+// Shared session name for both windows
+const SESSION_PARTITION = 'persist:nexusos';
+
 function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -19,6 +22,7 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       webviewTag: true,
+      partition: SESSION_PARTITION,
     },
     titleBarStyle: 'default',
     show: false,
@@ -35,7 +39,7 @@ function createWindow() {
     mainWindow.show();
   });
 
-  // Handle navigation - intercept auth URLs
+  // Handle navigation - intercept auth URLs and open in popup
   mainWindow.webContents.on('will-navigate', (event, url) => {
     if (isAuthUrl(url)) {
       event.preventDefault();
@@ -75,10 +79,11 @@ function isAuthUrl(url) {
          url.includes('github.com/login/oauth');
 }
 
-// Open authentication in a popup window
+// Open authentication in a popup window with SHARED session
 function openAuthWindow(url) {
   if (authWindow) {
     authWindow.focus();
+    authWindow.loadURL(url);
     return;
   }
 
@@ -91,7 +96,8 @@ function openAuthWindow(url) {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      partition: 'persist:nexusos-auth',
+      // IMPORTANT: Use same partition as main window to share sessionStorage
+      partition: SESSION_PARTITION,
     },
     title: 'Sign in to NexusOS',
   });
@@ -100,7 +106,7 @@ function openAuthWindow(url) {
 
   // Watch for successful auth redirect back to NexusOS
   authWindow.webContents.on('will-navigate', (event, navUrl) => {
-    if (navUrl.startsWith(NEXUSOS_URL)) {
+    if (navUrl.startsWith(NEXUSOS_URL) && !isAuthUrl(navUrl)) {
       // Auth complete, close popup and refresh main window
       authWindow.close();
       mainWindow.loadURL(NEXUSOS_URL);
@@ -108,7 +114,7 @@ function openAuthWindow(url) {
   });
 
   authWindow.webContents.on('did-navigate', (event, navUrl) => {
-    if (navUrl.startsWith(NEXUSOS_URL)) {
+    if (navUrl.startsWith(NEXUSOS_URL) && !isAuthUrl(navUrl)) {
       authWindow.close();
       mainWindow.loadURL(NEXUSOS_URL);
     }
