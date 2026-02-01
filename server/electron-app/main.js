@@ -26,6 +26,10 @@ function createWindow() {
   // Remove the default menu
   Menu.setApplicationMenu(null);
 
+  // Set custom user agent to include 'NexusOS-Desktop' for detection
+  const userAgent = mainWindow.webContents.getUserAgent() + ' NexusOS-Desktop';
+  mainWindow.webContents.setUserAgent(userAgent);
+
   // Load NexusOS
   mainWindow.loadURL(NEXUSOS_URL);
 

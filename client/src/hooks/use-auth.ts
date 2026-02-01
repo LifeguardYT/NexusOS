@@ -1,8 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { User } from "@shared/models/auth";
 
+// Detect if running in Electron/Desktop app
+function isDesktopApp(): boolean {
+  return typeof navigator !== 'undefined' && 
+    (navigator.userAgent.includes('NexusOS-Desktop') || 
+     navigator.userAgent.toLowerCase().includes('electron'));
+}
+
 async function fetchUser(): Promise<User | null> {
-  const response = await fetch("/api/auth/user", {
+  const endpoint = isDesktopApp() ? "/api/desktop-auth/user" : "/api/auth/user";
+  const response = await fetch(endpoint, {
     credentials: "include",
   });
 
@@ -23,8 +31,10 @@ async function logout(): Promise<void> {
 
 export function useAuth() {
   const queryClient = useQueryClient();
+  const authEndpoint = isDesktopApp() ? "/api/desktop-auth/user" : "/api/auth/user";
+  
   const { data: user, isLoading } = useQuery<User | null>({
-    queryKey: ["/api/auth/user"],
+    queryKey: [authEndpoint],
     queryFn: fetchUser,
     retry: false,
     staleTime: 1000 * 60 * 5, // 5 minutes
@@ -33,7 +43,7 @@ export function useAuth() {
   const logoutMutation = useMutation({
     mutationFn: logout,
     onSuccess: () => {
-      queryClient.setQueryData(["/api/auth/user"], null);
+      queryClient.setQueryData([authEndpoint], null);
     },
   });
 

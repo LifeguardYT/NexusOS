@@ -62,9 +62,10 @@ function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   
-  // Detect if running in Electron
-  const isElectron = typeof navigator !== 'undefined' && 
-    navigator.userAgent.toLowerCase().includes('electron');
+  // Detect if running in Electron/Desktop app
+  const isDesktopApp = typeof navigator !== 'undefined' && 
+    (navigator.userAgent.includes('NexusOS-Desktop') || 
+     navigator.userAgent.toLowerCase().includes('electron'));
 
   const handleDesktopLogin = async () => {
     if (!loginCode.trim()) return;
@@ -90,7 +91,7 @@ function LoginScreen() {
   };
 
   // Desktop app login - code only
-  if (isElectron) {
+  if (isDesktopApp) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
         <div className="text-center max-w-md">
@@ -184,9 +185,10 @@ function AppContent() {
   const [isBannedLocally, setIsBannedLocally] = useState(checkBanMarker);
   const bannedUserId = getBannedUserId();
   
-  // Detect if running in Electron
-  const isElectron = typeof navigator !== 'undefined' && 
-    navigator.userAgent.toLowerCase().includes('electron');
+  // Detect if running in Electron/Desktop app
+  const isDesktopApp = typeof navigator !== 'undefined' && 
+    (navigator.userAgent.includes('NexusOS-Desktop') || 
+     navigator.userAgent.toLowerCase().includes('electron'));
 
   // If locally banned, check with server if user has been unbanned
   const { data: unbanCheck } = useQuery<UnbanCheck>({
@@ -200,11 +202,11 @@ function AppContent() {
     refetchInterval: 60000,
   });
 
-  // Get current user info - use desktop auth endpoint if in Electron
+  // Get current user info - use desktop auth endpoint if in Desktop app
   const { data: authUser, isLoading: isLoadingUser } = useQuery<AuthUser | null>({
-    queryKey: [isElectron ? "/api/desktop-auth/user" : "/api/auth/user"],
+    queryKey: [isDesktopApp ? "/api/desktop-auth/user" : "/api/auth/user"],
     queryFn: async () => {
-      const endpoint = isElectron ? "/api/desktop-auth/user" : "/api/auth/user";
+      const endpoint = isDesktopApp ? "/api/desktop-auth/user" : "/api/auth/user";
       const res = await fetch(endpoint, { credentials: "include" });
       if (res.status === 401) return null;
       if (!res.ok) throw new Error("Failed to fetch user");
