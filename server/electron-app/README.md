@@ -68,6 +68,23 @@ npm start
 
 ---
 
+## How to Log In
+
+Since the desktop app can't use the regular login, you need a login code:
+
+1. **On the website** (nexusos.live), log in normally
+2. Go to **Settings** → **Accounts**
+3. Scroll down to **Desktop App Login**
+4. Click **Generate Login Code**
+5. Copy the 6-character code (e.g., `ABC123`)
+6. **In the desktop app**, click "Using the Desktop App? Enter login code"
+7. Paste or type the code
+8. Click **Verify Code**
+
+You're now logged in!
+
+---
+
 ## Troubleshooting
 
 **"npm is not recognized" or "command not found"**
@@ -81,12 +98,18 @@ npm start
 **It says "Cannot find module"**
 - Run `npm install` again
 
+**Login code doesn't work**
+- Codes expire after 5 minutes
+- Make sure you're copying the code correctly
+- Generate a new code if needed
+
 ---
 
 ## Tips
 
 - To run NexusOS again later, just open a terminal in this folder and type `npm start`
 - The app connects to https://nexusos.live
+- You stay logged in until you close the app
 
 ---
 

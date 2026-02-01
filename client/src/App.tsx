@@ -58,6 +58,34 @@ interface AuthUser {
 }
 
 function LoginScreen() {
+  const [showDesktopLogin, setShowDesktopLogin] = useState(false);
+  const [loginCode, setLoginCode] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleDesktopLogin = async () => {
+    if (!loginCode.trim()) return;
+    setIsLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/desktop-auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: loginCode.trim() }),
+      });
+      if (res.ok) {
+        window.location.reload();
+      } else {
+        const data = await res.json();
+        setError(data.error || "Invalid or expired code");
+      }
+    } catch (err) {
+      setError("Failed to verify code");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
       <div className="text-center max-w-md">
@@ -66,17 +94,66 @@ function LoginScreen() {
         </div>
         <h1 className="text-4xl font-bold text-white mb-2">NexusOS</h1>
         <p className="text-gray-400 mb-8">Sign in to access your desktop</p>
-        <Button 
-          size="lg"
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg"
-          onClick={() => window.location.href = "/api/login"}
-          data-testid="button-login"
-        >
-          Sign in with Replit
-        </Button>
-        <p className="text-gray-500 text-sm mt-6">
-          This is to prevent ban evasion
-        </p>
+        
+        {showDesktopLogin ? (
+          <div className="space-y-4">
+            <div className="text-left">
+              <label className="text-gray-300 text-sm block mb-2">Enter Login Code</label>
+              <input
+                type="text"
+                value={loginCode}
+                onChange={(e) => setLoginCode(e.target.value.toUpperCase())}
+                placeholder="XXXXXX"
+                maxLength={6}
+                className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white text-center text-2xl tracking-[0.3em] font-mono placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                data-testid="input-login-code"
+              />
+              {error && <p className="text-red-400 text-sm mt-2">{error}</p>}
+            </div>
+            <Button 
+              size="lg"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg"
+              onClick={handleDesktopLogin}
+              disabled={isLoading || loginCode.length < 6}
+              data-testid="button-verify-code"
+            >
+              {isLoading ? "Verifying..." : "Verify Code"}
+            </Button>
+            <button
+              onClick={() => setShowDesktopLogin(false)}
+              className="text-gray-400 hover:text-white text-sm underline"
+              data-testid="button-back-to-login"
+            >
+              Back to regular login
+            </button>
+            <p className="text-gray-500 text-xs mt-4">
+              Get a code from Settings → Accounts → Desktop App Login on the website
+            </p>
+          </div>
+        ) : (
+          <>
+            <Button 
+              size="lg"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-6 text-lg"
+              onClick={() => window.location.href = "/api/login"}
+              data-testid="button-login"
+            >
+              Sign in with Replit
+            </Button>
+            <div className="mt-4">
+              <button
+                onClick={() => setShowDesktopLogin(true)}
+                className="text-blue-400 hover:text-blue-300 text-sm underline"
+                data-testid="button-desktop-login"
+              >
+                Using the Desktop App? Enter login code
+              </button>
+            </div>
+            <p className="text-gray-500 text-sm mt-6">
+              This is to prevent ban evasion
+            </p>
+          </>
+        )}
       </div>
     </div>
   );

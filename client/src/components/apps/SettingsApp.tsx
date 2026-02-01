@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useOS } from "@/lib/os-context";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -208,6 +208,100 @@ function ThemeProfilesSection() {
             Import
           </Button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function DesktopLoginSection() {
+  const [desktopCode, setDesktopCode] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+
+  const generateCode = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch("/api/desktop-auth/code");
+      if (res.ok) {
+        const data = await res.json();
+        setDesktopCode(data.code);
+        setCountdown(data.expiresIn);
+      }
+    } catch (error) {
+      console.error("Failed to generate desktop code:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setInterval(() => {
+        setCountdown(prev => {
+          if (prev <= 1) {
+            setDesktopCode(null);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [countdown]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="space-y-3 border-t border-white/10 pt-6">
+      <h4 className="font-medium text-muted-foreground text-sm uppercase tracking-wider">Desktop App Login</h4>
+      
+      <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+        <div className="flex items-center gap-3 mb-3">
+          <Monitor className="w-5 h-5 text-blue-400" />
+          <div>
+            <h4 className="font-medium">Login Code</h4>
+            <p className="text-sm text-muted-foreground">Use this code to sign in on the NexusOS Desktop app</p>
+          </div>
+        </div>
+        
+        {desktopCode ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-center gap-2 p-4 rounded-lg bg-blue-500/20 border border-blue-500/30">
+              <span className="text-3xl font-mono font-bold tracking-[0.3em] text-blue-400" data-testid="text-desktop-code">
+                {desktopCode}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Expires in: {formatTime(countdown)}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  navigator.clipboard.writeText(desktopCode);
+                }}
+                data-testid="btn-copy-code"
+              >
+                Copy Code
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Enter this code in the NexusOS Desktop app to sign in. The code can only be used once.
+            </p>
+          </div>
+        ) : (
+          <Button
+            onClick={generateCode}
+            disabled={isLoading}
+            className="w-full"
+            data-testid="btn-generate-code"
+          >
+            {isLoading ? "Generating..." : "Generate Login Code"}
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -1061,6 +1155,8 @@ export function SettingsApp() {
                 />
               </div>
             </div>
+
+            <DesktopLoginSection />
 
             <div className="space-y-3">
               <h4 className="font-medium text-muted-foreground text-sm uppercase tracking-wider">Data Management</h4>

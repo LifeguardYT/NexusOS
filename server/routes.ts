@@ -535,6 +535,93 @@ export async function registerRoutes(
     }
   });
 
+  // ============= DESKTOP AUTH ROUTES =============
+  // Store for desktop login codes (code -> { userId, userName, email, expiresAt })
+  const desktopLoginCodes = new Map<string, { userId: string; userName: string; email: string; expiresAt: number }>();
+
+  // Generate a random 6-character code
+  function generateDesktopCode(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // No I, O, 0, 1 to avoid confusion
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  }
+
+  // Clean up expired codes periodically
+  setInterval(() => {
+    const now = Date.now();
+    desktopLoginCodes.forEach((value, key) => {
+      if (value.expiresAt < now) {
+        desktopLoginCodes.delete(key);
+      }
+    });
+  }, 60000); // Every minute
+
+  // Generate a desktop login code (for logged-in users on the website)
+  app.get("/api/desktop-auth/code", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      const userName = req.user?.claims?.first_name || req.user?.claims?.email?.split('@')[0] || "User";
+      const email = req.user?.claims?.email || "";
+
+      // Generate a new code
+      const code = generateDesktopCode();
+      const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
+
+      desktopLoginCodes.set(code, { userId, userName, email, expiresAt });
+
+      res.json({ code, expiresIn: 300 }); // 300 seconds
+    } catch (error) {
+      console.error("Failed to generate desktop code:", error);
+      res.status(500).json({ error: "Failed to generate code" });
+    }
+  });
+
+  // Validate a desktop login code (for the Electron app)
+  app.post("/api/desktop-auth/login", async (req: any, res) => {
+    try {
+      const { code } = req.body;
+
+      if (!code || typeof code !== 'string') {
+        return res.status(400).json({ error: "Code is required" });
+      }
+
+      const upperCode = code.toUpperCase().trim();
+      const loginData = desktopLoginCodes.get(upperCode);
+
+      if (!loginData) {
+        return res.status(401).json({ error: "Invalid or expired code" });
+      }
+
+      if (loginData.expiresAt < Date.now()) {
+        desktopLoginCodes.delete(upperCode);
+        return res.status(401).json({ error: "Code has expired" });
+      }
+
+      // Code is valid - delete it (one-time use)
+      desktopLoginCodes.delete(upperCode);
+
+      // Set the session for this user
+      if (req.session) {
+        req.session.desktopUserId = loginData.userId;
+        req.session.desktopUserName = loginData.userName;
+        req.session.desktopEmail = loginData.email;
+      }
+
+      res.json({ 
+        success: true, 
+        userId: loginData.userId,
+        userName: loginData.userName,
+        email: loginData.email
+      });
+    } catch (error) {
+      console.error("Failed to validate desktop code:", error);
+      res.status(500).json({ error: "Failed to validate code" });
+    }
+  });
+
   // ============= CHAT ROUTES =============
 
   // Get global chat messages

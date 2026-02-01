@@ -1,15 +1,11 @@
-const { app, BrowserWindow, shell, Menu, Tray, nativeImage } = require('electron');
+const { app, BrowserWindow, shell, Menu, Tray, nativeImage, clipboard } = require('electron');
 const path = require('path');
 
 // NexusOS URL - This points to the live NexusOS web app
 const NEXUSOS_URL = process.env.NEXUSOS_URL || 'https://nexusos.live';
 
 let mainWindow;
-let authWindow;
 let tray;
-
-// Shared session name for both windows
-const SESSION_PARTITION = 'persist:nexusos';
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -22,7 +18,6 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       webviewTag: true,
-      partition: SESSION_PARTITION,
     },
     titleBarStyle: 'default',
     show: false,
@@ -39,22 +34,24 @@ function createWindow() {
     mainWindow.show();
   });
 
-  // Handle navigation - intercept auth URLs and open in popup
+  // Handle all navigation - open auth URLs in system browser
   mainWindow.webContents.on('will-navigate', (event, url) => {
     if (isAuthUrl(url)) {
       event.preventDefault();
-      openAuthWindow(url);
+      // Open in system's default browser
+      shell.openExternal(url);
     }
   });
 
-  // Handle new window requests (popups, links, etc.)
+  // Handle new window requests
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (isAuthUrl(url)) {
-      openAuthWindow(url);
+      // Open auth in system browser
+      shell.openExternal(url);
       return { action: 'deny' };
     }
     
-    // External URLs that aren't auth - open in browser
+    // External URLs - open in browser
     if (!url.startsWith(NEXUSOS_URL) && url.startsWith('http')) {
       shell.openExternal(url);
       return { action: 'deny' };
@@ -79,56 +76,6 @@ function isAuthUrl(url) {
          url.includes('github.com/login/oauth');
 }
 
-// Open authentication in a popup window with SHARED session
-function openAuthWindow(url) {
-  if (authWindow) {
-    authWindow.focus();
-    authWindow.loadURL(url);
-    return;
-  }
-
-  authWindow = new BrowserWindow({
-    width: 500,
-    height: 700,
-    parent: mainWindow,
-    modal: false,
-    icon: path.join(__dirname, 'icon.png'),
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      // IMPORTANT: Use same partition as main window to share sessionStorage
-      partition: SESSION_PARTITION,
-    },
-    title: 'Sign in to NexusOS',
-  });
-
-  authWindow.loadURL(url);
-
-  // Watch for successful auth redirect back to NexusOS
-  authWindow.webContents.on('will-navigate', (event, navUrl) => {
-    if (navUrl.startsWith(NEXUSOS_URL) && !isAuthUrl(navUrl)) {
-      // Auth complete, close popup and refresh main window
-      authWindow.close();
-      mainWindow.loadURL(NEXUSOS_URL);
-    }
-  });
-
-  authWindow.webContents.on('did-navigate', (event, navUrl) => {
-    if (navUrl.startsWith(NEXUSOS_URL) && !isAuthUrl(navUrl)) {
-      authWindow.close();
-      mainWindow.loadURL(NEXUSOS_URL);
-    }
-  });
-
-  authWindow.on('closed', () => {
-    authWindow = null;
-    // Refresh main window after auth window closes
-    if (mainWindow) {
-      mainWindow.loadURL(NEXUSOS_URL);
-    }
-  });
-}
-
 // Create system tray
 function createTray() {
   const iconPath = path.join(__dirname, 'icon.png');
@@ -147,7 +94,7 @@ function createTray() {
         }
       },
       { 
-        label: 'Refresh', 
+        label: 'Refresh (after login)', 
         click: () => {
           if (mainWindow) {
             mainWindow.loadURL(NEXUSOS_URL);
@@ -176,6 +123,34 @@ function createTray() {
     console.log('Could not create tray icon');
   }
 }
+
+// Register custom protocol for deep linking
+app.setAsDefaultProtocolClient('nexusos');
+
+// Handle protocol URL on Windows/Linux
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on('second-instance', (event, commandLine) => {
+    // Someone tried to open a second instance or a protocol link
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+      // Refresh to pick up any new auth state
+      mainWindow.loadURL(NEXUSOS_URL);
+    }
+  });
+}
+
+// Handle protocol URL on macOS
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  if (mainWindow) {
+    mainWindow.focus();
+    mainWindow.loadURL(NEXUSOS_URL);
+  }
+});
 
 // App ready
 app.whenReady().then(() => {

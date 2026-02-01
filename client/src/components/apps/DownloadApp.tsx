@@ -126,6 +126,17 @@ export function DownloadApp() {
                     </div>
                   </div>
                   
+                  <div className="bg-black/30 rounded-lg p-4">
+                    <p className="font-semibold text-white mb-2">Step 5: Log In</p>
+                    <p className="text-gray-400 text-sm mb-2">To log in to the desktop app:</p>
+                    <ol className="text-gray-400 text-sm list-decimal list-inside space-y-1">
+                      <li>On the website, go to <strong>Settings → Accounts</strong></li>
+                      <li>Click <strong>"Generate Login Code"</strong> under Desktop App Login</li>
+                      <li>In the desktop app, click <strong>"Enter login code"</strong></li>
+                      <li>Type the 6-character code and click Verify</li>
+                    </ol>
+                  </div>
+                  
                   <p className="text-green-400 font-medium">NexusOS will open in its own window!</p>
                 </div>
               </div>
