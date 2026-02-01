@@ -41,6 +41,7 @@ import { TimerApp } from "@/components/apps/TimerApp";
 import { QRCodeApp } from "@/components/apps/QRCodeApp";
 import { VoiceRecorderApp } from "@/components/apps/VoiceRecorderApp";
 import { GifMakerApp } from "@/components/apps/GifMakerApp";
+import { DownloadApp } from "@/components/apps/DownloadApp";
 import { Power, Lock } from "lucide-react";
 import { useState, useEffect } from "react";
 import { AnimatePresence } from "framer-motion";
@@ -88,6 +89,7 @@ const appComponents: Record<string, React.ComponentType> = {
   qrcode: QRCodeApp,
   voicerecorder: VoiceRecorderApp,
   gifmaker: GifMakerApp,
+  download: DownloadApp,
 };
 
 export function Desktop() {

@@ -61,6 +61,7 @@ const defaultApps: App[] = [
   { id: "qrcode", name: "QR Code", icon: "qr-code", color: "bg-gray-600", defaultWidth: 550, defaultHeight: 500, iconImage: qrcodeIcon },
   { id: "voicerecorder", name: "Voice Recorder", icon: "mic", color: "bg-red-600", defaultWidth: 450, defaultHeight: 500, iconImage: voiceRecorderIcon },
   { id: "gifmaker", name: "GIF Maker", icon: "film", color: "bg-purple-600", defaultWidth: 700, defaultHeight: 550, iconImage: gifMakerIcon },
+  { id: "download", name: "Download", icon: "download", color: "bg-teal-600", defaultWidth: 600, defaultHeight: 650 },
 ];
 
 const defaultFiles: FileItem[] = [
