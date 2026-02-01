@@ -1,61 +1,48 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Download, Monitor, Terminal, CheckCircle, AlertCircle, LucideIcon } from "lucide-react";
-
-type Platform = "windows" | "mac" | "linux";
-
-interface DownloadOption {
-  platform: Platform;
-  icon: string;
-  name: string;
-  fileName: string;
-  size: string;
-  available: boolean;
-}
-
-const downloadOptions: DownloadOption[] = [
-  {
-    platform: "windows",
-    icon: "W",
-    name: "Windows",
-    fileName: "NexusOS-Setup-1.0.0.exe",
-    size: "~85 MB",
-    available: false,
-  },
-  {
-    platform: "mac",
-    icon: "M",
-    name: "macOS",
-    fileName: "NexusOS-1.0.0.dmg",
-    size: "~90 MB",
-    available: false,
-  },
-  {
-    platform: "linux",
-    icon: "L",
-    name: "Linux",
-    fileName: "NexusOS-1.0.0.AppImage",
-    size: "~80 MB",
-    available: false,
-  },
-];
+import { Download, Monitor, Terminal, CheckCircle, AlertCircle, Package, Loader2 } from "lucide-react";
 
 const features = [
   "Full desktop experience in a native window",
   "All 30+ apps included",
   "Works with your NexusOS account",
-  "Automatic updates",
   "System tray integration",
-  "Keyboard shortcuts",
+  "No browser required",
+  "Cross-platform support",
+];
+
+const requirements = [
+  { title: "Node.js", desc: "Version 18 or higher (download from nodejs.org)" },
+  { title: "Internet", desc: "Required to connect to NexusOS servers" },
+  { title: "Storage", desc: "~200MB for dependencies" },
 ];
 
 export function DownloadApp() {
-  const [selectedPlatform, setSelectedPlatform] = useState<Platform | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [showInstructions, setShowInstructions] = useState(false);
 
-  const handleDownload = (option: DownloadOption) => {
-    if (!option.available) {
-      setSelectedPlatform(option.platform);
+  const handleDownload = async () => {
+    setIsDownloading(true);
+    try {
+      const response = await fetch("/api/download/nexusos-desktop");
+      if (!response.ok) throw new Error("Download failed");
+      
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "NexusOS-Desktop.zip";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      setShowInstructions(true);
+    } catch (error) {
+      console.error("Download error:", error);
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -72,54 +59,60 @@ export function DownloadApp() {
           </p>
         </div>
 
-        <div className="grid gap-4 mb-8">
-          {downloadOptions.map((option) => (
-              <Card 
-                key={option.platform}
-                className="p-4 bg-white/10 border-white/20 hover:bg-white/15 transition-colors cursor-pointer"
-                onClick={() => handleDownload(option)}
-                data-testid={`download-${option.platform}`}
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center">
-                    <span className="text-xl font-bold text-white">{option.icon}</span>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-white font-semibold">{option.name}</h3>
-                    <p className="text-gray-400 text-sm">{option.fileName}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-gray-400 text-sm">{option.size}</p>
-                    {option.available ? (
-                      <Button size="sm" className="mt-1">
-                        <Download className="w-4 h-4 mr-1" />
-                        Download
-                      </Button>
-                    ) : (
-                      <span className="text-yellow-400 text-xs">Coming Soon</span>
-                    )}
-                  </div>
-                </div>
-              </Card>
-          ))}
-        </div>
+        <Card className="p-6 bg-gradient-to-r from-blue-600/20 to-purple-600/20 border-blue-500/30 mb-6">
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="w-16 h-16 bg-white/10 rounded-xl flex items-center justify-center">
+              <Package className="w-8 h-8 text-white" />
+            </div>
+            <div className="flex-1 text-center sm:text-left">
+              <h3 className="text-white font-semibold text-lg">Universal Package</h3>
+              <p className="text-gray-400 text-sm">Works on Windows, macOS, and Linux</p>
+              <p className="text-gray-500 text-xs mt-1">Requires Node.js to run</p>
+            </div>
+            <Button
+              size="lg"
+              onClick={handleDownload}
+              disabled={isDownloading}
+              className="bg-blue-600 hover:bg-blue-700"
+              data-testid="button-download"
+            >
+              {isDownloading ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Downloading...
+                </>
+              ) : (
+                <>
+                  <Download className="w-5 h-5 mr-2" />
+                  Download
+                </>
+              )}
+            </Button>
+          </div>
+        </Card>
 
-        {selectedPlatform && (
-          <Card className="p-4 mb-8 bg-yellow-500/10 border-yellow-500/30">
+        {showInstructions && (
+          <Card className="p-4 mb-6 bg-green-500/10 border-green-500/30">
             <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5" />
+              <CheckCircle className="w-5 h-5 text-green-400 mt-0.5" />
               <div>
-                <h4 className="text-yellow-400 font-medium">Desktop App Coming Soon</h4>
-                <p className="text-gray-300 text-sm mt-1">
-                  The NexusOS desktop app is currently in development. For now, you can use NexusOS directly in your browser at this URL. 
-                  You can also add it to your home screen or bookmark it for quick access.
-                </p>
+                <h4 className="text-green-400 font-medium">Download Complete!</h4>
+                <div className="text-gray-300 text-sm mt-2 space-y-2">
+                  <p>To run NexusOS Desktop:</p>
+                  <ol className="list-decimal list-inside space-y-1 ml-2">
+                    <li>Extract the ZIP file</li>
+                    <li>Open a terminal in the extracted folder</li>
+                    <li>Run: <code className="bg-black/30 px-2 py-0.5 rounded">npm install</code></li>
+                    <li>Run: <code className="bg-black/30 px-2 py-0.5 rounded">npm start</code></li>
+                  </ol>
+                  <p className="text-gray-400 mt-2">See the README file for more details.</p>
+                </div>
               </div>
             </div>
           </Card>
         )}
 
-        <Card className="p-6 bg-white/5 border-white/10 mb-8">
+        <Card className="p-6 bg-white/5 border-white/10 mb-6">
           <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
             <Monitor className="w-5 h-5" />
             Features
@@ -134,34 +127,37 @@ export function DownloadApp() {
           </div>
         </Card>
 
-        <Card className="p-6 bg-white/5 border-white/10">
+        <Card className="p-6 bg-white/5 border-white/10 mb-6">
           <h2 className="text-xl font-semibold text-white mb-4 flex items-center gap-2">
             <Terminal className="w-5 h-5" />
-            System Requirements
+            Requirements
           </h2>
-          <div className="space-y-4 text-sm">
+          <div className="space-y-3">
+            {requirements.map((req, i) => (
+              <div key={i}>
+                <h4 className="text-white font-medium">{req.title}</h4>
+                <p className="text-gray-400 text-sm">{req.desc}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card className="p-4 bg-yellow-500/10 border-yellow-500/30">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-yellow-400 mt-0.5" />
             <div>
-              <h4 className="text-white font-medium mb-1">Windows</h4>
-              <p className="text-gray-400">Windows 10 or later, 64-bit</p>
-            </div>
-            <div>
-              <h4 className="text-white font-medium mb-1">macOS</h4>
-              <p className="text-gray-400">macOS 10.15 (Catalina) or later</p>
-            </div>
-            <div>
-              <h4 className="text-white font-medium mb-1">Linux</h4>
-              <p className="text-gray-400">Ubuntu 18.04+, Fedora 32+, or equivalent</p>
-            </div>
-            <div className="pt-2 border-t border-white/10">
-              <p className="text-gray-400">
-                All platforms require an active internet connection to use NexusOS features.
+              <h4 className="text-yellow-400 font-medium">Note</h4>
+              <p className="text-gray-300 text-sm mt-1">
+                This package requires Node.js installed on your computer. 
+                Download Node.js from <span className="text-blue-400">nodejs.org</span> if you don't have it.
+                The app needs an internet connection to work.
               </p>
             </div>
           </div>
         </Card>
 
         <p className="text-center text-gray-500 text-xs mt-6">
-          NexusOS Desktop is powered by Electron and requires an internet connection.
+          NexusOS Desktop is powered by Electron
         </p>
       </div>
     </div>

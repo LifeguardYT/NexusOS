@@ -9,6 +9,9 @@ import { updates } from "@shared/schema";
 import { desc, eq, or, and, ilike, sql } from "drizzle-orm";
 import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
 import os from "os";
+import archiver from "archiver";
+import path from "path";
+import fs from "fs";
 
 // Global shutdown state
 let shutdownState = {
@@ -1279,6 +1282,35 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Failed to delete email:", error);
       res.status(500).json({ error: "Failed to delete email" });
+    }
+  });
+
+  // Download NexusOS Desktop app
+  app.get("/api/download/nexusos-desktop", (req, res) => {
+    try {
+      const electronAppPath = path.join(__dirname, "electron-app");
+      
+      // Check if the directory exists
+      if (!fs.existsSync(electronAppPath)) {
+        return res.status(404).json({ error: "Download not available" });
+      }
+
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader("Content-Disposition", "attachment; filename=NexusOS-Desktop.zip");
+
+      const archive = archiver("zip", { zlib: { level: 9 } });
+      
+      archive.on("error", (err: Error) => {
+        console.error("Archive error:", err);
+        res.status(500).json({ error: "Failed to create download" });
+      });
+
+      archive.pipe(res);
+      archive.directory(electronAppPath, "NexusOS-Desktop");
+      archive.finalize();
+    } catch (error) {
+      console.error("Download error:", error);
+      res.status(500).json({ error: "Failed to create download" });
     }
   });
 

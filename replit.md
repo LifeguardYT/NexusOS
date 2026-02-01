@@ -42,7 +42,7 @@ A fully functional web-based operating system simulation built with React and Ty
 30. **QR Code** - Generate QR codes for any text/URL
 31. **Voice Recorder** - Record audio (requires new tab for permissions)
 32. **GIF Maker** - Create animated GIFs frame-by-frame
-33. **Download** - Download NexusOS as a desktop app (coming soon)
+33. **Download** - Download NexusOS as a desktop Electron app (requires Node.js)
 34. **Friends** - Social app for managing friends, sending/accepting friend requests, and viewing online users
 
 ## New Features
