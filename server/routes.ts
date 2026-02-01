@@ -618,6 +618,29 @@ export async function registerRoutes(
     }
   });
 
+  // Get desktop auth user (for Electron app)
+  app.get("/api/desktop-auth/user", async (req: any, res) => {
+    try {
+      const desktopUserId = req.session?.desktopUserId;
+      
+      if (!desktopUserId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      // Get user from database
+      const [user] = await db.select().from(users).where(eq(users.id, desktopUserId));
+      
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching desktop user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
   // ============= CHAT ROUTES =============
 
   // Get global chat messages

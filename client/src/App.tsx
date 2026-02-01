@@ -183,6 +183,10 @@ function LoadingScreen() {
 function AppContent() {
   const [isBannedLocally, setIsBannedLocally] = useState(checkBanMarker);
   const bannedUserId = getBannedUserId();
+  
+  // Detect if running in Electron
+  const isElectron = typeof navigator !== 'undefined' && 
+    navigator.userAgent.toLowerCase().includes('electron');
 
   // If locally banned, check with server if user has been unbanned
   const { data: unbanCheck } = useQuery<UnbanCheck>({
@@ -196,11 +200,12 @@ function AppContent() {
     refetchInterval: 60000,
   });
 
-  // Get current user info
+  // Get current user info - use desktop auth endpoint if in Electron
   const { data: authUser, isLoading: isLoadingUser } = useQuery<AuthUser | null>({
-    queryKey: ["/api/auth/user"],
+    queryKey: [isElectron ? "/api/desktop-auth/user" : "/api/auth/user"],
     queryFn: async () => {
-      const res = await fetch("/api/auth/user", { credentials: "include" });
+      const endpoint = isElectron ? "/api/desktop-auth/user" : "/api/auth/user";
+      const res = await fetch(endpoint, { credentials: "include" });
       if (res.status === 401) return null;
       if (!res.ok) throw new Error("Failed to fetch user");
       return res.json();
