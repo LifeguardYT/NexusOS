@@ -695,12 +695,13 @@ export async function registerRoutes(
         .orderBy(desc(messages.createdAt))
         .limit(100);
       
-      // Add owner/admin status for each sender
+      // Add owner/admin/banned status for each sender
       const messagesWithRoles = await Promise.all(globalMessages.map(async (msg) => {
         const senderIsOwner = msg.senderId === OWNER_USER_ID;
         const [senderUser] = await db.select().from(users).where(eq(users.id, msg.senderId));
         const senderIsAdmin = senderIsOwner || senderUser?.isAdmin === true;
-        return { ...msg, senderIsOwner, senderIsAdmin };
+        const senderIsBanned = senderUser?.banned === true;
+        return { ...msg, senderIsOwner, senderIsAdmin, senderIsBanned };
       }));
       
       res.json(messagesWithRoles.reverse());
@@ -761,12 +762,13 @@ export async function registerRoutes(
         .orderBy(desc(messages.createdAt))
         .limit(100);
       
-      // Add owner/admin status for each sender
+      // Add owner/admin/banned status for each sender
       const messagesWithRoles = await Promise.all(directMessages.map(async (msg) => {
         const senderIsOwner = msg.senderId === OWNER_USER_ID;
         const [senderUser] = await db.select().from(users).where(eq(users.id, msg.senderId));
         const senderIsAdmin = senderIsOwner || senderUser?.isAdmin === true;
-        return { ...msg, senderIsOwner, senderIsAdmin };
+        const senderIsBanned = senderUser?.banned === true;
+        return { ...msg, senderIsOwner, senderIsAdmin, senderIsBanned };
       }));
       
       res.json(messagesWithRoles.reverse());

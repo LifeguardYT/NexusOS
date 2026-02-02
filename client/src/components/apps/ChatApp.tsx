@@ -18,6 +18,7 @@ interface Message {
   createdAt: string;
   senderIsOwner?: boolean;
   senderIsAdmin?: boolean;
+  senderIsBanned?: boolean;
 }
 
 interface Conversation {
@@ -407,7 +408,7 @@ export function ChatApp() {
                             : "bg-white/10 rounded-bl-md"
                         }`}
                       >
-                        {(msg.senderIsOwner || msg.senderIsAdmin) && (
+                        {(msg.senderIsOwner || msg.senderIsAdmin || msg.senderIsBanned) && (
                           <div className={`flex items-center flex-wrap gap-1.5 mb-1 ${isOwn ? "justify-end" : ""}`}>
                             {msg.senderIsOwner && (
                               <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${isOwn ? "bg-yellow-500/30 text-yellow-200 border border-yellow-400/40" : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"}`}>
@@ -419,6 +420,11 @@ export function ChatApp() {
                               <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${isOwn ? "bg-white/20 text-white border border-white/30" : "bg-blue-500/20 text-blue-400 border border-blue-500/30"}`}>
                                 <Shield className="w-2.5 h-2.5" />
                                 ADMIN
+                              </span>
+                            )}
+                            {msg.senderIsBanned && (
+                              <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${isOwn ? "bg-red-500/30 text-red-200 border border-red-400/40" : "bg-red-500/20 text-red-400 border border-red-500/30"}`}>
+                                BANNED
                               </span>
                             )}
                           </div>
