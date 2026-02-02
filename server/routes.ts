@@ -1298,7 +1298,16 @@ export async function registerRoutes(
       const senderName = sender.firstName || sender.email?.split("@")[0] || "Unknown";
 
       // Insert email for recipient (inbox)
-      await db.insert(emails).values({
+      console.log("Sending email:", {
+        fromUserId: userId,
+        fromName: senderName,
+        fromEmail: senderEmailAddress,
+        toUserId: recipient.id,
+        toEmail: toEmail,
+        subject,
+      });
+      
+      const insertResult = await db.insert(emails).values({
         fromUserId: userId,
         fromName: senderName,
         fromEmail: senderEmailAddress,
@@ -1307,7 +1316,9 @@ export async function registerRoutes(
         subject,
         body: body || "",
         folder: "inbox",
-      });
+      }).returning();
+      
+      console.log("Email inserted:", insertResult);
 
       res.json({ success: true, message: "Email sent successfully" });
     } catch (error) {
