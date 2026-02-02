@@ -54,13 +54,13 @@ export function EmailApp() {
 
   const getUserNexusEmail = (): string => {
     if (user?.firstName) {
-      return `${user.firstName}@nexusos.com`;
+      return `${user.firstName}@nexusos.live`;
     }
     if (user?.email) {
       const username = user.email.split("@")[0];
-      return `${username}@nexusos.com`;
+      return `${username}@nexusos.live`;
     }
-    return "Guest@nexusos.com";
+    return "Guest@nexusos.live";
   };
 
   const userEmail = getUserNexusEmail();
@@ -411,7 +411,7 @@ export function EmailApp() {
             <Input
               value={composeData.to}
               onChange={e => setComposeData(prev => ({ ...prev, to: e.target.value }))}
-              placeholder="To (e.g. Username@nexusos.com)"
+              placeholder="To (e.g. Username@nexusos.live)"
               data-testid="input-to"
             />
             <Input

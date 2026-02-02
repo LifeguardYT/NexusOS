@@ -1274,7 +1274,7 @@ export async function registerRoutes(
       }
 
       // Parse the nexusos email to find the user
-      // Format is username@nexusos.com or firstname@nexusos.com
+      // Format is username@nexusos.live or firstname@nexusos.live
       const recipientUsername = toEmail.split("@")[0].toLowerCase();
       
       // Find recipient by firstName or email prefix
@@ -1292,8 +1292,8 @@ export async function registerRoutes(
       
       // Create sender's email address
       const senderEmailAddress = sender.firstName 
-        ? `${sender.firstName}@nexusos.com`
-        : `${sender.email?.split("@")[0]}@nexusos.com`;
+        ? `${sender.firstName}@nexusos.live`
+        : `${sender.email?.split("@")[0]}@nexusos.live`;
       
       const senderName = sender.firstName || sender.email?.split("@")[0] || "Unknown";
 
