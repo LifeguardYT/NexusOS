@@ -560,12 +560,21 @@ export function OSProvider({ children }: { children: ReactNode }) {
       }
     };
     
-    // Check for updates and notifications after startup
-    const timer = setTimeout(() => {
+    const checkAll = () => {
       checkForNewUpdates();
       checkForGlobalNotifications();
-    }, 2000);
-    return () => clearTimeout(timer);
+    };
+    
+    // Check immediately after startup
+    const initialTimer = setTimeout(checkAll, 2000);
+    
+    // Then check every 30 seconds for new notifications
+    const interval = setInterval(checkAll, 30000);
+    
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+    };
   }, [isPoweredOn, hasCompletedStartup, addNotification]);
 
   const updateSettings = useCallback((updates: Partial<Settings>) => {
