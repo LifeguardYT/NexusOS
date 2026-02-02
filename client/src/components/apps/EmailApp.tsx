@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { 
   Inbox, Send, FileText, Trash2, Star, Archive, Mail, 
-  Pencil, X, Search, RefreshCw, Reply, Forward, Loader2
+  Pencil, X, Search, RefreshCw, Reply, Forward, Loader2, User as UserIcon
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,11 @@ import { Badge } from "@/components/ui/badge";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+
+interface EmailSuggestion {
+  email: string;
+  name: string;
+}
 
 interface Email {
   id: string;
@@ -70,6 +75,65 @@ export function EmailApp() {
   const [isComposing, setIsComposing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [composeData, setComposeData] = useState({ to: "", subject: "", body: "" });
+  
+  // Email autocomplete state
+  const [emailSuggestions, setEmailSuggestions] = useState<EmailSuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  const toInputRef = useRef<HTMLInputElement>(null);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+
+  // Search for users as they type
+  useEffect(() => {
+    const searchUsers = async () => {
+      const query = composeData.to.split("@")[0]; // Get part before @
+      if (query.length < 1) {
+        setEmailSuggestions([]);
+        return;
+      }
+      
+      setIsSearchingUsers(true);
+      try {
+        const res = await fetch(`/api/emails/search-users?query=${encodeURIComponent(query)}`, {
+          credentials: "include",
+        });
+        if (res.ok) {
+          const suggestions = await res.json();
+          setEmailSuggestions(suggestions);
+          setShowSuggestions(suggestions.length > 0);
+        }
+      } catch (error) {
+        console.error("Failed to search users:", error);
+      } finally {
+        setIsSearchingUsers(false);
+      }
+    };
+
+    const debounceTimer = setTimeout(searchUsers, 300);
+    return () => clearTimeout(debounceTimer);
+  }, [composeData.to]);
+
+  // Close suggestions when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        suggestionsRef.current && 
+        !suggestionsRef.current.contains(e.target as Node) &&
+        toInputRef.current &&
+        !toInputRef.current.contains(e.target as Node)
+      ) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectEmailSuggestion = (email: string) => {
+    setComposeData(prev => ({ ...prev, to: email }));
+    setShowSuggestions(false);
+    setEmailSuggestions([]);
+  };
 
   const sendEmailMutation = useMutation({
     mutationFn: async (data: { toEmail: string; subject: string; body: string }) => {
@@ -408,12 +472,41 @@ export function EmailApp() {
             </Button>
           </div>
           <div className="p-3 space-y-2 border-b">
-            <Input
-              value={composeData.to}
-              onChange={e => setComposeData(prev => ({ ...prev, to: e.target.value }))}
-              placeholder="To (e.g. Username@nexusos.live)"
-              data-testid="input-to"
-            />
+            <div className="relative">
+              <Input
+                ref={toInputRef}
+                value={composeData.to}
+                onChange={e => setComposeData(prev => ({ ...prev, to: e.target.value }))}
+                onFocus={() => emailSuggestions.length > 0 && setShowSuggestions(true)}
+                placeholder="To (e.g. Username@nexusos.live)"
+                data-testid="input-to"
+              />
+              {isSearchingUsers && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 animate-spin text-muted-foreground" />
+              )}
+              {showSuggestions && emailSuggestions.length > 0 && (
+                <div 
+                  ref={suggestionsRef}
+                  className="absolute z-50 top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-lg max-h-48 overflow-y-auto"
+                  data-testid="email-suggestions"
+                >
+                  {emailSuggestions.map((suggestion, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => selectEmailSuggestion(suggestion.email)}
+                      className="w-full px-3 py-2 text-left hover:bg-accent flex items-center gap-2 transition-colors"
+                      data-testid={`suggestion-${idx}`}
+                    >
+                      <UserIcon className="w-4 h-4 text-muted-foreground" />
+                      <div>
+                        <div className="font-medium text-sm">{suggestion.name}</div>
+                        <div className="text-xs text-muted-foreground">{suggestion.email}</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <Input
               value={composeData.subject}
               onChange={e => setComposeData(prev => ({ ...prev, subject: e.target.value }))}

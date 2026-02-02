@@ -1316,6 +1316,51 @@ export async function registerRoutes(
     }
   });
 
+  // Search users for email autocomplete
+  app.get("/api/emails/search-users", isAuthenticated, async (req: any, res) => {
+    try {
+      const { query } = req.query;
+      const currentUserId = req.user?.claims?.sub;
+      
+      if (!query || query.length < 1) {
+        return res.json([]);
+      }
+
+      const searchQuery = query.toLowerCase();
+      
+      // Find users whose firstName or email prefix matches the query
+      const matchingUsers = await db.select({
+        id: users.id,
+        firstName: users.firstName,
+        email: users.email,
+      }).from(users)
+        .where(and(
+          or(
+            ilike(users.firstName, `%${searchQuery}%`),
+            sql`LOWER(SPLIT_PART(${users.email}, '@', 1)) LIKE ${'%' + searchQuery + '%'}`
+          ),
+          sql`${users.id} != ${currentUserId}` // Exclude current user
+        ))
+        .limit(10);
+
+      // Format as nexusos emails
+      const suggestions = matchingUsers.map(user => {
+        const nexusEmail = user.firstName 
+          ? `${user.firstName}@nexusos.live`
+          : `${user.email?.split("@")[0]}@nexusos.live`;
+        return {
+          email: nexusEmail,
+          name: user.firstName || user.email?.split("@")[0] || "User",
+        };
+      });
+
+      res.json(suggestions);
+    } catch (error) {
+      console.error("Failed to search users:", error);
+      res.status(500).json({ error: "Failed to search users" });
+    }
+  });
+
   // Mark email as read/unread
   app.patch("/api/emails/:emailId/read", isAuthenticated, async (req: any, res) => {
     try {
