@@ -507,6 +507,41 @@ export function OSProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("os-files", JSON.stringify(files));
   }, [files]);
 
+  // Check for new updates and notify users
+  useEffect(() => {
+    if (!isPoweredOn || !hasCompletedStartup) return;
+    
+    const checkForNewUpdates = async () => {
+      try {
+        const response = await fetch("/api/updates");
+        if (!response.ok) return;
+        
+        const updates = await response.json();
+        if (!updates || updates.length === 0) return;
+        
+        const latestUpdate = updates[0];
+        const lastSeenUpdateId = localStorage.getItem("os-last-seen-update-id");
+        
+        if (lastSeenUpdateId !== latestUpdate.id) {
+          // There's a new update the user hasn't seen
+          addNotification(
+            "New Update Available",
+            latestUpdate.title,
+            "info",
+            "updates"
+          );
+          localStorage.setItem("os-last-seen-update-id", latestUpdate.id);
+        }
+      } catch (error) {
+        console.error("Failed to check for updates:", error);
+      }
+    };
+    
+    // Check for updates after startup
+    const timer = setTimeout(checkForNewUpdates, 2000);
+    return () => clearTimeout(timer);
+  }, [isPoweredOn, hasCompletedStartup, addNotification]);
+
   const updateSettings = useCallback((updates: Partial<Settings>) => {
     setSettings(prev => ({ ...prev, ...updates }));
   }, []);
