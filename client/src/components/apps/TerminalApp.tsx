@@ -64,7 +64,7 @@ const createFileSystem = (): Record<string, FileSystemNode> => ({
       "passwd": { type: "file", content: "root:x:0:0:root:/root:/bin/bash\nuser:x:1000:1000:User:/home/user:/bin/bash", size: 74, permissions: "-rw-r--r--" },
       "hostname": { type: "file", content: "nexusos", size: 7, permissions: "-rw-r--r--" },
       "hosts": { type: "file", content: "127.0.0.1   localhost\n::1         localhost\n127.0.1.1   nexusos", size: 58, permissions: "-rw-r--r--" },
-      "os-release": { type: "file", content: "NAME=\"NexusOS\"\nVERSION=\"2.0.0\"\nID=nexusos\nPRETTY_NAME=\"NexusOS 2.0.0\"", size: 68, permissions: "-rw-r--r--" },
+      "os-release": { type: "file", content: "NAME=\"NexusOS\"\nVERSION=\"2.1.1\"\nID=nexusos\nPRETTY_NAME=\"NexusOS 2.1.1\"", size: 68, permissions: "-rw-r--r--" },
     }
   },
   var: {
