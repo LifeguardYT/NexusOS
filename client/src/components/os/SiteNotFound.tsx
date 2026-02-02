@@ -14,14 +14,10 @@ export function SiteNotFound({ reason }: SiteNotFoundProps) {
           </div>
         </div>
         <h1 className="text-3xl font-bold text-white mb-4">Banned</h1>
-        {reason && (
-          <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6">
-            <p className="text-red-400 font-medium">Reason:</p>
-            <p className="text-gray-300 mt-1">{reason}</p>
-          </div>
-        )}
-        <p className="text-gray-400 mb-6">
-          Your account has been suspended from NexusOS. 
+        <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6">
+          <p className="text-gray-300">{reason || "No reason provided"}</p>
+        </div>
+        <p className="text-gray-500 text-sm">
           If you believe this is a mistake, please contact an administrator.
         </p>
         <div className="text-xs text-gray-600 mt-8">
