@@ -507,7 +507,7 @@ export function OSProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("os-files", JSON.stringify(files));
   }, [files]);
 
-  // Check for new updates and notify users
+  // Check for new updates and global notifications
   useEffect(() => {
     if (!isPoweredOn || !hasCompletedStartup) return;
     
@@ -523,7 +523,6 @@ export function OSProvider({ children }: { children: ReactNode }) {
         const lastSeenUpdateId = localStorage.getItem("os-last-seen-update-id");
         
         if (lastSeenUpdateId !== latestUpdate.id) {
-          // There's a new update the user hasn't seen
           addNotification(
             "New Update Available",
             latestUpdate.title,
@@ -537,8 +536,35 @@ export function OSProvider({ children }: { children: ReactNode }) {
       }
     };
     
-    // Check for updates after startup
-    const timer = setTimeout(checkForNewUpdates, 2000);
+    const checkForGlobalNotifications = async () => {
+      try {
+        const response = await fetch("/api/notifications");
+        if (!response.ok) return;
+        
+        const notifications = await response.json();
+        if (!notifications || notifications.length === 0) return;
+        
+        const latestNotification = notifications[0];
+        const lastSeenNotificationId = localStorage.getItem("os-last-seen-notification-id");
+        
+        if (lastSeenNotificationId !== latestNotification.id) {
+          addNotification(
+            latestNotification.title,
+            latestNotification.message,
+            latestNotification.type || "info"
+          );
+          localStorage.setItem("os-last-seen-notification-id", latestNotification.id);
+        }
+      } catch (error) {
+        console.error("Failed to check for global notifications:", error);
+      }
+    };
+    
+    // Check for updates and notifications after startup
+    const timer = setTimeout(() => {
+      checkForNewUpdates();
+      checkForGlobalNotifications();
+    }, 2000);
     return () => clearTimeout(timer);
   }, [isPoweredOn, hasCompletedStartup, addNotification]);
 

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { settingsSchema, insertUpdateSchema, insertMessageSchema, insertCustomAppSchema, insertBugReportSchema, users, messages, customApps, bugReports, userPresence, friends, emails, insertEmailSchema } from "@shared/schema";
+import { settingsSchema, insertUpdateSchema, insertMessageSchema, insertCustomAppSchema, insertBugReportSchema, users, messages, customApps, bugReports, userPresence, friends, emails, insertEmailSchema, globalNotifications, insertGlobalNotificationSchema } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { updates } from "@shared/schema";
@@ -248,6 +248,49 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Failed to delete update:", error);
       res.status(500).json({ error: "Failed to delete update" });
+    }
+  });
+
+  // Get global notifications (for checking new ones)
+  app.get("/api/notifications", async (req, res) => {
+    try {
+      const allNotifications = await db.select().from(globalNotifications).orderBy(desc(globalNotifications.createdAt));
+      res.json(allNotifications);
+    } catch (error) {
+      console.error("Failed to fetch notifications:", error);
+      res.status(500).json({ error: "Failed to fetch notifications" });
+    }
+  });
+
+  // Create a global notification (owner only)
+  app.post("/api/notifications", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId || !isOwner(userId)) {
+        return res.status(403).json({ error: "Owner access required" });
+      }
+      const data = insertGlobalNotificationSchema.parse(req.body);
+      const [newNotification] = await db.insert(globalNotifications).values(data).returning();
+      res.json(newNotification);
+    } catch (error) {
+      console.error("Failed to create notification:", error);
+      res.status(500).json({ error: "Failed to create notification" });
+    }
+  });
+
+  // Delete a global notification (owner only)
+  app.delete("/api/notifications/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId || !isOwner(userId)) {
+        return res.status(403).json({ error: "Owner access required" });
+      }
+      const { id } = req.params;
+      await db.delete(globalNotifications).where(eq(globalNotifications.id, id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to delete notification:", error);
+      res.status(500).json({ error: "Failed to delete notification" });
     }
   });
 

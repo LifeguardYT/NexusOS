@@ -91,6 +91,19 @@ export const insertUpdateSchema = createInsertSchema(updates).omit({ id: true, c
 export type InsertUpdate = z.infer<typeof insertUpdateSchema>;
 export type Update = typeof updates.$inferSelect;
 
+// Global Notifications table (owner can broadcast to all users)
+export const globalNotifications = pgTable("global_notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  type: text("type").notNull().default("info"), // info, success, warning, error
+  createdAt: text("created_at").notNull().default(sql`now()`),
+});
+
+export const insertGlobalNotificationSchema = createInsertSchema(globalNotifications).omit({ id: true, createdAt: true });
+export type InsertGlobalNotification = z.infer<typeof insertGlobalNotificationSchema>;
+export type GlobalNotification = typeof globalNotifications.$inferSelect;
+
 // Chat Messages table
 export const messages = pgTable("messages", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

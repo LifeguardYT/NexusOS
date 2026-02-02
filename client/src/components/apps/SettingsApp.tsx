@@ -6,7 +6,7 @@ import {
   Palette, Monitor, Volume2, Wifi, Bell, User, Lock, Info, 
   Sun, Moon, ChevronRight, Check, Shield, Code, Activity, Users,
   Cpu, HardDrive, Clock, RefreshCw, ArrowLeft, Key, Mail, Ban, UserCheck, Crown, ShieldCheck, ShieldOff,
-  Download, Upload, Trash2, Terminal
+  Download, Upload, Trash2, Terminal, Send
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -321,6 +321,10 @@ export function SettingsApp() {
   const [adminUsername, setAdminUsername] = useState("");
   const [grantAdminError, setGrantAdminError] = useState("");
   const [grantAdminSuccess, setGrantAdminSuccess] = useState("");
+  const [notifTitle, setNotifTitle] = useState("");
+  const [notifMessage, setNotifMessage] = useState("");
+  const [notifType, setNotifType] = useState<"info" | "success" | "warning" | "error">("info");
+  const [notifSuccess, setNotifSuccess] = useState("");
   const [versionClickCount, setVersionClickCount] = useState(0);
   const [banModalOpen, setBanModalOpen] = useState(false);
   const [banTargetUser, setBanTargetUser] = useState<{id: string; name: string} | null>(null);
@@ -416,6 +420,27 @@ export function SettingsApp() {
     onError: (error: Error) => {
       setGrantAdminError(error.message);
       setGrantAdminSuccess("");
+    },
+  });
+
+  const sendNotificationMutation = useMutation({
+    mutationFn: async (data: { title: string; message: string; type: string }) => {
+      const res = await apiRequest("POST", "/api/notifications", data);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to send notification");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      setNotifSuccess("Notification sent to all users!");
+      setNotifTitle("");
+      setNotifMessage("");
+      setNotifType("info");
+      setTimeout(() => setNotifSuccess(""), 3000);
+    },
+    onError: (error: Error) => {
+      setNotifSuccess("");
     },
   });
 
@@ -1632,6 +1657,57 @@ export function SettingsApp() {
                   )}
                 </div>
               ))}
+            </div>
+
+            <div className="p-4 rounded-lg bg-white/5 space-y-4 mt-6">
+              <h4 className="font-medium flex items-center gap-2">
+                <Bell className="w-4 h-4" />
+                Broadcast Notification
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Send a notification to all NexusOS users.
+              </p>
+              <Input
+                placeholder="Notification title..."
+                value={notifTitle}
+                onChange={(e) => setNotifTitle(e.target.value)}
+                data-testid="input-notif-title"
+              />
+              <Textarea
+                placeholder="Notification message..."
+                value={notifMessage}
+                onChange={(e) => setNotifMessage(e.target.value)}
+                className="min-h-[80px]"
+                data-testid="input-notif-message"
+              />
+              <div className="flex gap-2">
+                <select
+                  value={notifType}
+                  onChange={(e) => setNotifType(e.target.value as any)}
+                  className="flex-1 rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  data-testid="select-notif-type"
+                >
+                  <option value="info">Info</option>
+                  <option value="success">Success</option>
+                  <option value="warning">Warning</option>
+                  <option value="error">Error</option>
+                </select>
+                <Button
+                  onClick={() => sendNotificationMutation.mutate({ 
+                    title: notifTitle, 
+                    message: notifMessage, 
+                    type: notifType 
+                  })}
+                  disabled={!notifTitle.trim() || !notifMessage.trim() || sendNotificationMutation.isPending}
+                  data-testid="btn-send-notification"
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  Send
+                </Button>
+              </div>
+              {notifSuccess && (
+                <p className="text-sm text-green-400">{notifSuccess}</p>
+              )}
             </div>
           </div>
         );
