@@ -20,9 +20,6 @@ export function SiteNotFound({ reason }: SiteNotFoundProps) {
         <p className="text-gray-500 text-sm">
           If you believe this is a mistake, please contact an administrator.
         </p>
-        <div className="text-xs text-gray-600 mt-8">
-          Error Code: ACCESS_REVOKED
-        </div>
       </div>
     </div>
   );
