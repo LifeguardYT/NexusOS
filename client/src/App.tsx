@@ -237,9 +237,9 @@ function AppContent() {
     }
   }, [unbanCheck]);
 
-  // If banned (either from server or localStorage), show site not found
+  // If banned (either from server or localStorage), show ban screen
   if (isBannedLocally || banStatus?.banned) {
-    return <SiteNotFound />;
+    return <SiteNotFound reason={banStatus?.reason} />;
   }
 
   // Show loading while checking auth
