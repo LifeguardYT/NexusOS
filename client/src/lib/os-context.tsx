@@ -524,8 +524,8 @@ export function OSProvider({ children }: { children: ReactNode }) {
         
         if (lastSeenUpdateId !== latestUpdate.id) {
           addNotification(
-            "New Update Available",
-            latestUpdate.title,
+            "Update",
+            "Check the Updates app!",
             "info",
             "updates"
           );
