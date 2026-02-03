@@ -1779,6 +1779,14 @@ alias grep='grep --color=auto'`;
         const users = await res.json();
         if (users.length === 0) return "No registered users";
         
+        // Get owner ID
+        const adminStatusRes = await fetch("/api/admin/status", { credentials: "include" });
+        let ownerId = "";
+        if (adminStatusRes.ok) {
+          const adminStatus = await adminStatusRes.json();
+          ownerId = adminStatus.ownerId || "";
+        }
+        
         // Fetch tags for all users
         const userTags: Record<string, string[]> = {};
         await Promise.all(users.map(async (u: any) => {
@@ -1799,8 +1807,20 @@ alias grep='grep --color=auto'`;
           const id = u.id.substring(0, 14).padEnd(16);
           const name = (`${u.firstName || ""} ${u.lastName || ""}`.trim() || "N/A").substring(0, 18).padEnd(20);
           const status = u.banned ? "\x1b[31mBANNED\x1b[0m    " : "\x1b[32mActive\x1b[0m    ";
-          const tags = userTags[u.id]?.length > 0 ? userTags[u.id].join(", ") : "-";
-          output += `${id}| ${name}| ${status}| ${tags}\n`;
+          
+          // Build tags list with role tags first
+          const allTags: string[] = [];
+          if (u.id === ownerId) {
+            allTags.push("\x1b[33mOWNER\x1b[0m");
+          } else if (u.isAdmin) {
+            allTags.push("\x1b[36mADMIN\x1b[0m");
+          }
+          if (userTags[u.id]?.length > 0) {
+            allTags.push(...userTags[u.id]);
+          }
+          const tagsStr = allTags.length > 0 ? allTags.join(", ") : "-";
+          
+          output += `${id}| ${name}| ${status}| ${tagsStr}\n`;
         });
         return output;
       } catch (e) {
