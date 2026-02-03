@@ -1771,6 +1771,30 @@ alias grep='grep --color=auto'`;
                    \x1b[30m███\x1b[31m███\x1b[32m███\x1b[33m███\x1b[34m███\x1b[35m███\x1b[36m███\x1b[37m███\x1b[0m
 `,
     
+    secret: () => `\x1b[35m╔═══════════════════════════════════════════╗
+║       \x1b[1;33m🤫 SECRET COMMANDS 🤫\x1b[0m\x1b[35m              ║
+╚═══════════════════════════════════════════╝\x1b[0m
+
+You found the secret command list! Here are some hidden gems:
+
+  \x1b[36mcmatrix\x1b[0m      - Matrix-style falling code animation
+  \x1b[36msl\x1b[0m           - Steam locomotive (when you mistype 'ls')
+  \x1b[36mcowsay\x1b[0m       - A cow says your message
+  \x1b[36mfortune\x1b[0m      - Random fortune cookie wisdom
+  \x1b[36mfiglet\x1b[0m       - Create ASCII art text banners
+  \x1b[36mlolcat\x1b[0m       - Rainbow colored text output
+  \x1b[36mparrot\x1b[0m       - Party parrot animation
+  \x1b[36maquarium\x1b[0m     - ASCII fish tank
+  \x1b[36mfire\x1b[0m         - Animated fire effect
+  \x1b[36mhack\x1b[0m         - "Hacker" mode simulation
+  \x1b[36mrickroll\x1b[0m     - Never gonna give you up...
+  \x1b[36m42\x1b[0m           - The answer to everything
+  \x1b[36mxyzzy\x1b[0m        - Nothing happens... or does it?
+  \x1b[36msudo rm -rf\x1b[0m  - Don't try this at home
+
+\x1b[33mTip:\x1b[0m Some commands have hidden easter eggs. Explore!
+`,
+    
     users: async (args, isAdmin) => {
       if (!isAdmin) return "Permission denied: Admin access required";
       try {
