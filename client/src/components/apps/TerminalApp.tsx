@@ -390,7 +390,7 @@ export function TerminalApp() {
       const categories = {
         "File Operations": ["ls", "cd", "pwd", "cat", "head", "tail", "touch", "mkdir", "rm", "rmdir", "cp", "mv", "find", "locate", "file"],
         "Text Processing": ["grep", "sed", "awk", "sort", "uniq", "wc", "cut", "tr", "diff", "tee"],
-        "System Info": ["uname", "hostname", "uptime", "date", "cal", "whoami", "user", "id", "groups", "w", "who", "last"],
+        "System Info": ["uname", "hostname", "uptime", "date", "cal", "whoami", "id", "groups", "w", "who", "last"],
         "Process Management": ["ps", "top", "htop", "kill", "killall", "jobs", "bg", "fg", "nohup"],
         "Disk & Memory": ["df", "du", "free", "mount", "umount"],
         "Network": ["ping", "ifconfig", "ip", "netstat", "ss", "curl", "wget", "host", "dig", "nslookup"],
@@ -590,48 +590,6 @@ export function TerminalApp() {
     },
     
     whoami: () => env.USER || "user",
-    
-    user: async () => {
-      try {
-        const userRes = await fetch("/api/auth/user", { credentials: "include" });
-        if (!userRes.ok) return "Error: Not logged in";
-        const userData = await userRes.json();
-        
-        if (!userData) return "Error: Not logged in";
-        
-        // Fetch user tags
-        let tags: {id: string; name: string; color: string}[] = [];
-        try {
-          const tagsRes = await fetch(`/api/users/${userData.id}/tags`, { credentials: "include" });
-          if (tagsRes.ok) {
-            tags = await tagsRes.json();
-          }
-        } catch (e) {
-          // Tags fetch failed, continue without them
-        }
-        
-        const banStatus = userData.banned ? `\x1b[31mBANNED\x1b[0m` : `\x1b[32mNot Banned\x1b[0m`;
-        const banReason = userData.banned && userData.banReason ? `\n  Reason: ${userData.banReason}` : "";
-        
-        let tagsDisplay = "None";
-        if (tags.length > 0) {
-          tagsDisplay = tags.map(t => t.name).join(", ");
-        }
-        
-        return `\x1b[36m╔══════════════════════════════════════╗\x1b[0m
-\x1b[36m║\x1b[0m         \x1b[1;33mUser Information\x1b[0m            \x1b[36m║\x1b[0m
-\x1b[36m╚══════════════════════════════════════╝\x1b[0m
-
-  \x1b[1mUsername:\x1b[0m    ${userData.firstName || "Unknown"}${userData.lastName ? " " + userData.lastName : ""}
-  \x1b[1mUser ID:\x1b[0m     ${userData.id}
-  \x1b[1mEmail:\x1b[0m       ${userData.email || "N/A"}
-  \x1b[1mStatus:\x1b[0m      ${banStatus}${banReason}
-  \x1b[1mTags:\x1b[0m        ${tagsDisplay}
-  \x1b[1mCreated:\x1b[0m     ${userData.createdAt ? new Date(userData.createdAt).toLocaleDateString() : "Unknown"}`;
-      } catch (error) {
-        return "Error: Failed to fetch user information";
-      }
-    },
     
     id: () => `uid=1000(${env.USER}) gid=1000(${env.USER}) groups=1000(${env.USER}),27(sudo),1001(docker)`,
     
@@ -1820,13 +1778,29 @@ alias grep='grep --color=auto'`;
         if (!res.ok) return "Failed to fetch users";
         const users = await res.json();
         if (users.length === 0) return "No registered users";
-        let output = "USER ID          | EMAIL                    | NAME\n";
-        output += "-".repeat(60) + "\n";
+        
+        // Fetch tags for all users
+        const userTags: Record<string, string[]> = {};
+        await Promise.all(users.map(async (u: any) => {
+          try {
+            const tagsRes = await fetch(`/api/users/${u.id}/tags`, { credentials: "include" });
+            if (tagsRes.ok) {
+              const tags = await tagsRes.json();
+              userTags[u.id] = tags.map((t: any) => t.name);
+            }
+          } catch (e) {
+            userTags[u.id] = [];
+          }
+        }));
+        
+        let output = "USER ID          | NAME                | STATUS      | TAGS\n";
+        output += "-".repeat(80) + "\n";
         users.forEach((u: any) => {
           const id = u.id.substring(0, 14).padEnd(16);
-          const email = (u.email || "N/A").substring(0, 24).padEnd(26);
-          const name = `${u.firstName || ""} ${u.lastName || ""}`.trim() || "N/A";
-          output += `${id}| ${email}| ${name}\n`;
+          const name = (`${u.firstName || ""} ${u.lastName || ""}`.trim() || "N/A").substring(0, 18).padEnd(20);
+          const status = u.banned ? "\x1b[31mBANNED\x1b[0m    " : "\x1b[32mActive\x1b[0m    ";
+          const tags = userTags[u.id]?.length > 0 ? userTags[u.id].join(", ") : "-";
+          output += `${id}| ${name}| ${status}| ${tags}\n`;
         });
         return output;
       } catch (e) {
