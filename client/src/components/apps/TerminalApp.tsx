@@ -1877,27 +1877,8 @@ This is just a harmless Easter egg.
 \x1b[0m`,
 
     rickroll: () => {
-      const lines = [
-        "\x1b[35m♪ Rick Astley - 1987 ♪\x1b[0m",
-        "\x1b[33m♪ ... ♪\x1b[0m",
-        "\x1b[33m♪ ... ♪\x1b[0m",
-        "\x1b[33m♪ ... ♪\x1b[0m",
-        "\x1b[31m♪ [Classic 80s synth plays] ♪\x1b[0m",
-        "\x1b[31m♪ [Iconic dance moves] ♪\x1b[0m",
-        "\x1b[32m♪ [You know exactly what song this is] ♪\x1b[0m",
-      ];
-      
-      let index = 0;
-      const interval = setInterval(() => {
-        if (index < lines.length) {
-          setLines(prev => [...prev, { type: "output", content: lines[index] }]);
-          index++;
-        } else {
-          clearInterval(interval);
-        }
-      }, 1000);
-      
-      return "";
+      window.open("https://www.youtube.com/watch?v=dQw4w9WgXcQ", "_blank");
+      return "\x1b[35m♪ Opening Rick Astley... ♪\x1b[0m";
     },
 
     "42": () => `\x1b[33m
