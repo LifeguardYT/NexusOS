@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { settingsSchema, insertUpdateSchema, insertMessageSchema, insertCustomAppSchema, insertBugReportSchema, users, messages, customApps, bugReports, userPresence, friends, emails, insertEmailSchema, globalNotifications, insertGlobalNotificationSchema } from "@shared/schema";
+import { settingsSchema, insertUpdateSchema, insertMessageSchema, insertCustomAppSchema, insertBugReportSchema, users, messages, customApps, bugReports, userPresence, friends, emails, insertEmailSchema, globalNotifications, insertGlobalNotificationSchema, userTags, insertUserTagSchema } from "@shared/schema";
 import { z } from "zod";
 import { db } from "./db";
 import { updates } from "@shared/schema";
@@ -535,6 +535,67 @@ export async function registerRoutes(
     }
   });
 
+  // Get tags for a user
+  app.get("/api/users/:userId/tags", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const tags = await db.select().from(userTags).where(eq(userTags.userId, userId));
+      res.json(tags);
+    } catch (error) {
+      console.error("Failed to get user tags:", error);
+      res.status(500).json({ error: "Failed to get tags" });
+    }
+  });
+
+  // Add a tag to a user (owner only)
+  app.post("/api/owner/users/:userId/tags", isAuthenticated, async (req: any, res) => {
+    try {
+      const ownerId = req.user?.claims?.sub;
+      if (!isOwner(ownerId)) {
+        return res.status(403).json({ error: "Owner access required" });
+      }
+      
+      const { userId } = req.params;
+      const { name, color } = req.body;
+      
+      if (!name || typeof name !== 'string') {
+        return res.status(400).json({ error: "Tag name is required" });
+      }
+      
+      const tagData = insertUserTagSchema.parse({
+        userId,
+        name: name.trim(),
+        color: color || "#3b82f6",
+      });
+      
+      const [newTag] = await db.insert(userTags).values(tagData).returning();
+      res.json(newTag);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid tag data", details: error.errors });
+      }
+      console.error("Failed to add tag:", error);
+      res.status(500).json({ error: "Failed to add tag" });
+    }
+  });
+
+  // Remove a tag (owner only)
+  app.delete("/api/owner/tags/:tagId", isAuthenticated, async (req: any, res) => {
+    try {
+      const ownerId = req.user?.claims?.sub;
+      if (!isOwner(ownerId)) {
+        return res.status(403).json({ error: "Owner access required" });
+      }
+      
+      const { tagId } = req.params;
+      await db.delete(userTags).where(eq(userTags.id, tagId));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to delete tag:", error);
+      res.status(500).json({ error: "Failed to delete tag" });
+    }
+  });
+
   // Check if current user is banned
   app.get("/api/auth/ban-status", isAuthenticated, async (req: any, res) => {
     try {
@@ -695,13 +756,14 @@ export async function registerRoutes(
         .orderBy(desc(messages.createdAt))
         .limit(100);
       
-      // Add owner/admin/banned status for each sender
+      // Add owner/admin/banned status and tags for each sender
       const messagesWithRoles = await Promise.all(globalMessages.map(async (msg) => {
         const senderIsOwner = msg.senderId === OWNER_USER_ID;
         const [senderUser] = await db.select().from(users).where(eq(users.id, msg.senderId));
         const senderIsAdmin = senderIsOwner || senderUser?.isAdmin === true;
         const senderIsBanned = senderUser?.banned === true;
-        return { ...msg, senderIsOwner, senderIsAdmin, senderIsBanned };
+        const senderTags = await db.select().from(userTags).where(eq(userTags.userId, msg.senderId));
+        return { ...msg, senderIsOwner, senderIsAdmin, senderIsBanned, senderTags };
       }));
       
       res.json(messagesWithRoles.reverse());
@@ -762,13 +824,14 @@ export async function registerRoutes(
         .orderBy(desc(messages.createdAt))
         .limit(100);
       
-      // Add owner/admin/banned status for each sender
+      // Add owner/admin/banned status and tags for each sender
       const messagesWithRoles = await Promise.all(directMessages.map(async (msg) => {
         const senderIsOwner = msg.senderId === OWNER_USER_ID;
         const [senderUser] = await db.select().from(users).where(eq(users.id, msg.senderId));
         const senderIsAdmin = senderIsOwner || senderUser?.isAdmin === true;
         const senderIsBanned = senderUser?.banned === true;
-        return { ...msg, senderIsOwner, senderIsAdmin, senderIsBanned };
+        const senderTags = await db.select().from(userTags).where(eq(userTags.userId, msg.senderId));
+        return { ...msg, senderIsOwner, senderIsAdmin, senderIsBanned, senderTags };
       }));
       
       res.json(messagesWithRoles.reverse());
