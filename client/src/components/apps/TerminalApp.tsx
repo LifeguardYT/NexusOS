@@ -1876,14 +1876,37 @@ Just kidding! You're not actually hacking anything. 😎
 This is just a harmless Easter egg.
 \x1b[0m`,
 
-    rickroll: () => `\x1b[35m
-    ♪♫♪ NEVER GONNA GIVE YOU UP ♪♫♪
-    ♪♫♪ NEVER GONNA LET YOU DOWN ♪♫♪
-    ♪♫♪ NEVER GONNA RUN AROUND ♪♫♪
-    ♪♫♪ AND DESERT YOU ♪♫♪
-\x1b[0m
-\x1b[33mYou just got rickrolled! 🎵\x1b[0m
-https://www.youtube.com/watch?v=dQw4w9WgXcQ`,
+    rickroll: () => {
+      const lines = [
+        "\x1b[35m♪♫♪ Loading Rick Astley... ♪♫♪\x1b[0m",
+        "\x1b[35m♪♫♪ Preparing the classic... ♪♫♪\x1b[0m",
+        "\x1b[35m♪♫♪ You know what's coming... ♪♫♪\x1b[0m",
+        "\x1b[33m♪♫♪ ... ♪♫♪\x1b[0m",
+        "\x1b[33m♪♫♪ ...wait for it... ♪♫♪\x1b[0m",
+        "\x1b[33m♪♫♪ ... ♪♫♪\x1b[0m",
+        "",
+        "\x1b[31m  _____  _____ _____ _  ______  ____  _     _     _____ ____  _ \x1b[0m",
+        "\x1b[31m |  __ \\|_   _/ ____| |/ /  _ \\/ __ \\| |   | |   |  ___|  _ \\| |\x1b[0m",
+        "\x1b[31m | |__) | | || |    | ' /| |_) | |  | | |   | |   | |_  | | | | |\x1b[0m",
+        "\x1b[31m |  _  /  | || |    |  < |  _ <| |  | | |   | |   |  _| | | | |_|\x1b[0m",
+        "\x1b[31m | | \\ \\ _| || |____| . \\| |_) | |__| | |___| |___| |___| |_| |_|\x1b[0m",
+        "\x1b[31m |_|  \\_\\_____\\_____|_|\\_\\____/ \\____/|_____|_____|_____|____/(_)\x1b[0m",
+        "",
+        "\x1b[32mYOU JUST GOT RICKROLLED!\x1b[0m",
+      ];
+      
+      let index = 0;
+      const interval = setInterval(() => {
+        if (index < lines.length) {
+          setLines(prev => [...prev, { type: "output", content: lines[index] }]);
+          index++;
+        } else {
+          clearInterval(interval);
+        }
+      }, 1000);
+      
+      return "\x1b[35mStarting the rickroll...\x1b[0m";
+    },
 
     "42": () => `\x1b[33m
 The Answer to the Ultimate Question of Life,
