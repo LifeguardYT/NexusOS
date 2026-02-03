@@ -11,6 +11,7 @@ import { Loader2 } from "lucide-react";
 
 const BAN_STORAGE_KEY = "nexusos_access_revoked";
 const BAN_USER_ID_KEY = "nexusos_revoked_id";
+const BAN_REASON_KEY = "nexusos_revoked_reason";
 
 function checkBanMarker(): boolean {
   try {
@@ -28,10 +29,21 @@ function getBannedUserId(): string | null {
   }
 }
 
-function setBanMarker(userId: string) {
+function getBanReason(): string | null {
+  try {
+    return localStorage.getItem(BAN_REASON_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setBanMarker(userId: string, reason: string | null) {
   try {
     localStorage.setItem(BAN_STORAGE_KEY, "true");
     localStorage.setItem(BAN_USER_ID_KEY, userId);
+    if (reason) {
+      localStorage.setItem(BAN_REASON_KEY, reason);
+    }
   } catch {}
 }
 
@@ -39,6 +51,7 @@ function clearBanMarker() {
   try {
     localStorage.removeItem(BAN_STORAGE_KEY);
     localStorage.removeItem(BAN_USER_ID_KEY);
+    localStorage.removeItem(BAN_REASON_KEY);
   } catch {}
 }
 
@@ -225,10 +238,10 @@ function AppContent() {
 
   useEffect(() => {
     if (banStatus?.banned && authUser?.id) {
-      setBanMarker(authUser.id);
+      setBanMarker(authUser.id, banStatus.reason);
       setIsBannedLocally(true);
     }
-  }, [banStatus?.banned, authUser?.id]);
+  }, [banStatus?.banned, banStatus?.reason, authUser?.id]);
 
   useEffect(() => {
     if (unbanCheck && !unbanCheck.stillBanned) {
@@ -239,7 +252,8 @@ function AppContent() {
 
   // If banned (either from server or localStorage), show ban screen
   if (isBannedLocally || banStatus?.banned) {
-    return <SiteNotFound reason={banStatus?.reason} />;
+    const reason = banStatus?.reason || getBanReason();
+    return <SiteNotFound reason={reason} />;
   }
 
   // Show loading while checking auth
