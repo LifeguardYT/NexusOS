@@ -1805,7 +1805,8 @@ alias grep='grep --color=auto'`;
         output += "-".repeat(80) + "\n";
         users.forEach((u: any) => {
           const id = u.id.substring(0, 14).padEnd(16);
-          const name = (`${u.firstName || ""} ${u.lastName || ""}`.trim() || "N/A").substring(0, 18).padEnd(20);
+          const displayName = `${u.firstName || ""} ${u.lastName || ""}`.trim();
+          const name = (displayName || u.email || "N/A").substring(0, 18).padEnd(20);
           const status = u.banned ? "\x1b[31mBANNED\x1b[0m    " : "\x1b[32mActive\x1b[0m    ";
           
           // Build tags list with role tags first
