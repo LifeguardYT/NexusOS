@@ -1878,21 +1878,13 @@ This is just a harmless Easter egg.
 
     rickroll: () => {
       const lines = [
-        "\x1b[35m♪♫♪ Loading Rick Astley... ♪♫♪\x1b[0m",
-        "\x1b[35m♪♫♪ Preparing the classic... ♪♫♪\x1b[0m",
-        "\x1b[35m♪♫♪ You know what's coming... ♪♫♪\x1b[0m",
-        "\x1b[33m♪♫♪ ... ♪♫♪\x1b[0m",
-        "\x1b[33m♪♫♪ ...wait for it... ♪♫♪\x1b[0m",
-        "\x1b[33m♪♫♪ ... ♪♫♪\x1b[0m",
-        "",
-        "\x1b[31m  _____  _____ _____ _  ______  ____  _     _     _____ ____  _ \x1b[0m",
-        "\x1b[31m |  __ \\|_   _/ ____| |/ /  _ \\/ __ \\| |   | |   |  ___|  _ \\| |\x1b[0m",
-        "\x1b[31m | |__) | | || |    | ' /| |_) | |  | | |   | |   | |_  | | | | |\x1b[0m",
-        "\x1b[31m |  _  /  | || |    |  < |  _ <| |  | | |   | |   |  _| | | | |_|\x1b[0m",
-        "\x1b[31m | | \\ \\ _| || |____| . \\| |_) | |__| | |___| |___| |___| |_| |_|\x1b[0m",
-        "\x1b[31m |_|  \\_\\_____\\_____|_|\\_\\____/ \\____/|_____|_____|_____|____/(_)\x1b[0m",
-        "",
-        "\x1b[32mYOU JUST GOT RICKROLLED!\x1b[0m",
+        "\x1b[35m♪ Rick Astley - 1987 ♪\x1b[0m",
+        "\x1b[33m♪ ... ♪\x1b[0m",
+        "\x1b[33m♪ ... ♪\x1b[0m",
+        "\x1b[33m♪ ... ♪\x1b[0m",
+        "\x1b[31m♪ [Classic 80s synth plays] ♪\x1b[0m",
+        "\x1b[31m♪ [Iconic dance moves] ♪\x1b[0m",
+        "\x1b[32m♪ [You know exactly what song this is] ♪\x1b[0m",
       ];
       
       let index = 0;
@@ -1905,7 +1897,7 @@ This is just a harmless Easter egg.
         }
       }, 1000);
       
-      return "\x1b[35mStarting the rickroll...\x1b[0m";
+      return "";
     },
 
     "42": () => `\x1b[33m
