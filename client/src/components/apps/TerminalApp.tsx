@@ -1795,7 +1795,7 @@ alias grep='grep --color=auto'`;
 `,
     
     secret: () => `\x1b[35m╔═══════════════════════════════════════════╗
-║       \x1b[1;33m🤫 SECRET COMMANDS 🤫\x1b[0m\x1b[35m              ║
+║         \x1b[33m🤫 SECRET COMMANDS 🤫\x1b[0m\x1b[35m            ║
 ╚═══════════════════════════════════════════╝\x1b[0m
 
 You found the secret command list! Here are some hidden gems:
@@ -1889,7 +1889,7 @@ https://www.youtube.com/watch?v=dQw4w9WgXcQ`,
 The Answer to the Ultimate Question of Life,
 the Universe, and Everything is...
 
-         \x1b[1;36m42\x1b[0m\x1b[33m
+         \x1b[36m42\x1b[0m\x1b[33m
 
 (According to Deep Thought after 7.5 million years of computation)
 \x1b[0m`,
