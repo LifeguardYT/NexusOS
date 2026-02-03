@@ -194,3 +194,16 @@ export const emails = pgTable("emails", {
 export const insertEmailSchema = createInsertSchema(emails).omit({ id: true, createdAt: true });
 export type InsertEmail = z.infer<typeof insertEmailSchema>;
 export type Email = typeof emails.$inferSelect;
+
+// User Tags table (owner-assigned custom tags for users)
+export const userTags = pgTable("user_tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull(),
+  color: text("color").notNull().default("#3b82f6"), // hex color
+  createdAt: text("created_at").notNull().default(sql`now()`),
+});
+
+export const insertUserTagSchema = createInsertSchema(userTags).omit({ id: true, createdAt: true });
+export type InsertUserTag = z.infer<typeof insertUserTagSchema>;
+export type UserTag = typeof userTags.$inferSelect;
