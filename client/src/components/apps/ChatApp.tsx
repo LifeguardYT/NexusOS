@@ -8,6 +8,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 
+interface UserTag {
+  id: string;
+  name: string;
+  color: string;
+}
+
 interface Message {
   id: string;
   senderId: string;
@@ -19,6 +25,7 @@ interface Message {
   senderIsOwner?: boolean;
   senderIsAdmin?: boolean;
   senderIsBanned?: boolean;
+  senderTags?: UserTag[];
 }
 
 interface Conversation {
@@ -408,7 +415,7 @@ export function ChatApp() {
                             : "bg-white/10 rounded-bl-md"
                         }`}
                       >
-                        {(msg.senderIsOwner || msg.senderIsAdmin || msg.senderIsBanned) && (
+                        {(msg.senderIsOwner || msg.senderIsAdmin || msg.senderIsBanned || (msg.senderTags && msg.senderTags.length > 0)) && (
                           <div className={`flex items-center flex-wrap gap-1.5 mb-1 ${isOwn ? "justify-end" : ""}`}>
                             {msg.senderIsOwner && (
                               <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold ${isOwn ? "bg-yellow-500/30 text-yellow-200 border border-yellow-400/40" : "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"}`}>
@@ -427,6 +434,19 @@ export function ChatApp() {
                                 BANNED
                               </span>
                             )}
+                            {msg.senderTags?.map((tag) => (
+                              <span 
+                                key={tag.id}
+                                className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold"
+                                style={{ 
+                                  backgroundColor: `${tag.color}30`, 
+                                  color: isOwn ? 'white' : tag.color,
+                                  border: `1px solid ${tag.color}50`
+                                }}
+                              >
+                                {tag.name}
+                              </span>
+                            ))}
                           </div>
                         )}
                         {chatView === "global" && !isOwn && (

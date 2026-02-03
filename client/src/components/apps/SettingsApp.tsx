@@ -6,7 +6,7 @@ import {
   Palette, Monitor, Volume2, Wifi, Bell, User, Lock, Info, 
   Sun, Moon, ChevronRight, Check, Shield, Code, Activity, Users,
   Cpu, HardDrive, Clock, RefreshCw, ArrowLeft, Key, Mail, Ban, UserCheck, Crown, ShieldCheck, ShieldOff,
-  Download, Upload, Trash2, Terminal, Send
+  Download, Upload, Trash2, Terminal, Send, Tag, X, Plus
 } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -329,6 +329,10 @@ export function SettingsApp() {
   const [banModalOpen, setBanModalOpen] = useState(false);
   const [banTargetUser, setBanTargetUser] = useState<{id: string; name: string} | null>(null);
   const [banReason, setBanReason] = useState("");
+  const [tagTargetUser, setTagTargetUser] = useState<{id: string; name: string} | null>(null);
+  const [tagName, setTagName] = useState("");
+  const [tagColor, setTagColor] = useState("#3b82f6");
+  const [tagSuccess, setTagSuccess] = useState("");
 
   const { data: currentUser } = useQuery<AuthUser | null>({
     queryKey: ["/api/auth/user"],
@@ -455,6 +459,50 @@ export function SettingsApp() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+  });
+
+  const { data: userTagsData, refetch: refetchUserTags } = useQuery<{id: string; userId: string; name: string; color: string}[]>({
+    queryKey: ["/api/users", tagTargetUser?.id, "tags"],
+    queryFn: async () => {
+      if (!tagTargetUser?.id) return [];
+      const res = await fetch(`/api/users/${tagTargetUser.id}/tags`, { credentials: "include" });
+      if (!res.ok) {
+        throw new Error("Failed to fetch user tags");
+      }
+      return res.json();
+    },
+    enabled: !!tagTargetUser?.id,
+  });
+
+  const addTagMutation = useMutation({
+    mutationFn: async ({ userId, name, color }: { userId: string; name: string; color: string }) => {
+      const res = await apiRequest("POST", `/api/owner/users/${userId}/tags`, { name, color });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to add tag");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchUserTags();
+      setTagName("");
+      setTagSuccess("Tag added successfully!");
+      setTimeout(() => setTagSuccess(""), 3000);
+    },
+  });
+
+  const deleteTagMutation = useMutation({
+    mutationFn: async (tagId: string) => {
+      const res = await apiRequest("DELETE", `/api/owner/tags/${tagId}`);
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Failed to delete tag");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      refetchUserTags();
     },
   });
 
@@ -1707,6 +1755,100 @@ export function SettingsApp() {
               </div>
               {notifSuccess && (
                 <p className="text-sm text-green-400">{notifSuccess}</p>
+              )}
+            </div>
+
+            <div className="p-4 rounded-lg bg-white/5 space-y-4 mt-6">
+              <h4 className="font-medium flex items-center gap-2">
+                <Tag className="w-4 h-4" />
+                Manage User Tags
+              </h4>
+              <p className="text-sm text-muted-foreground">
+                Add custom tags to user accounts that appear in chat.
+              </p>
+              
+              <div className="space-y-3">
+                <p className="text-sm font-medium">Select a user:</p>
+                <div className="max-h-40 overflow-y-auto space-y-1">
+                  {users?.map((user) => (
+                    <button
+                      key={user.id}
+                      onClick={() => {
+                        setTagTargetUser({ id: user.id, name: user.firstName || user.email || "User" });
+                        setTagSuccess("");
+                      }}
+                      className={`w-full flex items-center gap-2 p-2 rounded-lg text-left transition-colors ${
+                        tagTargetUser?.id === user.id ? "bg-blue-500/20 border border-blue-500/30" : "bg-white/5 hover:bg-white/10"
+                      }`}
+                      data-testid={`btn-select-user-tag-${user.id}`}
+                    >
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-sm font-medium">
+                        {user.firstName?.[0] || user.email?.[0]?.toUpperCase() || '?'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{user.firstName} {user.lastName}</p>
+                        <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {tagTargetUser && (
+                <div className="space-y-3 pt-3 border-t border-white/10">
+                  <p className="text-sm font-medium">Tags for {tagTargetUser.name}:</p>
+                  
+                  <div className="flex flex-wrap gap-2">
+                    {userTagsData?.map((tag) => (
+                      <span 
+                        key={tag.id}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-bold"
+                        style={{ backgroundColor: `${tag.color}30`, color: tag.color, border: `1px solid ${tag.color}50` }}
+                      >
+                        {tag.name}
+                        <button 
+                          onClick={() => deleteTagMutation.mutate(tag.id)}
+                          className="hover:opacity-70"
+                          data-testid={`btn-delete-tag-${tag.id}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                    {(!userTagsData || userTagsData.length === 0) && (
+                      <p className="text-sm text-muted-foreground">No tags yet</p>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      placeholder="Tag name..."
+                      value={tagName}
+                      onChange={(e) => setTagName(e.target.value)}
+                      className="flex-1"
+                      data-testid="input-tag-name"
+                    />
+                    <input
+                      type="color"
+                      value={tagColor}
+                      onChange={(e) => setTagColor(e.target.value)}
+                      className="w-10 h-10 rounded cursor-pointer border-0"
+                      title="Tag color"
+                      data-testid="input-tag-color"
+                    />
+                    <Button
+                      onClick={() => addTagMutation.mutate({ userId: tagTargetUser.id, name: tagName, color: tagColor })}
+                      disabled={!tagName.trim() || addTagMutation.isPending}
+                      size="icon"
+                      data-testid="btn-add-tag"
+                    >
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  {tagSuccess && (
+                    <p className="text-sm text-green-400">{tagSuccess}</p>
+                  )}
+                </div>
               )}
             </div>
           </div>
