@@ -1635,6 +1635,29 @@ passwd: password updated successfully`;
         return `User user may run the following commands on nexusos:
     (ALL : ALL) ALL`;
       }
+      
+      // Easter egg for "sudo rm -rf"
+      const fullCmd = args.join(" ");
+      if (fullCmd.startsWith("rm -rf") || fullCmd === "rm -rf /") {
+        return `\x1b[31m
+╔══════════════════════════════════════════════════════════════╗
+║  ██████╗  █████╗ ███╗   ██╗ ██████╗ ███████╗██████╗ ██╗      ║
+║  ██╔══██╗██╔══██╗████╗  ██║██╔════╝ ██╔════╝██╔══██╗██║      ║
+║  ██║  ██║███████║██╔██╗ ██║██║  ███╗█████╗  ██████╔╝██║      ║
+║  ██║  ██║██╔══██║██║╚██╗██║██║   ██║██╔══╝  ██╔══██╗╚═╝      ║
+║  ██████╔╝██║  ██║██║ ╚████║╚██████╔╝███████╗██║  ██║██╗      ║
+║  ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝╚═╝      ║
+╚══════════════════════════════════════════════════════════════╝
+\x1b[0m
+\x1b[33m⚠️  JUST KIDDING! ⚠️\x1b[0m
+
+This is NexusOS - a web-based operating system.
+You can't actually delete system files here! 😅
+
+But nice try... 👀
+`;
+      }
+      
       const sudoCmd = args[0];
       const sudoArgs = args.slice(1);
       if (COMMANDS[sudoCmd]) {
@@ -1794,6 +1817,157 @@ You found the secret command list! Here are some hidden gems:
 
 \x1b[33mTip:\x1b[0m Some commands have hidden easter eggs. Explore!
 `,
+
+    lolcat: (args) => {
+      const text = args.join(" ") || "Hello World!";
+      const colors = ["\x1b[31m", "\x1b[33m", "\x1b[32m", "\x1b[36m", "\x1b[34m", "\x1b[35m"];
+      let result = "";
+      for (let i = 0; i < text.length; i++) {
+        result += colors[i % colors.length] + text[i];
+      }
+      return result + "\x1b[0m";
+    },
+
+    parrot: () => `\x1b[32m
+         .---.
+        /     \\
+        \\.@-@./
+        /\`\\_/\`\\
+       //  _  \\\\
+      | \\     )|_
+     /\`\\_\`>  <_/ \\
+     \\__/'---'\\__/
+\x1b[0m
+\x1b[33m🎉 PARTY PARROT! 🎉\x1b[0m
+The party parrot is vibing! 🦜`,
+
+    aquarium: () => `\x1b[36m
+    ><((°>  ><((°>     ><((°>
+         ><((°>    ><((°>
+    ><((°>     ><((°>        ><((°>
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  ~~~~~ 🪸 ~~~~~ 🌿 ~~~~~ 🪨 ~~~~~
+  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+\x1b[0m
+\x1b[34mYour peaceful ASCII aquarium\x1b[0m`,
+
+    fire: () => `\x1b[31m
+                    (  .      )
+                 )           (              )
+                       .  '   .   '  .  '  .
+               (    , )       (.   )  (   ',    )
+                .' ) ( . )    ,  ( ,     )   ( .
+             ). , ( .   (  ) ( , ')  .' (  ,    )
+            (_,,._.,)  (.,_,._(,..(__,.._)__,._,)
+\x1b[33m            ''' '' '''' '' '' ' '' '''' ' ''\x1b[0m
+`,
+
+    hack: () => `\x1b[32m
+[*] Initializing hack sequence...
+[*] Bypassing firewall............... \x1b[32m[OK]\x1b[0m\x1b[32m
+[*] Accessing mainframe.............. \x1b[32m[OK]\x1b[0m\x1b[32m
+[*] Downloading secret files......... \x1b[32m[OK]\x1b[0m\x1b[32m
+[*] Covering tracks.................. \x1b[32m[OK]\x1b[0m\x1b[32m
+[*] Exfiltrating data................ \x1b[32m[OK]\x1b[0m\x1b[32m
+
+\x1b[33m>>> ACCESS GRANTED <<<\x1b[0m
+
+Just kidding! You're not actually hacking anything. 😎
+This is just a harmless Easter egg.
+\x1b[0m`,
+
+    rickroll: () => `\x1b[35m
+    ♪♫♪ NEVER GONNA GIVE YOU UP ♪♫♪
+    ♪♫♪ NEVER GONNA LET YOU DOWN ♪♫♪
+    ♪♫♪ NEVER GONNA RUN AROUND ♪♫♪
+    ♪♫♪ AND DESERT YOU ♪♫♪
+\x1b[0m
+\x1b[33mYou just got rickrolled! 🎵\x1b[0m
+https://www.youtube.com/watch?v=dQw4w9WgXcQ`,
+
+    "42": () => `\x1b[33m
+The Answer to the Ultimate Question of Life,
+the Universe, and Everything is...
+
+         \x1b[1;36m42\x1b[0m\x1b[33m
+
+(According to Deep Thought after 7.5 million years of computation)
+\x1b[0m`,
+
+    xyzzy: () => {
+      const outcomes = [
+        "Nothing happens.",
+        "A hollow voice says 'Plugh'.",
+        "You feel a strange tingling sensation.",
+        "Suddenly, you find yourself in a maze of twisty little passages, all alike.",
+        "A grue appears briefly, then vanishes.",
+        "You hear a distant rumbling.",
+        "For a moment, you feel like you're in a text adventure game.",
+      ];
+      return outcomes[Math.floor(Math.random() * outcomes.length)];
+    },
+
+    fortune: () => {
+      const fortunes = [
+        "A journey of a thousand miles begins with a single step.",
+        "The best time to plant a tree was 20 years ago. The second best time is now.",
+        "Fortune favors the bold.",
+        "You will find happiness with a new love.",
+        "A wise man once said nothing.",
+        "The early bird gets the worm, but the second mouse gets the cheese.",
+        "Do not take life too seriously. You will never get out of it alive.",
+        "The only way to do great work is to love what you do.",
+        "In the middle of difficulty lies opportunity.",
+        "Your code will compile on the first try. (Just kidding.)",
+        "Debugging is like being the detective in a crime movie where you are also the murderer.",
+        "There are only two hard things in CS: cache invalidation and naming things.",
+        "A bug in production is worth two in development.",
+      ];
+      return fortunes[Math.floor(Math.random() * fortunes.length)];
+    },
+
+    cmatrix: () => `\x1b[32m
+   ▄▄▄▄▄▄▄  ▄▄   ▄▄  ▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄  ▄▄▄▄▄▄   ▄▄▄▄▄▄▄  ▄▄   ▄▄ 
+  █       ██  █▄█  ██       ██       ██   ▄  █ █       ██  █ █  █
+  █       ██       ██   ▄   ██▄     ▄██  █ █ █ █▄     ▄██  █▄█  █
+  █     ▄▄██       ██  █▀█  █ █   █ ██   █▄▄█▄  █   █ ██       █
+  █    █  ██       ██  █▄█  █ █   █ ██    ▄▄  █ █   █ ██▄     ▄█
+  █    █▄▄██ ██▄██ ██       █ █   █ ██   █  █ █ █   █ █ █   █  
+  █▄▄▄▄▄▄▄██▄█   █▄██▄▄▄▄▄▄▄█ █▄▄▄█ ██▄▄▄█  █▄█ █▄▄▄█ █  █▄▄█  
+\x1b[0m
+\x1b[32mWake up, Neo... The Matrix has you.\x1b[0m
+Press Ctrl+C to exit...`,
+
+    sl: () => `
+                         (  ) (@@) ( )  (@)  ()    @@    O     @
+                    (@@@)
+                (    )
+             (@@@@)
+           (   )
+        ====        ________                ___________
+    _D _|  |_______/        \\__I_I_____===__|_________|
+     |(_)---  |   H\\________/ |   |        =|___ ___|
+     /     |  |   H  |  |     |   |         ||_| |_||
+    |      |  |   H  |__--------------------| [___] |
+    | ________|___H__/__|_____/[][]~\\_______|       |
+    |/ |   |-----------I_____I [][] []  D   |=======|_
+  __/ =| o |=-~~\\  /~~\\  /~~\\  /~~\\ ____Y___________|__
+   |/-=|___|=    ||    ||    ||    |_____/~\\___/
+    \\_/      \\O=====O=====O=====O_/      \\_/
+\x1b[33mYou have been run over by a steam locomotive!\x1b[0m`,
+
+    cowsay: (args) => {
+      const msg = args.join(" ") || "Moo!";
+      const border = "_".repeat(msg.length + 2);
+      return ` ${border}
+< ${msg} >
+ ${"-".repeat(msg.length + 2)}
+        \\   ^__^
+         \\  (oo)\\_______
+            (__)\\       )\\/\\
+                ||----w |
+                ||     ||`;
+    },
     
     users: async (args, isAdmin) => {
       if (!isAdmin) return "Permission denied: Admin access required";
