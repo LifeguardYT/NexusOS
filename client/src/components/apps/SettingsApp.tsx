@@ -1325,7 +1325,7 @@ export function SettingsApp() {
                   onClick={handleVersionClick}
                   data-testid="text-version"
                 >
-                  Version 2.2.1 - IS THAT A GEOMETRY DASH REFERENCE?!
+                  Version 2.2.1
                   {versionClickCount > 0 && versionClickCount < 5 && (
                     <span className="ml-2 text-xs">({5 - versionClickCount} more...)</span>
                   )}
