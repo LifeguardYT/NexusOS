@@ -67,6 +67,51 @@ function filterBadWords(text: string): string {
   return filtered;
 }
 
+function formatMessageText(text: string): string[] {
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+  let wordCount = 0;
+  
+  for (const word of words) {
+    // Check if adding this word would exceed 400 chars or 10 words
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    
+    // If single word is longer than 400 chars, break it up
+    if (word.length > 400) {
+      if (currentLine) {
+        lines.push(currentLine);
+        currentLine = '';
+        wordCount = 0;
+      }
+      // Break long word into 400 char chunks
+      for (let i = 0; i < word.length; i += 400) {
+        lines.push(word.slice(i, i + 400));
+      }
+      continue;
+    }
+    
+    // Check if we hit 10 words or 400 continuous chars
+    if (wordCount >= 10 || testLine.length > 400) {
+      if (currentLine) {
+        lines.push(currentLine);
+      }
+      currentLine = word;
+      wordCount = 1;
+    } else {
+      currentLine = testLine;
+      wordCount++;
+    }
+  }
+  
+  // Add remaining text
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+  
+  return lines.length > 0 ? lines : [''];
+}
+
 interface AdminStatus {
   isAdmin: boolean;
   isOwner: boolean;
@@ -454,7 +499,11 @@ export function ChatApp() {
                             {msg.senderName}
                           </p>
                         )}
-                        <p className="text-sm break-words">{filterBadWords(msg.content)}</p>
+                        <div className="text-sm break-words">
+                          {formatMessageText(filterBadWords(msg.content)).map((line, i) => (
+                            <p key={i}>{line}</p>
+                          ))}
+                        </div>
                         <p className={`text-xs mt-1 ${isOwn ? "text-blue-100" : "text-muted-foreground"}`}>
                           {formatTime(msg.createdAt)}
                         </p>
