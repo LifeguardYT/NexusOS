@@ -544,16 +544,31 @@ export function OSProvider({ children }: { children: ReactNode }) {
         const notifications = await response.json();
         if (!notifications || notifications.length === 0) return;
         
-        const latestNotification = notifications[0];
         const lastSeenNotificationId = localStorage.getItem("os-last-seen-notification-id");
+        const lastSeenTimestamp = localStorage.getItem("os-last-seen-notification-timestamp");
         
-        if (lastSeenNotificationId !== latestNotification.id) {
+        // Find all notifications newer than the last seen one
+        const newNotifications = [];
+        for (const notification of notifications) {
+          if (notification.id === lastSeenNotificationId) break;
+          // Also check timestamp to catch notifications we haven't seen
+          if (lastSeenTimestamp && new Date(notification.createdAt) <= new Date(lastSeenTimestamp)) break;
+          newNotifications.push(notification);
+        }
+        
+        // Show all new notifications (in reverse order so oldest shows first)
+        for (const notification of newNotifications.reverse()) {
           addNotification(
-            latestNotification.title,
-            latestNotification.message,
-            latestNotification.type || "info"
+            notification.title,
+            notification.message,
+            notification.type || "info"
           );
-          localStorage.setItem("os-last-seen-notification-id", latestNotification.id);
+        }
+        
+        // Update last seen to the latest notification
+        if (notifications.length > 0) {
+          localStorage.setItem("os-last-seen-notification-id", notifications[0].id);
+          localStorage.setItem("os-last-seen-notification-timestamp", notifications[0].createdAt);
         }
       } catch (error) {
         console.error("Failed to check for global notifications:", error);
@@ -568,8 +583,8 @@ export function OSProvider({ children }: { children: ReactNode }) {
     // Check immediately after startup
     const initialTimer = setTimeout(checkAll, 2000);
     
-    // Then check every 30 seconds for new notifications
-    const interval = setInterval(checkAll, 30000);
+    // Then check every 10 seconds for new notifications
+    const interval = setInterval(checkAll, 10000);
     
     return () => {
       clearTimeout(initialTimer);
