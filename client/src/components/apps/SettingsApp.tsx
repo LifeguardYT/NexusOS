@@ -529,7 +529,7 @@ export function SettingsApp() {
 
   const handleExportData = () => {
     const exportData = {
-      version: "2.2",
+      version: "2.2.1",
       exportedAt: new Date().toISOString(),
       settings: settings,
       security: {
@@ -1325,7 +1325,7 @@ export function SettingsApp() {
                   onClick={handleVersionClick}
                   data-testid="text-version"
                 >
-                  Version 2.2 - IS THAT A GEOMETRY DASH REFERENCE?!
+                  Version 2.2.1 - IS THAT A GEOMETRY DASH REFERENCE?!
                   {versionClickCount > 0 && versionClickCount < 5 && (
                     <span className="ml-2 text-xs">({5 - versionClickCount} more...)</span>
                   )}
