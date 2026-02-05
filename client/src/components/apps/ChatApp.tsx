@@ -74,25 +74,25 @@ function formatMessageText(text: string): string[] {
   let wordCount = 0;
   
   for (const word of words) {
-    // Check if adding this word would exceed 400 chars or 10 words
+    // Check if adding this word would exceed 200 chars or 10 words
     const testLine = currentLine ? `${currentLine} ${word}` : word;
     
-    // If single word is longer than 400 chars, break it up
-    if (word.length > 400) {
+    // If single word is longer than 200 chars, break it up
+    if (word.length > 200) {
       if (currentLine) {
         lines.push(currentLine);
         currentLine = '';
         wordCount = 0;
       }
-      // Break long word into 400 char chunks
-      for (let i = 0; i < word.length; i += 400) {
-        lines.push(word.slice(i, i + 400));
+      // Break long word into 200 char chunks
+      for (let i = 0; i < word.length; i += 200) {
+        lines.push(word.slice(i, i + 200));
       }
       continue;
     }
     
-    // Check if we hit 10 words or 400 continuous chars
-    if (wordCount >= 10 || testLine.length > 400) {
+    // Check if we hit 10 words or 200 continuous chars
+    if (wordCount >= 10 || testLine.length > 200) {
       if (currentLine) {
         lines.push(currentLine);
       }
